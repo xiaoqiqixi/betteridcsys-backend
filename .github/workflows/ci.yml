@@ -29,10 +29,35 @@ jobs:
           cache: false
       - name: Independent frontend source-pair CLI contracts
         run: python3 -B scripts/test_frontend_pair.py
+      - name: Independent backend bundle real Git and Go CLI contracts
+        run: python3 -B scripts/test_backend_bundle.py
       - name: Prepare isolated native runner
         run: bash vps-billing/deploy/ci/prepare-native-runner.sh
       - name: Real MySQL regression with no skipped Go tests
         run: RUNNER_TEMP="$ASTER_NATIVE_FIXTURE_ROOT" bash vps-billing/deploy/ci/mysql-native.sh -- bash scripts/check-backend.sh
+      - name: Build and inspect the actual backend half without inventing a frontend source
+        run: |
+          set -euo pipefail
+          python3 -I scripts/backend_bundle.py build --source-sha "$GITHUB_SHA" --output "$RUNNER_TEMP/backend-candidate"
+          version=$(python3 -c 'import json; print(json.load(open("FRONTEND_PAIR.json"))["core_version"])')
+          frontend=$(python3 -c 'import json; print(json.load(open("FRONTEND_PAIR.json"))["source_sha"])')
+          python3 -I scripts/backend_bundle.py inspect --manifest "$RUNNER_TEMP/backend-candidate/BACKEND.json" \
+            --archive "$RUNNER_TEMP/backend-candidate/aster-finance-backend-$version-linux-amd64.tar.gz" \
+            --expected-source-sha "$GITHUB_SHA" --expected-frontend-sha "$frontend"
+          python3 -I scripts/backend_bundle.py build --source-sha "$GITHUB_SHA" --output "$RUNNER_TEMP/backend-reproduction"
+          cmp "$RUNNER_TEMP/backend-candidate/BACKEND.json" "$RUNNER_TEMP/backend-reproduction/BACKEND.json"
+          cmp "$RUNNER_TEMP/backend-candidate/aster-finance-backend-$version-linux-amd64.tar.gz" \
+            "$RUNNER_TEMP/backend-reproduction/aster-finance-backend-$version-linux-amd64.tar.gz"
+      - name: Retain bounded backend candidate, not an authenticated release
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        with:
+          name: backend-candidate-${{ matrix.os }}-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            ${{ runner.temp }}/backend-candidate/BACKEND.json
+            ${{ runner.temp }}/backend-candidate/aster-finance-backend-*-linux-amd64.tar.gz
+          if-no-files-found: error
+          retention-days: 7
+          overwrite: false
   vulnerability:
     runs-on: ubuntu-24.04
     timeout-minutes: 15

@@ -9936,10 +9936,22 @@
       "first_backend_pair_ci": "https://github.com/xiaoqiqixi/betteridcsys-backend/actions/runs/40480459176",
       "first_backend_pair_browser": "rejected_at_postbuild_source_check; no browser acceptance claimed",
       "cache_fix": "Generated TypeScript build info removed from frontend Git tracking; strict tracked-source checks retained.",
-      "next_backend_pair_acceptance": "required_after_new_frontend_pin; not yet verified",
+      "next_backend_pair_acceptance": "Each subsequent backend commit, including the new bundle tooling, still requires its own complete CI; no inherited acceptance.",
       "release_authenticated": false,
       "financial_logic_changed": false,
-      "first_backend_pair_ubuntu22": "30-minute total runner budget exhausted after slow provisioning; real Go tests were interrupted, not accepted"
+      "first_backend_pair_ubuntu22": "30-minute total runner budget exhausted after slow provisioning; real Go tests were interrupted, not accepted",
+      "verified_backend_source": "323e009ab279288f164d17641d57f2884a23f739",
+      "verified_backend_ci": "https://github.com/xiaoqiqixi/betteridcsys-backend/actions/runs/40485154293",
+      "verified_backend_ci_state": "success_4_of_4; Ubuntu22/24 actual MySQL with zero skipped Go tests, vulnerability scan and strict-TLS real-MySQL browser",
+      "verified_browser": {
+        "checks": 20,
+        "screenshots": 12,
+        "artifact_zip_digests_verified": true,
+        "financial_business_writes": 0,
+        "historical_data_unchanged": true,
+        "host_trust_modified": false
+      },
+      "frontend_candidate_matches_independent_ci_bytes": true
     },
     "cloud_independent_acceptance": {
       "source": "37ff075b1f0a863130b1ff9778ee9f5f2d8d4563",
@@ -9949,6 +9961,16 @@
       "published_entrypoint_ci": "https://github.com/xiaoqiqixi/betteridcsys-cloud/actions/runs/40477716043",
       "published_entrypoint_state": "4/4 passed for existing old-repository RC; not a new cloud release",
       "real_kvm_acceptance": false
+    },
+    "backend_candidate": {
+      "format": "backend-tar-v1",
+      "state": "implemented_local_ci_pending",
+      "cli_tests": 10,
+      "build_scope": "Actual Git snapshot and Go compiler; separate pinned frontend identity, no frontend code in backend asset. Local fixtures prove the CLI, not production package or host installation.",
+      "ci_scope": "Ubuntu22/24 actual backend dual build, byte comparison and bounded inspection added after real MySQL gates; new-source results pending.",
+      "authenticated_release": false,
+      "legacy_installer_compatible": false,
+      "production_backend_changed": false
     }
   },
   "builtin_upgrades": {
@@ -9960,7 +9982,7 @@
     ],
     "contract": "development/BUILTIN_UPGRADES.md",
     "state": "design_and_u01_partial_ci",
-    "implemented_scope": "Frontend bounded static candidates; independent cloud native/MySQL/browser CI; immutable finance source pairing and paired-browser workflow. Source-pair regression/final CI and authenticated release composition remain incomplete. No built-in upgrade executor/API/UI shipped.",
+    "implemented_scope": "Frontend bounded static candidates and actual immutable frontend/backend MySQL/browser pairing; independent cloud native/MySQL/browser CI; independent backend candidate builder/inspector locally tested. Authenticated release composition and new-format installation remain incomplete. No built-in upgrade executor/API/UI shipped.",
     "pending": [
       "U01 authenticated three-repository composition",
       "U02 protected native upgrade services",

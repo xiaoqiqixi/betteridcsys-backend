@@ -21,6 +21,14 @@
 
 保留的 `frontend-source-pair.json` 分别记录后端和前端 SHA，静态候选包及清单记录本次实际构建内容；它们不是 Release 或独立签名。发布时仍需完成固定来源验签、前后端资产配对、安装/升级/备份/恢复和回滚门禁。修改配对文件必须重新完成相关 CI，不能继承其他源码的通过结果。
 
+### 独立后端候选制品
+
+[backend_bundle.py](../../scripts/backend_bundle.py) 从当前已提交的后端 Git 快照构建 Linux amd64 API 与插件宿主，保留迁移、部署资源、文档、Go 模块与原始许可证。它不检出、构建或夹带前端；`BACKEND.json` 单独记录后端 SHA 和 `FRONTEND_PAIR.json` 的前端身份。两个仓库不是同一来源提交。
+
+公开 CLI 提供 `build --source-sha SHA --output NEW_DIRECTORY` 和 `inspect --manifest FILE --archive FILE --expected-source-sha SHA --expected-frontend-sha SHA`。构建要求非 root、干净源码与全长提交；只读检查验证有界单一 gzip、规范 tar、固定文件布局、Linux amd64 二进制、完整清单及精确配对。拒绝重复字段、链接、路径穿越、夹带前端、缺少迁移或改写已有输出。测试使用真实 Git、Go 与制品字节，不以模拟 ELF 代替构建。
+
+Ubuntu22/24 CI 在实库回归后各构建实际后端两次并比较文件，制品名绑定运行 ID 与 attempt。`backend-tar-v1` 是新的独立后端内容格式，**不是旧 `raw-binaries-v1` 安装包**；内容摘要也不是来源签名。旧安装器不接受它，不能手工复制成旧 `BUILD.json` 或伪造安装收据。三仓库发行认证、前端发行资产绑定、新安装/升级消费路径及旧实例迁移完成前，只保留候选，不作为用户下载入口。
+
 ## 设计与实施
 
 - [内置升级方案](BUILTIN_UPGRADES.md)：财务整站、云主控及节点的受控升级。
