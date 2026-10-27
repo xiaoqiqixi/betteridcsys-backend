@@ -211,6 +211,13 @@ README 面向安装使用：功能简介、一键安装入口、使用手册与�
 
 上一原生轮的 Ubuntu22 在准备阶段返回泛化拒绝，尚未确定根因；Ubuntu24 在进入 guest 测试前达到固定 VM 时限。两份失败产物已独立校验大小和摘要，宿主前后网络均未变化。补充固定阶段错误码，并从新的恢复场景 seed 移除不需要的测试 ELF；没有删安全断言、延长原 30 分钟 VM 限制或盲目放行账号。
 
-新场景保留所有准备断言，并增加真实隔离 MySQL 源快照 → 签名 Ubuntu22/24 目标安装/导入，验证类型值、只读服务器上的重入、篡改行及外键拒绝。源主机身份材料仍为合成，不代替真实源隔离导出或节点接管。本地 Go race/vet/Linux 构建、Python 26/19/111/2/53 项和 actionlint 通过；本地 SQL 明确跳过。对应 [同 SHA CI](https://github.com/xiaoqiqixi/betteridcsys-cloud/actions/runs/40587676929) 正在运行，原生 SQL/目标导入与浏览器回归尚未确认，不发布。
+新场景保留所有准备断言，并增加真实隔离 MySQL 源快照 → 签名 Ubuntu22/24 目标安装/导入，验证类型值、只读服务器上的重入、篡改行及外键拒绝。源主机身份材料仍为合成，不代替真实源隔离导出或节点接管。本地 Go race/vet/Linux 构建、Python 26/19/111/2/53 项和 actionlint 通过；本地 SQL 明确跳过。对应 [同 SHA CI](https://github.com/xiaoqiqixi/betteridcsys-cloud/actions/runs/40587676929) 已结束：12 门通过、2 个原生目标恢复门失败。真实 MySQL22/24 均通过完整导入、结构证明及篡改拒绝，浏览器回归通过；两个签名 Ubuntu 目标均在 `target-provision` 返回 `TARGET_RESTORE_SERVER_INVENTORY_REJECTED`，尚未到达原生目标导入，不能将核心 SQL 通过写成完整迁移通过。两份原生失败 ZIP 及浏览器 ZIP 的大小/SHA256 已独立核验。
 
 后续仍接材料/配置、会话撤销、单活接管、重启和迁移 UI，并继续完整269项/1625末级清单、内置升级和三个新仓库正式发行；旧仓库与历史资产保持不动。
+
+
+## 2026-10-28 增量：原生账户诊断边界
+
+`5e5c561` 的 [CI 40591001428](https://github.com/xiaoqiqixi/betteridcsys-cloud/actions/runs/40591001428) 已结束，仍为12门通过、两个原生目标恢复失败。真实 MySQL22/24、浏览器和两平台 libvirt 准备通过；目标均停在账户清单拒绝，诊断对象为空，不能据此推断或放行任何维护账户。新失败 ZIP 与浏览器 ZIP 已核验大小/SHA256，宿主网络未改变。
+
+`5b26bbc` 只修诊断链：允许两个明确布尔表达式的 MySQL JSON 布尔编码并规范成0/1；其余计数保持整数与上限检查。查询/解码失败只返回固定错误码，不输出账户名、凭据、认证字符串或原始 stderr。相同只读 SQL 和解析器新增到真实隔离 MySQL 检查，避免再次只测一个虚构 JSON。56项诊断/fixture合同、111项安装器合同、2项入口测试及 Python3.10/actionlint 已通过；[新同SHA CI](https://github.com/xiaoqiqixi/betteridcsys-cloud/actions/runs/40594690388) 正在执行。没有修改生产允许账户清单，尚未修复原生恢复阻塞，不能发布。
