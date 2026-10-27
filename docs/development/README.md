@@ -11,6 +11,14 @@
 
 实库测试只使用名称含 `_test` 的隔离库。Ubuntu22/24 CI 创建 socket-only MySQL 并要求 Go 测试零跳过；没有 DSN 的单元检查不能代替实库回归。浏览器、安装、升级与恢复需各自的独立证据。
 
+### 独立前后端配对验收
+
+[FRONTEND_PAIR.json](../../FRONTEND_PAIR.json)固定前端仓库 ID、完整提交、版本和兼容文档摘要。CI 先核验 GitHub 仓库身份与两份独立 Git 源码，再构建前端；不从可变 main、旧前端或 demo 数据回退。前端仍是独立仓库，临时检出到 `vps-billing/frontend/` 只用于既有浏览器入口，不导入后端 Git 历史。
+
+`Real MySQL financial browser acceptance` 连接真实 Go API、独立 MySQL 和严格 HTTPS；只在专用 Firefox 配置中信任临时测试 CA，不改宿主证书信任。检查客户/管理员、中英文、手机/桌面、错误文案与历史账务数据不变。现有浏览器只读业务检查不替代 Go 事务测试、实际支付渠道或原生升级验收。
+
+保留的 `frontend-source-pair.json` 分别记录后端和前端 SHA，静态候选包及清单记录本次实际构建内容；它们不是 Release 或独立签名。发布时仍需完成固定来源验签、前后端资产配对、安装/升级/备份/恢复和回滚门禁。修改配对文件必须重新完成相关 CI，不能继承其他源码的通过结果。
+
 ## 设计与实施
 
 - [内置升级方案](BUILTIN_UPGRADES.md)：财务整站、云主控及节点的受控升级。

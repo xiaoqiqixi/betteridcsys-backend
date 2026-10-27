@@ -25,6 +25,8 @@ jobs:
         with:
           go-version: '1.27.3'
           cache: false
+      - name: Independent frontend source-pair CLI contracts
+        run: python3 -B scripts/test_frontend_pair.py
       - name: Prepare isolated native runner
         run: bash vps-billing/deploy/ci/prepare-native-runner.sh
       - name: Real MySQL regression with no skipped Go tests
@@ -43,3 +45,96 @@ jobs:
       - name: Dependency security gate
         working-directory: vps-billing/backend
         run: go run golang.org/x/vuln/cmd/govulncheck@v1.9.0 -format=text -show=version,verbose ./...
+
+  financial-browser-mysql:
+    name: Real MySQL financial browser acceptance
+    if: github.repository == 'xiaoqiqixi/betteridcsys-backend' && github.event.repository.private == false
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - name: Resolve the reviewed immutable frontend source, never latest/main
+        id: pair
+        run: python3 -I scripts/frontend_pair.py pin >> "$GITHUB_OUTPUT"
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          repository: xiaoqiqixi/betteridcsys-frontend
+          ref: ${{ steps.pair.outputs.source_sha }}
+          path: vps-billing/frontend
+          persist-credentials: false
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e
+        with:
+          go-version: '1.27.3'
+          cache: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1
+        with:
+          node-version: '24.19.0'
+          package-manager-cache: false
+      - name: Verify official repository ID, both Git sources and the compatibility contract
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          gh api repos/xiaoqiqixi/betteridcsys-frontend --jq '{id,full_name,private,default_branch,owner:{id:.owner.id}}' > "$RUNNER_TEMP/frontend-repository.json"
+          python3 -I scripts/frontend_pair.py verify --repository-metadata "$RUNNER_TEMP/frontend-repository.json" \
+            --backend-source-sha "$GITHUB_SHA" > "$RUNNER_TEMP/frontend-source-pair.json"
+      - name: Build the pinned real frontend and record its bounded static bundle
+        working-directory: vps-billing/frontend
+        env:
+          FRONTEND_SHA: ${{ steps.pair.outputs.source_sha }}
+        run: |
+          set -euo pipefail
+          npm ci --ignore-scripts --no-audit --no-fund
+          npm run build
+          python3 -I scripts/frontend_bundle.py build --source-root "$PWD" --output "$RUNNER_TEMP/paired-frontend" \
+            --source-sha "$FRONTEND_SHA" --source-date-epoch "$(git show -s --format=%ct HEAD)"
+          version=$(node -p 'JSON.parse(require("fs").readFileSync("package.json","utf8")).version')
+          core=$(node -p 'JSON.parse(require("fs").readFileSync("compatibility.json","utf8")).core_version')
+          python3 -I scripts/frontend_bundle.py inspect --manifest "$RUNNER_TEMP/paired-frontend/FRONTEND.json" \
+            --archive "$RUNNER_TEMP/paired-frontend/aster-finance-frontend-$version.tar.gz" \
+            --expected-source-sha "$FRONTEND_SHA" --expected-core-version "$core"
+      - name: Require clean source checkouts after the build
+        run: |
+          python3 -I scripts/frontend_pair.py verify --repository-metadata "$RUNNER_TEMP/frontend-repository.json" \
+            --backend-source-sha "$GITHUB_SHA" > "$RUNNER_TEMP/frontend-source-pair.json"
+      - name: Prepare disposable native runner
+        run: bash vps-billing/deploy/ci/prepare-native-runner.sh
+      - name: Install pinned private Firefox, not host trust
+        run: |
+          set -euo pipefail
+          umask 077
+          tools_root=$(mktemp -d "$ASTER_NATIVE_FIXTURE_ROOT/browser-tools.XXXXXXXX")
+          npm install --prefix "$tools_root" --ignore-scripts --no-audit --no-fund --save-exact playwright@1.64.0
+          export PLAYWRIGHT_BROWSERS_PATH="$tools_root/browsers"
+          node "$tools_root/node_modules/playwright/cli.js" install --with-deps firefox
+          sudo apt-get install --no-install-recommends -y libnss3-tools
+          printf 'PLAYWRIGHT_MODULE_DIR=%s\nPLAYWRIGHT_BROWSERS_PATH=%s\n' "$tools_root/node_modules" "$PLAYWRIGHT_BROWSERS_PATH" >> "$GITHUB_ENV"
+      - name: Strict TLS and real MySQL UI, immutable financial history, no demo fallback
+        run: RUNNER_TEMP="$ASTER_NATIVE_FIXTURE_ROOT" bash vps-billing/deploy/ci/mysql-native.sh -- bash vps-billing/deploy/ci/browser-mysql.sh --repo-root "$GITHUB_WORKSPACE" --output "$ASTER_NATIVE_FIXTURE_ROOT/financial-browser-mysql"
+      - name: Retain only paired source identities, bounded candidate and synthetic browser evidence
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        with:
+          name: paired-financial-browser-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            ${{ runner.temp }}/frontend-source-pair.json
+            ${{ runner.temp }}/paired-frontend/FRONTEND.json
+            ${{ runner.temp }}/paired-frontend/*.tar.gz
+            ${{ env.ASTER_NATIVE_FIXTURE_ROOT }}/financial-browser-mysql/summary.json
+            ${{ env.ASTER_NATIVE_FIXTURE_ROOT }}/financial-browser-mysql/report.json
+            ${{ env.ASTER_NATIVE_FIXTURE_ROOT }}/financial-browser-mysql/tls.json
+            ${{ env.ASTER_NATIVE_FIXTURE_ROOT }}/financial-browser-mysql/screenshots/*.png
+          if-no-files-found: warn
+          retention-days: 7
+          overwrite: false
+      - name: Remove only owned native scratch and private trust
+        if: always()
+        run: |
+          if [[ -n ${ASTER_NATIVE_FIXTURE_ROOT:-} ]]; then
+            [[ $ASTER_NATIVE_FIXTURE_ROOT =~ ^/run/aster-native\.[A-Za-z0-9]{8}$ ]]
+            [[ -d $ASTER_NATIVE_FIXTURE_ROOT && ! -L $ASTER_NATIVE_FIXTURE_ROOT ]]
+            [[ $(stat -c %u "$ASTER_NATIVE_FIXTURE_ROOT") == "$(id -u)" ]]
+            sudo rm -rf --one-file-system -- "$ASTER_NATIVE_FIXTURE_ROOT"
+          fi

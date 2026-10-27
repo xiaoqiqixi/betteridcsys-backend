@@ -12,3 +12,5 @@ artifacts/
 *.test
 bin/
 __pycache__/
+# Independent frontend checkout used only by paired CI; never vendor its source.
+/vps-billing/frontend/

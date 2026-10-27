@@ -1,0 +1,9 @@
+{
+  "schema": 1,
+  "repository": "xiaoqiqixi/betteridcsys-frontend",
+  "repository_id": 1435344023,
+  "source_sha": "1c78d2e16310d57f9d1003e8bdd7a7dad88c467a",
+  "frontend_version": "0.5.10",
+  "core_version": "0.5.10",
+  "compatibility_sha256": "8b8c9ad7ba76519113b02cc50d163ed2cc59ca3c3461347950727646f515da17"
+}
