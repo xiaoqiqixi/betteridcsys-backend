@@ -9964,13 +9964,35 @@
     },
     "backend_candidate": {
       "format": "backend-tar-v1",
-      "state": "implemented_local_ci_pending",
+      "state": "ci_verified_at_e6eb16c; subsequent runtime integration pending",
       "cli_tests": 10,
       "build_scope": "Actual Git snapshot and Go compiler; separate pinned frontend identity, no frontend code in backend asset. Local fixtures prove the CLI, not production package or host installation.",
       "ci_scope": "Ubuntu22/24 actual backend dual build, byte comparison and bounded inspection added after real MySQL gates; new-source results pending.",
       "authenticated_release": false,
       "legacy_installer_compatible": false,
-      "production_backend_changed": false
+      "production_backend_changed": false,
+      "verified_source": "e6eb16c6e9d2f28b97ee570d9ebb592c3b3d4747",
+      "ci": "https://github.com/xiaoqiqixi/betteridcsys-backend/actions/runs/40488645705",
+      "ci_state": "success_4_of_4",
+      "actual_linux_candidates": {
+        "ubuntu22": true,
+        "ubuntu24": true,
+        "cross_platform_byte_identical": true,
+        "files": 71,
+        "asset_sha256": "dd8512e7922eb15c7198b650d2a8dad17cee2ca2483c8f2b8aae6256c5a508ce"
+      }
+    },
+    "paired_runtime_candidate": {
+      "state": "implemented_local_ci_pending",
+      "format": "paired-runtime-candidate-v1",
+      "cli_tests": 6,
+      "portable_browser_guards": 49,
+      "compiled_go_overlay": true,
+      "actual_staging_files": 109,
+      "implementation": "Exact candidate API binary and static frontend; private loopback process, strict TLS browser, fixture history comparison and explicit shutdown proof. No source-handler fallback when candidate mode is selected.",
+      "actual_packaged_api_browser_run": "pending_new_source_ci",
+      "authenticated_release": false,
+      "native_install_upgrade_acceptance": false
     }
   },
   "builtin_upgrades": {
@@ -9982,7 +10004,7 @@
     ],
     "contract": "development/BUILTIN_UPGRADES.md",
     "state": "design_and_u01_partial_ci",
-    "implemented_scope": "Frontend bounded static candidates and actual immutable frontend/backend MySQL/browser pairing; independent cloud native/MySQL/browser CI; independent backend candidate builder/inspector locally tested. Authenticated release composition and new-format installation remain incomplete. No built-in upgrade executor/API/UI shipped.",
+    "implemented_scope": "Independent frontend/backend candidate formats and immutable source pairing; e6eb16c Ubuntu22/24 real builds and MySQL, strict-TLS source browser passed. Candidate-byte staging and actual packaged-API browser integration locally tested and awaiting its own CI. Authenticated release composition, native installation and built-in upgrade executor/API/UI remain incomplete.",
     "pending": [
       "U01 authenticated three-repository composition",
       "U02 protected native upgrade services",

@@ -279,7 +279,7 @@ def build(args):
             'files': len(files), 'asset': name}
 
 
-def inspect(args):
+def verified_content(args):
     raw_manifest = PAIR.regular(args.manifest, MAX_MANIFEST)
     value = PAIR.decode(raw_manifest)
     require(isinstance(value, dict) and set(value) == {'schema', 'kind', 'repository', 'repository_id', 'version',
@@ -314,8 +314,13 @@ def inspect(args):
     inventory = [{'path': name, 'size': len(data), 'sha256': digest(data)} for name, data in sorted(files.items())]
     require(encode(value['files']) == encode(inventory), 'exact_inventory_required')
     complete_inventory(files, pin)
+    return value, files, raw_manifest
+
+
+def inspect(args):
+    value, files, _ = verified_content(args)
     return {'status': 'content_verified', 'authenticated_source': False, 'installable_release': False,
-            'source_commit': value['source_commit'], 'frontend_source_commit': pin['source_sha'], 'files': len(files)}
+            'source_commit': value['source_commit'], 'frontend_source_commit': value['frontend_pair']['source_sha'], 'files': len(files)}
 
 
 def main():

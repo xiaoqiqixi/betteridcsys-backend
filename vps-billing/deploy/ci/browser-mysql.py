@@ -15,6 +15,7 @@ import shutil
 import signal
 import stat
 import struct
+import subprocess
 import sys
 import tempfile
 import time
@@ -177,6 +178,32 @@ def clean_environment(source, scratch, billing):
     return env
 
 
+def candidate_runtime(directory, root, temp):
+    """Inspect our owned two-source candidate; never accept an arbitrary executable."""
+    if directory is None:
+        return None
+    candidate = private_dir(directory)
+    if candidate != temp / "paired-runtime":
+        raise Failure("Candidate must be the fixed owned runtime beneath native scratch")
+    source = os.environ.get("GITHUB_SHA", "")
+    if not re.fullmatch(r"[0-9a-f]{40}", source):
+        raise Failure("Candidate requires the exact CI source")
+    result = subprocess.run([sys.executable, "-I", str(root / "scripts/pair_runtime.py"), "verify",
+                             "--directory", str(candidate), "--backend-source", source],
+                            stdin=subprocess.DEVNULL, capture_output=True, timeout=30)
+    if result.returncode != 0 or len(result.stdout) > 8192:
+        raise Failure("Owned paired candidate content verification failed")
+    value = json.loads(result.stdout)
+    if (not isinstance(value, dict) or value.get("backend_source") != source or
+            value.get("authenticated_release") is not False or value.get("installed") is not False):
+        raise Failure("Candidate is not a verified unauthenticated test tree")
+    proof = json.loads(regular(candidate / "manifests/BACKEND.json").read_text())
+    matches = [entry["sha256"] for entry in proof["files"] if entry["path"] == "bin/aster-api"]
+    if len(matches) != 1 or not re.fullmatch(r"[a-f0-9]{64}", matches[0]):
+        raise Failure("Candidate API digest is missing")
+    return {"directory": candidate, "api_sha256": matches[0], "pair": value}
+
+
 def export_public(scratch, output):
     public = scratch / "public"
     names = {entry.name for entry in public.iterdir()}
@@ -218,13 +245,16 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--repo-root", required=True)
     parser.add_argument("--output", required=True)
+    parser.add_argument("--candidate-root", help="Owned validated paired runtime; execute the actual packaged API")
     args = parser.parse_args()
     os.umask(0o077)
     stage, supervisor, fixture, scratch, output = "input-validation", None, None, None, None
     passed, cleanup_ok, output_owned = False, True, False
     browser_progress, progress_rejected = None, False
+    candidate, packaged_api_passed = None, False
     try:
         root, billing, temp, output = validate(args)
+        candidate = candidate_runtime(args.candidate_root, root, temp)
         output.mkdir(mode=0o700)
         output_owned = True
         scratch = Path(tempfile.mkdtemp(prefix="aster-billing-browser.", dir=temp))
@@ -236,6 +266,11 @@ def main():
         signal.signal(signal.SIGINT, interrupted)
         signal.signal(signal.SIGTERM, interrupted)
         env = clean_environment(os.environ, scratch, billing)
+        if candidate is not None:
+            env.update({"ASTER_BILLING_BROWSER_DIST": str(candidate["directory"] / "web"),
+                        "ASTER_BILLING_BROWSER_API_BINARY": str(candidate["directory"] / "bin/aster-api"),
+                        "ASTER_BILLING_BROWSER_API_SHA256": candidate["api_sha256"],
+                        "ASTER_BILLING_BROWSER_CORE_VERSION": candidate["pair"]["version"]})
         serial = 0
         def run(arguments, timeout=120, required=(), child_env=None):
             nonlocal serial
@@ -279,10 +314,15 @@ def main():
         log = regular(scratch / "fixture.log", 5_000_000).read_text(errors="replace")
         if "--- PASS: TestOwnedBrowserMySQLFixture " not in log or re.search(r"--- (?:SKIP|FAIL):|DATA RACE", log):
             raise Failure("Required real MySQL fixture must pass without skipping")
+        if candidate is not None:
+            marker = regular(scratch / "packaged-api-passed", 128).read_text()
+            if marker != candidate["api_sha256"] + "\n":
+                raise Failure("Actual packaged API did not complete its verified lifecycle")
+            packaged_api_passed = True
         stage = "validate-public-evidence"
         export_public(scratch, output)
         passed = True
-    except (Failure, OSError, ValueError, KeyError, TypeError):
+    except (Failure, OSError, ValueError, KeyError, TypeError, subprocess.SubprocessError):
         # Do not expose raw subprocess/driver/credential-bearing exceptions.
         passed = False
     finally:
@@ -320,6 +360,10 @@ def main():
                        "actual_mysql_history_verified": passed, "owned_database_removed": passed,
                        "screenshots": SHOTS if passed else [], "financial_business_writes": 0 if passed else None,
                        "browser_progress": browser_progress, "browser_progress_rejected": progress_rejected}
+            if candidate is not None:
+                summary.update({"candidate_pair": candidate["pair"],
+                                "packaged_backend_executed": passed and packaged_api_passed,
+                                "packaged_frontend_served": passed and packaged_api_passed})
             try:
                 (output / "summary.json").write_text(json.dumps(summary, indent=2) + "\n")
             except Exception:

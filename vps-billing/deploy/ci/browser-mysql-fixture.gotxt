@@ -9,19 +9,157 @@ import (
 	"encoding/json"
 	"net"
 	"net/http"
+	"net/http/httputil"
+	"net/url"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"reflect"
 	"regexp"
 	"runtime"
 	"sort"
 	"strings"
+	"sync"
 	"sync/atomic"
+	"syscall"
 	"testing"
 	"time"
 
 	"golang.org/x/crypto/bcrypt"
 )
+
+// Only the opted-in CI path executes the already content-verified candidate.
+// It remains unprivileged, loopback-only and owned by the fixture process group.
+func browserPackagedAPI(t *testing.T, ctx context.Context, caseDir, origin, dsn string) (http.Handler, func() bool) {
+	t.Helper()
+	binary := os.Getenv("ASTER_BILLING_BROWSER_API_BINARY")
+	wanted := os.Getenv("ASTER_BILLING_BROWSER_API_SHA256")
+	version := os.Getenv("ASTER_BILLING_BROWSER_CORE_VERSION")
+	info, err := os.Lstat(binary)
+	resolved, resolveErr := filepath.EvalSymlinks(binary)
+	if err != nil || resolveErr != nil || !filepath.IsAbs(binary) || resolved != binary || !info.Mode().IsRegular() || info.Mode().Perm() != 0555 || info.Size() < 64 || info.Size() > 32*1024*1024 || !regexp.MustCompile(`^[a-f0-9]{64}$`).MatchString(wanted) || !regexp.MustCompile(`^[0-9]+\.[0-9]+\.[0-9]+$`).MatchString(version) {
+		t.Fatal("verified packaged API identity is required")
+	}
+	raw, err := os.ReadFile(binary)
+	sum := sha256.Sum256(raw)
+	if err != nil || hex.EncodeToString(sum[:]) != wanted {
+		t.Fatal("packaged API changed before execution")
+	}
+	versionContext, cancelVersion := context.WithTimeout(ctx, 10*time.Second)
+	defer cancelVersion()
+	probe := exec.CommandContext(versionContext, binary, "-version")
+	probe.Env = []string{"PATH=/usr/bin:/bin", "LANG=C.UTF-8"}
+	got, err := probe.Output()
+	if err != nil || string(got) != "Aster Core "+version+"\n" {
+		t.Fatal("actual packaged API version mismatch")
+	}
+	for name, value := range map[string]string{"api-session-secret": ID() + ID(), "api-mysql-dsn": dsn} {
+		path := filepath.Join(caseDir, name)
+		file, err := os.OpenFile(path, os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0600)
+		if err != nil {
+			t.Fatal("cannot create owned private API configuration")
+		}
+		_, writeErr := file.WriteString(value)
+		closeErr := file.Close()
+		if writeErr != nil || closeErr != nil {
+			t.Fatal("cannot finish owned private API configuration")
+		}
+	}
+	reservation, err := net.Listen("tcp4", "127.0.0.1:0")
+	if err != nil {
+		t.Fatal("cannot select a loopback API port")
+	}
+	address := reservation.Addr().String()
+	if reservation.Close() != nil {
+		t.Fatal("cannot release owned API port reservation")
+	}
+	log, err := os.OpenFile(filepath.Join(caseDir, "packaged-api.log"), os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0600)
+	if err != nil {
+		t.Fatal("cannot open private API diagnostics")
+	}
+	command := exec.Command(binary)
+	command.Dir = caseDir
+	command.Env = []string{"PATH=/usr/bin:/bin", "LANG=C.UTF-8", "APP_MODE=production", "APP_ORIGIN=" + origin,
+		"LISTEN_ADDR=" + address, "MYSQL_DSN_FILE=" + filepath.Join(caseDir, "api-mysql-dsn"),
+		"MYSQL_ALLOW_INSECURE=true", // Already verified: private owned local Unix socket, never TCP.
+		"SESSION_SECRET_FILE=" + filepath.Join(caseDir, "api-session-secret"),
+		"PAYMENT_PROVIDER=payment.disabled", "EMAIL_PROVIDER=email.disabled"}
+	command.Stdout, command.Stderr = log, log
+	if command.Start() != nil {
+		log.Close()
+		t.Fatal("cannot start the actual packaged API")
+	}
+	done := make(chan struct{})
+	var waitErr error
+	go func() { waitErr = command.Wait(); close(done) }()
+	var once sync.Once
+	stoppedCleanly := false
+	stop := func() bool {
+		once.Do(func() {
+			defer log.Close()
+			select {
+			case <-done:
+				return // Exiting without our shutdown request is never a clean acceptance.
+			default:
+			}
+			if command.Process.Signal(syscall.SIGTERM) == nil {
+				select {
+				case <-done:
+					stoppedCleanly = waitErr == nil
+					return
+				case <-time.After(12 * time.Second):
+				}
+			}
+			_ = command.Process.Kill()
+			select {
+			case <-done:
+			case <-time.After(3 * time.Second):
+			}
+		})
+		return stoppedCleanly
+	}
+	// If readiness fails, no caller receives stop. Cleanup must still run.
+	ready := false
+	defer func() {
+		if !ready && !stop() {
+			t.Error("failed packaged API startup required forced cleanup")
+		}
+	}()
+	target, err := url.Parse("http://" + address)
+	if err != nil {
+		t.Fatal("invalid owned loopback API address")
+	}
+	transport := &http.Transport{Proxy: nil, MaxIdleConns: 4, IdleConnTimeout: 5 * time.Second}
+	client := &http.Client{Transport: transport, Timeout: time.Second, CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }}
+	deadline := time.Now().Add(45 * time.Second)
+	for !ready && time.Now().Before(deadline) {
+		select {
+		case <-done:
+			t.Fatal("packaged API exited before readiness")
+		case <-ctx.Done():
+			t.Fatal("packaged API readiness context expired")
+		default:
+		}
+		response, requestErr := client.Get(target.String() + "/readyz")
+		if requestErr == nil {
+			ready = response.StatusCode == http.StatusOK
+			response.Body.Close()
+		}
+		if !ready {
+			time.Sleep(100 * time.Millisecond)
+		}
+	}
+	transport.CloseIdleConnections()
+	if !ready {
+		t.Fatal("packaged API did not become ready")
+	}
+	proxy := httputil.NewSingleHostReverseProxy(target)
+	proxy.Transport = transport
+	proxy.ErrorHandler = func(w http.ResponseWriter, _ *http.Request, _ error) {
+		http.Error(w, "packaged API unavailable", http.StatusBadGateway)
+	}
+	return proxy, stop
+}
 
 // Every row except short-lived authentication sessions is compared after UI
 // acceptance. This includes exact money, issuer/currency/product snapshots,
@@ -234,8 +372,19 @@ func TestOwnedBrowserMySQLFixture(t *testing.T) {
 	}
 	defer listener.Close()
 	origin := "https://localhost:" + strings.Split(listener.Addr().String(), ":")[1]
-	app := NewApp(m, Config{Demo: false, Origin: origin, Secret: ID() + ID(), SecureCookie: true})
-	api := app.Handler()
+	var api http.Handler
+	var stopPackagedAPI func() bool
+	if os.Getenv("ASTER_BILLING_BROWSER_API_BINARY") != "" {
+		api, stopPackagedAPI = browserPackagedAPI(t, ctx, caseDir, origin, cfg.FormatDSN())
+		defer func() {
+			if !stopPackagedAPI() {
+				t.Error("packaged API did not stop cleanly")
+			}
+		}()
+	} else {
+		app := NewApp(m, Config{Demo: false, Origin: origin, Secret: ID() + ID(), SecureCookie: true})
+		api = app.Handler()
+	}
 	dist := os.Getenv("ASTER_BILLING_BROWSER_DIST")
 	if info, e := os.Stat(filepath.Join(dist, "index.html")); e != nil || !filepath.IsAbs(dist) || !info.Mode().IsRegular() {
 		t.Fatal("real frontend dist is required")
@@ -309,6 +458,9 @@ waiting:
 	if server.Shutdown(shutdown) != nil {
 		t.Fatal("owned HTTPS service did not drain")
 	}
+	if stopPackagedAPI != nil && !stopPackagedAPI() {
+		t.Fatal("actual packaged API shutdown failed")
+	}
 	if blocked.Load() != 0 || logins.Load() != 4 || logouts.Load() != 4 || audits.Load() < 4 {
 		t.Fatal("required real API acceptance did not complete or attempted a business write")
 	}
@@ -332,5 +484,10 @@ waiting:
 	// This marker appears only after row equality AND verified owned-db removal.
 	if os.WriteFile(filepath.Join(caseDir, "fixture-passed"), []byte("real-mysql-history-and-cleanup-verified\n"), 0600) != nil {
 		t.Fatal("cannot persist bounded fixture result")
+	}
+	if stopPackagedAPI != nil {
+		if os.WriteFile(filepath.Join(caseDir, "packaged-api-passed"), []byte(os.Getenv("ASTER_BILLING_BROWSER_API_SHA256")+"\n"), 0600) != nil {
+			t.Fatal("cannot persist actual packaged API acceptance")
+		}
 	}
 }

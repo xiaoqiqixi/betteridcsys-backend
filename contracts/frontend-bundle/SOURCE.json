@@ -1,0 +1,19 @@
+{
+  "schema": 1,
+  "repository": "xiaoqiqixi/betteridcsys-frontend",
+  "repository_id": 1435344023,
+  "source_commit": "aa86bf06eb4de9dd4fc95ff8d902c164de76784f",
+  "purpose": "Reviewed static-site content protocol only; no frontend application source or release authentication.",
+  "files": [
+    {
+      "upstream_path": "scripts/frontend_bundle.py",
+      "path": "frontend_bundle.py",
+      "sha256": "8d4d8f9a050da51bef76084be835c320ac297222b33df9e9f709679d5e1981fa"
+    },
+    {
+      "upstream_path": "LICENSE",
+      "path": "LICENSE",
+      "sha256": "c71d239df91726fc519c6eb72d318ec65820627232b2f796219e87dcf35d0ab4"
+    }
+  ]
+}
