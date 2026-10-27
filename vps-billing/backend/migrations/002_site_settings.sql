@@ -1,0 +1,4 @@
+CREATE TABLE IF NOT EXISTS site_settings (
+ id TINYINT PRIMARY KEY, document JSON NOT NULL, CHECK(id=1)
+) ENGINE=InnoDB;
+ALTER TABLE invoices ADD COLUMN issuer_snapshot JSON NULL;

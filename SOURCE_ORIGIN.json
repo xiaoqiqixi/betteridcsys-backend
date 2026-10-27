@@ -1,0 +1,1618 @@
+{
+  "schema": 1,
+  "source_repository": "xiaoqiqixi/betteridcsys",
+  "source_commit": "fa4d2139ff5ecfc2802c0825e839134ca488d138",
+  "component": "betteridcsys-backend",
+  "source_is_verified_committed_main": true,
+  "local_uncommitted_changes_included": false,
+  "files": {
+    "LICENSE": {
+      "upstream_path": "LICENSE",
+      "upstream_sha256": "c71d239df91726fc519c6eb72d318ec65820627232b2f796219e87dcf35d0ab4",
+      "exported_sha256": "c71d239df91726fc519c6eb72d318ec65820627232b2f796219e87dcf35d0ab4"
+    },
+    "docs/CLOUD_PUBLIC_ACCEPTANCE.md": {
+      "upstream_path": "docs/CLOUD_PUBLIC_ACCEPTANCE.md",
+      "upstream_sha256": "f47325c950e78f28e395e81f5f3e7f01bb1349021ed8958de4ccf64eb1c5233c",
+      "exported_sha256": "0deb360143ace78734d13338f5b89440077aeb3d3291cced357becf462ea2919",
+      "adapted_for_independent_repository": true
+    },
+    "docs/CORE_PUBLIC_PREPARE_ACCEPTANCE.md": {
+      "upstream_path": "docs/CORE_PUBLIC_PREPARE_ACCEPTANCE.md",
+      "upstream_sha256": "3e4ba13abee606177b7616b087faa975278ec29528abf745b4ec3dfc42d6538c",
+      "exported_sha256": "3e4ba13abee606177b7616b087faa975278ec29528abf745b4ec3dfc42d6538c"
+    },
+    "docs/EXECUTION-20261025.md": {
+      "upstream_path": "docs/EXECUTION-20261025.md",
+      "upstream_sha256": "41426f5145116ae0ff224df30e4e8d5b252e35765c6ff08c021d2ef1dc3d3261",
+      "exported_sha256": "41426f5145116ae0ff224df30e4e8d5b252e35765c6ff08c021d2ef1dc3d3261"
+    },
+    "docs/EXECUTION-20261026.md": {
+      "upstream_path": "docs/EXECUTION-20261026.md",
+      "upstream_sha256": "3eb446e0b4378c47cc66747d47cfd1a6e846b5002281ecaffb09fda01a8f0004",
+      "exported_sha256": "3eb446e0b4378c47cc66747d47cfd1a6e846b5002281ecaffb09fda01a8f0004"
+    },
+    "docs/EXECUTION-20261027.md": {
+      "upstream_path": "docs/EXECUTION-20261027.md",
+      "upstream_sha256": "bc178c9b66105c01745a497b6e872466d86f69c3e98d385bb774b6f8deb2cc1a",
+      "exported_sha256": "bc178c9b66105c01745a497b6e872466d86f69c3e98d385bb774b6f8deb2cc1a"
+    },
+    "docs/EXECUTION_PLAN.md": {
+      "upstream_path": "docs/EXECUTION_PLAN.md",
+      "upstream_sha256": "68a22df18a3d8b2bae422ad59324f104eb68bf86be8e1406cccfa9fbcf0ba80f",
+      "exported_sha256": "68a22df18a3d8b2bae422ad59324f104eb68bf86be8e1406cccfa9fbcf0ba80f"
+    },
+    "docs/FINANCE_IDENTITY_SESSION_FENCE.md": {
+      "upstream_path": "docs/FINANCE_IDENTITY_SESSION_FENCE.md",
+      "upstream_sha256": "3e72cdc022f21f4125ecdd9be7ee0f7311ead0c165c78d5e282aa04265ff7fb6",
+      "exported_sha256": "3e72cdc022f21f4125ecdd9be7ee0f7311ead0c165c78d5e282aa04265ff7fb6"
+    },
+    "docs/FINANCE_NATIVE_22_24.md": {
+      "upstream_path": "docs/FINANCE_NATIVE_22_24.md",
+      "upstream_sha256": "df49200a0f34505bb67cf209eef3aa97bc0decb5d6f6c13a1248e2f9ee279319",
+      "exported_sha256": "df49200a0f34505bb67cf209eef3aa97bc0decb5d6f6c13a1248e2f9ee279319"
+    },
+    "docs/FINANCE_STAFF_ACCESS.md": {
+      "upstream_path": "docs/FINANCE_STAFF_ACCESS.md",
+      "upstream_sha256": "fcbedf09644b94aa87e59ee44ba5622e1b47c12f3e69530a2ef433355174b9f4",
+      "exported_sha256": "fcbedf09644b94aa87e59ee44ba5622e1b47c12f3e69530a2ef433355174b9f4"
+    },
+    "docs/HISTORY_REWRITE.md": {
+      "upstream_path": "docs/HISTORY_REWRITE.md",
+      "upstream_sha256": "457d6af57a686974d37853e93003ac6838b7cb119250ff7fcf732cfd0c2aa81c",
+      "exported_sha256": "457d6af57a686974d37853e93003ac6838b7cb119250ff7fcf732cfd0c2aa81c"
+    },
+    "docs/IDENTITY_OPERATIONS.md": {
+      "upstream_path": "docs/IDENTITY_OPERATIONS.md",
+      "upstream_sha256": "c5f8e471ea67e6dbb31eb5ac9950e21d5a93d65fc71f01af0aa86aff01978905",
+      "exported_sha256": "c5f8e471ea67e6dbb31eb5ac9950e21d5a93d65fc71f01af0aa86aff01978905"
+    },
+    "docs/IDENTITY_PERMISSION_PLAN.md": {
+      "upstream_path": "docs/IDENTITY_PERMISSION_PLAN.md",
+      "upstream_sha256": "7c17bc933a3977d6abc4a11e521c6fe01936081cccda182fd2415d7596fbcd08",
+      "exported_sha256": "7c17bc933a3977d6abc4a11e521c6fe01936081cccda182fd2415d7596fbcd08"
+    },
+    "docs/IDENTITY_SESSION_FENCE.md": {
+      "upstream_path": "docs/IDENTITY_SESSION_FENCE.md",
+      "upstream_sha256": "7d0821c74e8deac47778effc7bbb6e4e1f08b59a4f5fa399d9634082cfbee390",
+      "exported_sha256": "7d0821c74e8deac47778effc7bbb6e4e1f08b59a4f5fa399d9634082cfbee390"
+    },
+    "docs/README.md": {
+      "upstream_path": "docs/README.md",
+      "upstream_sha256": "e4ddbeadb43813133310c075c8ee20a4eeac7a50ac3b7aa21e2de49637451b3d",
+      "exported_sha256": "6af67bf5fc0fd42154a44f546531cfb95afbc23f1f43cafb77e7dfd010c2d427",
+      "adapted_for_independent_repository": true
+    },
+    "docs/execution-tracker.json": {
+      "upstream_path": "docs/execution-tracker.json",
+      "upstream_sha256": "4d833166774ed0bd356dd8d9073cdd9142f8abceb36df7fc0d6a32882c77e619",
+      "exported_sha256": "4d833166774ed0bd356dd8d9073cdd9142f8abceb36df7fc0d6a32882c77e619"
+    },
+    "docs/history-author-map.json": {
+      "upstream_path": "docs/history-author-map.json",
+      "upstream_sha256": "89064ffd7054f98662a428312a6aa667099bc77e8db1477e092ce9f8bd58f5d0",
+      "exported_sha256": "89064ffd7054f98662a428312a6aa667099bc77e8db1477e092ce9f8bd58f5d0"
+    },
+    "vps-billing/GLOSSARY.md": {
+      "upstream_path": "vps-billing/GLOSSARY.md",
+      "upstream_sha256": "6411617696a6103467b90166c81605b19576f25961c3e2ce3729c7a3c391fcb6",
+      "exported_sha256": "6411617696a6103467b90166c81605b19576f25961c3e2ce3729c7a3c391fcb6"
+    },
+    "vps-billing/backend/README.md": {
+      "upstream_path": "vps-billing/backend/README.md",
+      "upstream_sha256": "b866e6c356c5a87b76c4e549babb74059892dffc36493ab12c8e5acd0ca13376",
+      "exported_sha256": "b866e6c356c5a87b76c4e549babb74059892dffc36493ab12c8e5acd0ca13376"
+    },
+    "vps-billing/backend/cmd/plugin-host/main_linux.go": {
+      "upstream_path": "vps-billing/backend/cmd/plugin-host/main_linux.go",
+      "upstream_sha256": "0a2a2256472f622ec553ba0abcf07129c2be268f2eb69f00d8dffdff2186a6ce",
+      "exported_sha256": "0a2a2256472f622ec553ba0abcf07129c2be268f2eb69f00d8dffdff2186a6ce"
+    },
+    "vps-billing/backend/cmd/server/main.go": {
+      "upstream_path": "vps-billing/backend/cmd/server/main.go",
+      "upstream_sha256": "ee6637a991f6535e787d12af6cebd07ecf95ecfed22f7a89106a357f7d6df80c",
+      "exported_sha256": "ee6637a991f6535e787d12af6cebd07ecf95ecfed22f7a89106a357f7d6df80c"
+    },
+    "vps-billing/backend/cmd/server/main_test.go": {
+      "upstream_path": "vps-billing/backend/cmd/server/main_test.go",
+      "upstream_sha256": "33603f2c1dcae86c8573bdde3705db08c79da8291879e34a2b4bca606eba433e",
+      "exported_sha256": "33603f2c1dcae86c8573bdde3705db08c79da8291879e34a2b4bca606eba433e"
+    },
+    "vps-billing/backend/cmd/server/provisioning.go": {
+      "upstream_path": "vps-billing/backend/cmd/server/provisioning.go",
+      "upstream_sha256": "e0bed47504b6ee66612d58fb0d94037b6e6835fcf7347b9c2f5b9e3162d06655",
+      "exported_sha256": "e0bed47504b6ee66612d58fb0d94037b6e6835fcf7347b9c2f5b9e3162d06655"
+    },
+    "vps-billing/backend/cmd/server/provisioning_test.go": {
+      "upstream_path": "vps-billing/backend/cmd/server/provisioning_test.go",
+      "upstream_sha256": "bcf7d195b25a651b5b060744221b4b478f3d9d413d3be72fc61110020f1442fe",
+      "exported_sha256": "bcf7d195b25a651b5b060744221b4b478f3d9d413d3be72fc61110020f1442fe"
+    },
+    "vps-billing/backend/cmd/server/runtime.go": {
+      "upstream_path": "vps-billing/backend/cmd/server/runtime.go",
+      "upstream_sha256": "374ce10bc06a37dcddd16eacf736875f64ba5ce116bed44fc9b5197e5690ea03",
+      "exported_sha256": "374ce10bc06a37dcddd16eacf736875f64ba5ce116bed44fc9b5197e5690ea03"
+    },
+    "vps-billing/backend/cmd/server/runtime_test.go": {
+      "upstream_path": "vps-billing/backend/cmd/server/runtime_test.go",
+      "upstream_sha256": "3cf41ef3aa7d2b38440d8db2619626f14510509acdf5afaaaa1773493bf71d58",
+      "exported_sha256": "3cf41ef3aa7d2b38440d8db2619626f14510509acdf5afaaaa1773493bf71d58"
+    },
+    "vps-billing/backend/controllerapi/contract.go": {
+      "upstream_path": "vps-billing/backend/controllerapi/contract.go",
+      "upstream_sha256": "082fc40c2963971d621d93c1a9dbaf1b0b649441757cd5c0af10656385bd1b0c",
+      "exported_sha256": "082fc40c2963971d621d93c1a9dbaf1b0b649441757cd5c0af10656385bd1b0c"
+    },
+    "vps-billing/backend/controllerapi/contract_test.go": {
+      "upstream_path": "vps-billing/backend/controllerapi/contract_test.go",
+      "upstream_sha256": "cc167d111fb5adae6d545f39377bec05fd1fb6bfdb13fe69927f41b6c9fff62a",
+      "exported_sha256": "cc167d111fb5adae6d545f39377bec05fd1fb6bfdb13fe69927f41b6c9fff62a"
+    },
+    "vps-billing/backend/controllerapi/transport.go": {
+      "upstream_path": "vps-billing/backend/controllerapi/transport.go",
+      "upstream_sha256": "0a6c6761e361cb181276bfefce6c6e6b7b535f3c25a73d28c68a7e98060ffcae",
+      "exported_sha256": "0a6c6761e361cb181276bfefce6c6e6b7b535f3c25a73d28c68a7e98060ffcae"
+    },
+    "vps-billing/backend/controllerapi/transport_test.go": {
+      "upstream_path": "vps-billing/backend/controllerapi/transport_test.go",
+      "upstream_sha256": "8ef84541badee31bd40eced514854cd1cdc03be1232a5d6223229de545febe8b",
+      "exported_sha256": "8ef84541badee31bd40eced514854cd1cdc03be1232a5d6223229de545febe8b"
+    },
+    "vps-billing/backend/go.mod": {
+      "upstream_path": "vps-billing/backend/go.mod",
+      "upstream_sha256": "b74a275f69dc5bcad1d68a0a4642e99c6d84329aefc91012569471bfc025d2f4",
+      "exported_sha256": "b74a275f69dc5bcad1d68a0a4642e99c6d84329aefc91012569471bfc025d2f4"
+    },
+    "vps-billing/backend/go.sum": {
+      "upstream_path": "vps-billing/backend/go.sum",
+      "upstream_sha256": "02c4c0c146994726d21a41c1451db1b0b84e11bf1d2b3c390bb8367413529d9d",
+      "exported_sha256": "02c4c0c146994726d21a41c1451db1b0b84e11bf1d2b3c390bb8367413529d9d"
+    },
+    "vps-billing/backend/internal/billing/admin_catalog.go": {
+      "upstream_path": "vps-billing/backend/internal/billing/admin_catalog.go",
+      "upstream_sha256": "f361e7de0161ecbc5eb5e5eceafb627198cbcc6328574cfae7690e55044c9dc9",
+      "exported_sha256": "f361e7de0161ecbc5eb5e5eceafb627198cbcc6328574cfae7690e55044c9dc9"
+    },
+    "vps-billing/backend/internal/billing/admin_catalog_currency_revision_test.go": {
+      "upstream_path": "vps-billing/backend/internal/billing/admin_catalog_currency_revision_test.go",
+      "upstream_sha256": "23d96527de45dcf0b05217c7361f68ffd3c158318be3d7224e487ee4cf74bcd3",
+      "exported_sha256": "23d96527de45dcf0b05217c7361f68ffd3c158318be3d7224e487ee4cf74bcd3"
+    },
+    "vps-billing/backend/internal/billing/admin_catalog_mysql.go": {
+      "upstream_path": "vps-billing/backend/internal/billing/admin_catalog_mysql.go",
+      "upstream_sha256": "90f005ad1b19b5d7ca639305f32267993b2d70a8bcdb9e940bb75655ea491b70",
+      "exported_sha256": "90f005ad1b19b5d7ca639305f32267993b2d70a8bcdb9e940bb75655ea491b70"
+    },
+    "vps-billing/backend/internal/billing/admin_catalog_test.go": {
+      "upstream_path": "vps-billing/backend/internal/billing/admin_catalog_test.go",
+      "upstream_sha256": "e5a60d9b28d3d31efdb3b9cdc5705e2c8a491f7033dc0abef811219415798681",
+      "exported_sha256": "e5a60d9b28d3d31efdb3b9cdc5705e2c8a491f7033dc0abef811219415798681"
+    },
+    "vps-billing/backend/internal/billing/admin_customers.go": {
+      "upstream_path": "vps-billing/backend/internal/billing/admin_customers.go",
+      "upstream_sha256": "3f38ffadf9dcddcc2f276bb719db41f71a63b65f51eb4b37397065520439b5ec",
+      "exported_sha256": "3f38ffadf9dcddcc2f276bb719db41f71a63b65f51eb4b37397065520439b5ec"
+    },
+    "vps-billing/backend/internal/billing/admin_customers_http.go": {
+      "upstream_path": "vps-billing/backend/internal/billing/admin_customers_http.go",
+      "upstream_sha256": "a6ab67e807b74f39b88ccfe8b6091288f612f20fdb505b3b8e2467a72a76418a",
+      "exported_sha256": "a6ab67e807b74f39b88ccfe8b6091288f612f20fdb505b3b8e2467a72a76418a"
+    },
+    "vps-billing/backend/internal/billing/admin_customers_migration.go": {
+      "upstream_path": "vps-billing/backend/internal/billing/admin_customers_migration.go",
+      "upstream_sha256": "e57a92c010e2057d61e4afbc69d27e3892f877246ceec8d9457369010ea1f35f",
+      "exported_sha256": "e57a92c010e2057d61e4afbc69d27e3892f877246ceec8d9457369010ea1f35f"
+    },
+    "vps-billing/backend/internal/billing/admin_customers_migration_test.go": {
+      "upstream_path": "vps-billing/backend/internal/billing/admin_customers_migration_test.go",
+      "upstream_sha256": "b4234bfc3d863fd79307d1e9dfff44c3c22945638e6f99c6bbcab32f15dfae10",
+      "exported_sha256": "b4234bfc3d863fd79307d1e9dfff44c3c22945638e6f99c6bbcab32f15dfae10"
+    },
+    "vps-billing/backend/internal/billing/admin_customers_mysql_test.go": {
+      "upstream_path": "vps-billing/backend/internal/billing/admin_customers_mysql_test.go",
+      "upstream_sha256": "c88883f04d6faf36174018952808950204d35da5998bd7716997693baccac9a0",
+      "exported_sha256": "c88883f04d6faf36174018952808950204d35da5998bd7716997693baccac9a0"
+    },
+    "vps-billing/backend/internal/billing/admin_customers_session.go": {
+      "upstream_path": "vps-billing/backend/internal/billing/admin_customers_session.go",
+      "upstream_sha256": "6337170982fcf7473e2f8e388a2b9f20cea1d826e763a48265fa521056d6f3b9",
+      "exported_sha256": "6337170982fcf7473e2f8e388a2b9f20cea1d826e763a48265fa521056d6f3b9"
+    },
+    "vps-billing/backend/internal/billing/admin_customers_session_mysql_test.go": {
+      "upstream_path": "vps-billing/backend/internal/billing/admin_customers_session_mysql_test.go",
+      "upstream_sha256": "96f64e2a3a067dcca8b76cabcdbe6ffbe1670630d39f065cbe4652cb2662cf48",
+      "exported_sha256": "96f64e2a3a067dcca8b76cabcdbe6ffbe1670630d39f065cbe4652cb2662cf48"
+    },
+    "vps-billing/backend/internal/billing/admin_customers_session_test.go": {
+      "upstream_path": "vps-billing/backend/internal/billing/admin_customers_session_test.go",
+      "upstream_sha256": "973b65a5baf6a043a6b8b9395272e9b964a923bad42f75870c383109ab3c6d21",
+      "exported_sha256": "973b65a5baf6a043a6b8b9395272e9b964a923bad42f75870c383109ab3c6d21"
+    },
+    "vps-billing/backend/internal/billing/admin_customers_test.go": {
+      "upstream_path": "vps-billing/backend/internal/billing/admin_customers_test.go",
+      "upstream_sha256": "c69153c4293fc30cc8eca681732cf92973336072af832987beb086df9d4d3a26",
+      "exported_sha256": "c69153c4293fc30cc8eca681732cf92973336072af832987beb086df9d4d3a26"
+    },
+    "vps-billing/backend/internal/billing/admin_services.go": {
+      "upstream_path": "vps-billing/backend/internal/billing/admin_services.go",
+      "upstream_sha256": "c05d20887c09a001ff17c94fb1f016deda7bd1e9300e64c4d515831c3fc9c56c",
+      "exported_sha256": "c05d20887c09a001ff17c94fb1f016deda7bd1e9300e64c4d515831c3fc9c56c"
+    },
+    "vps-billing/backend/internal/billing/admin_services_test.go": {
+      "upstream_path": "vps-billing/backend/internal/billing/admin_services_test.go",
+      "upstream_sha256": "84b8374f07bf5fa0c8f1cc660d5ee3137ba8f7b9308f63b5fe001fa2095d3ecc",
+      "exported_sha256": "84b8374f07bf5fa0c8f1cc660d5ee3137ba8f7b9308f63b5fe001fa2095d3ecc"
+    },
+    "vps-billing/backend/internal/billing/audit_index.go": {
+      "upstream_path": "vps-billing/backend/internal/billing/audit_index.go",
+      "upstream_sha256": "34b9f2aa6891032c370f21bf36f361f2e78e3c430b1d9dc8c0cb8afbc91b17a7",
+      "exported_sha256": "34b9f2aa6891032c370f21bf36f361f2e78e3c430b1d9dc8c0cb8afbc91b17a7"
+    },
+    "vps-billing/backend/internal/billing/audit_index_test.go": {
+      "upstream_path": "vps-billing/backend/internal/billing/audit_index_test.go",
+      "upstream_sha256": "cc645383fdecf27d6a4b25801cb575b12e123beb3c017615c47b248eda4af0c6",
+      "exported_sha256": "cc645383fdecf27d6a4b25801cb575b12e123beb3c017615c47b248eda4af0c6"
+    },
+    "vps-billing/backend/internal/billing/audit_query.go": {
+      "upstream_path": "vps-billing/backend/internal/billing/audit_query.go",
+      "upstream_sha256": "f63de8765964bff3662c85cda5623aedf508a766c04aa93a34ec7623638b9553",
+      "exported_sha256": "f63de8765964bff3662c85cda5623aedf508a766c04aa93a34ec7623638b9553"
+    },
+    "vps-billing/backend/internal/billing/audit_query_test.go": {
+      "upstream_path": "vps-billing/backend/internal/billing/audit_query_test.go",
+      "upstream_sha256": "a6aa1852e21d09beac4418c183df46130d989d68e3aed4ba5240701698aff6a5",
+      "exported_sha256": "a6aa1852e21d09beac4418c183df46130d989d68e3aed4ba5240701698aff6a5"
+    },
+    "vps-billing/backend/internal/billing/audit_time_test.go": {
+      "upstream_path": "vps-billing/backend/internal/billing/audit_time_test.go",
+      "upstream_sha256": "6429a2b948f0f0605b28c20364e6a90de367315cbb791d1ce02324055e24f874",
+      "exported_sha256": "6429a2b948f0f0605b28c20364e6a90de367315cbb791d1ce02324055e24f874"
+    },
+    "vps-billing/backend/internal/billing/cancellation.go": {
+      "upstream_path": "vps-billing/backend/internal/billing/cancellation.go",
+      "upstream_sha256": "867eea1e438684a25e481b066e33d113ad57e10aad45fc5e25e1c47233de9c7a",
+      "exported_sha256": "867eea1e438684a25e481b066e33d113ad57e10aad45fc5e25e1c47233de9c7a"
+    },
+    "vps-billing/backend/internal/billing/cancellation_http.go": {
+      "upstream_path": "vps-billing/backend/internal/billing/cancellation_http.go",
+      "upstream_sha256": "5ef1917733437c9b275e35757c46bb163bfb4c3786364462996466e89dcc53fa",
+      "exported_sha256": "5ef1917733437c9b275e35757c46bb163bfb4c3786364462996466e89dcc53fa"
+    },
+    "vps-billing/backend/internal/billing/cancellation_http_test.go": {
+      "upstream_path": "vps-billing/backend/internal/billing/cancellation_http_test.go",
+      "upstream_sha256": "baa24f83284c86ff575e6d87e8e9d8afe6ae0837c6924088aeff8df9d7e5281f",
+      "exported_sha256": "baa24f83284c86ff575e6d87e8e9d8afe6ae0837c6924088aeff8df9d7e5281f"
+    },
+    "vps-billing/backend/internal/billing/cancellation_mysql.go": {
+      "upstream_path": "vps-billing/backend/internal/billing/cancellation_mysql.go",
+      "upstream_sha256": "f8c3050641b162816aabf263f71284e25f45453ee59d321964a80cd77d73437e",
+      "exported_sha256": "f8c3050641b162816aabf263f71284e25f45453ee59d321964a80cd77d73437e"
+    },
+    "vps-billing/backend/internal/billing/cancellation_mysql_test.go": {
+      "upstream_path": "vps-billing/backend/internal/billing/cancellation_mysql_test.go",
+      "upstream_sha256": "b5ae702deea2643be7da4a57ab399309d1580d5f0a6ca0b5054ed75a9cc0fa48",
+      "exported_sha256": "b5ae702deea2643be7da4a57ab399309d1580d5f0a6ca0b5054ed75a9cc0fa48"
+    },
+    "vps-billing/backend/internal/billing/cancellation_test.go": {
+      "upstream_path": "vps-billing/backend/internal/billing/cancellation_test.go",
+      "upstream_sha256": "2efda7e44687a11e3e97e03dbce86687a2672e0ac5a03400da0dd7c8b6eea647",
+      "exported_sha256": "2efda7e44687a11e3e97e03dbce86687a2672e0ac5a03400da0dd7c8b6eea647"
+    },
+    "vps-billing/backend/internal/billing/catalog_nodes_migration.go": {
+      "upstream_path": "vps-billing/backend/internal/billing/catalog_nodes_migration.go",
+      "upstream_sha256": "9a5175dacf7c7f95ca1d9befb30420d74e28eaf0f95b03f355cc581ada6b4d05",
+      "exported_sha256": "9a5175dacf7c7f95ca1d9befb30420d74e28eaf0f95b03f355cc581ada6b4d05"
+    },
+    "vps-billing/backend/internal/billing/catalog_taxonomy.go": {
+      "upstream_path": "vps-billing/backend/internal/billing/catalog_taxonomy.go",
+      "upstream_sha256": "650b0d5e464eebcdd43df42ac36ed2f84c0cea388567c26b5c1216f50f7924a3",
+      "exported_sha256": "650b0d5e464eebcdd43df42ac36ed2f84c0cea388567c26b5c1216f50f7924a3"
+    },
+    "vps-billing/backend/internal/billing/catalog_taxonomy_migration.go": {
+      "upstream_path": "vps-billing/backend/internal/billing/catalog_taxonomy_migration.go",
+      "upstream_sha256": "f8d944fd33fe3be0395fa84e73ced5fbe6278a97b485e85534977fdef46328f0",
+      "exported_sha256": "f8d944fd33fe3be0395fa84e73ced5fbe6278a97b485e85534977fdef46328f0"
+    },
+    "vps-billing/backend/internal/billing/catalog_taxonomy_mysql.go": {
+      "upstream_path": "vps-billing/backend/internal/billing/catalog_taxonomy_mysql.go",
+      "upstream_sha256": "0ca72306c4f2b9681a0ef72a7fa3b5960113ff9223b6d921b1e370eab4463231",
+      "exported_sha256": "0ca72306c4f2b9681a0ef72a7fa3b5960113ff9223b6d921b1e370eab4463231"
+    },
+    "vps-billing/backend/internal/billing/catalog_visibility_test.go": {
+      "upstream_path": "vps-billing/backend/internal/billing/catalog_visibility_test.go",
+      "upstream_sha256": "4c1c7086c739e53e5da2863cf791dcdb37bb4c17a16e838bcee8fc26df046ce7",
+      "exported_sha256": "4c1c7086c739e53e5da2863cf791dcdb37bb4c17a16e838bcee8fc26df046ce7"
+    },
+    "vps-billing/backend/internal/billing/currency.go": {
+      "upstream_path": "vps-billing/backend/internal/billing/currency.go",
+      "upstream_sha256": "e5844a1f70f48172d79d1dc5c30b615770d7bef18bc5457fed894042b335118f",
+      "exported_sha256": "e5844a1f70f48172d79d1dc5c30b615770d7bef18bc5457fed894042b335118f"
+    },
+    "vps-billing/backend/internal/billing/currency_http.go": {
+      "upstream_path": "vps-billing/backend/internal/billing/currency_http.go",
+      "upstream_sha256": "ef5181cf323ce890e8e25aea51a4f77f296abe91c09fbe37b6065e0fbfd1895e",
+      "exported_sha256": "ef5181cf323ce890e8e25aea51a4f77f296abe91c09fbe37b6065e0fbfd1895e"
+    },
+    "vps-billing/backend/internal/billing/currency_memory.go": {
+      "upstream_path": "vps-billing/backend/internal/billing/currency_memory.go",
+      "upstream_sha256": "b76cbe69cc4a650303d2e7f471d0268943203b621cc5130259b0d3dc08e851a7",
+      "exported_sha256": "b76cbe69cc4a650303d2e7f471d0268943203b621cc5130259b0d3dc08e851a7"
+    },
+    "vps-billing/backend/internal/billing/currency_migration.go": {
+      "upstream_path": "vps-billing/backend/internal/billing/currency_migration.go",
+      "upstream_sha256": "d9eb89f58f0e9cdb2781439276b19dc871fb8dd7cabf9c3ced641dc80fd40b52",
+      "exported_sha256": "d9eb89f58f0e9cdb2781439276b19dc871fb8dd7cabf9c3ced641dc80fd40b52"
+    },
+    "vps-billing/backend/internal/billing/currency_migration_test.go": {
+      "upstream_path": "vps-billing/backend/internal/billing/currency_migration_test.go",
+      "upstream_sha256": "8205df5bf7237e3d0b647db42e3a9b8706c4d6f525218f4e6b27935b51b87fa3",
+      "exported_sha256": "8205df5bf7237e3d0b647db42e3a9b8706c4d6f525218f4e6b27935b51b87fa3"
+    },
+    "vps-billing/backend/internal/billing/currency_mysql.go": {
+      "upstream_path": "vps-billing/backend/internal/billing/currency_mysql.go",
+      "upstream_sha256": "7b2efbdc2bd939ca93c6b6b346721a4520d93dcc413446c33dc8c0f6b48a35bd",
+      "exported_sha256": "7b2efbdc2bd939ca93c6b6b346721a4520d93dcc413446c33dc8c0f6b48a35bd"
+    },
+    "vps-billing/backend/internal/billing/currency_mysql_test.go": {
+      "upstream_path": "vps-billing/backend/internal/billing/currency_mysql_test.go",
+      "upstream_sha256": "7f683aa3c92ab4ff7bf3ba1dc87408157708aaabc3ca90fa228bee7e48e084a2",
+      "exported_sha256": "7f683aa3c92ab4ff7bf3ba1dc87408157708aaabc3ca90fa228bee7e48e084a2"
+    },
+    "vps-billing/backend/internal/billing/currency_registry.go": {
+      "upstream_path": "vps-billing/backend/internal/billing/currency_registry.go",
+      "upstream_sha256": "c110464543c1ab3a805bb1f13df1707d54212a794b93bc3d0c8d52e097b5b357",
+      "exported_sha256": "c110464543c1ab3a805bb1f13df1707d54212a794b93bc3d0c8d52e097b5b357"
+    },
+    "vps-billing/backend/internal/billing/currency_registry_mysql_test.go": {
+      "upstream_path": "vps-billing/backend/internal/billing/currency_registry_mysql_test.go",
+      "upstream_sha256": "0259cb6637a7db5c8e3d5fcdb54990236a3b2eb7960ca4314de6da9140033b41",
+      "exported_sha256": "0259cb6637a7db5c8e3d5fcdb54990236a3b2eb7960ca4314de6da9140033b41"
+    },
+    "vps-billing/backend/internal/billing/currency_registry_test.go": {
+      "upstream_path": "vps-billing/backend/internal/billing/currency_registry_test.go",
+      "upstream_sha256": "c1d447e6f2a14b27c6f03f43a0f6b5f273ae2b08d09727ff23122c7fd17ed6c4",
+      "exported_sha256": "c1d447e6f2a14b27c6f03f43a0f6b5f273ae2b08d09727ff23122c7fd17ed6c4"
+    },
+    "vps-billing/backend/internal/billing/currency_test.go": {
+      "upstream_path": "vps-billing/backend/internal/billing/currency_test.go",
+      "upstream_sha256": "fc013677e1a1475a0fe7e1f436def9e19f2f453137611f4b53e742c73352e6de",
+      "exported_sha256": "fc013677e1a1475a0fe7e1f436def9e19f2f453137611f4b53e742c73352e6de"
+    },
+    "vps-billing/backend/internal/billing/email_http.go": {
+      "upstream_path": "vps-billing/backend/internal/billing/email_http.go",
+      "upstream_sha256": "39fbc1596499339831abb282db0cc21904278172c34a4cf3da6cf1e666cf521d",
+      "exported_sha256": "39fbc1596499339831abb282db0cc21904278172c34a4cf3da6cf1e666cf521d"
+    },
+    "vps-billing/backend/internal/billing/email_mysql_test.go": {
+      "upstream_path": "vps-billing/backend/internal/billing/email_mysql_test.go",
+      "upstream_sha256": "8813ee8bc1f1d45303131b4a17a3739c83cf730ed5dcec41571237808754ab0a",
+      "exported_sha256": "8813ee8bc1f1d45303131b4a17a3739c83cf730ed5dcec41571237808754ab0a"
+    },
+    "vps-billing/backend/internal/billing/email_settings.go": {
+      "upstream_path": "vps-billing/backend/internal/billing/email_settings.go",
+      "upstream_sha256": "e8d18febf8591affcc062192008dc97817a494531e2ce5b7e176ca8595ee3782",
+      "exported_sha256": "e8d18febf8591affcc062192008dc97817a494531e2ce5b7e176ca8595ee3782"
+    },
+    "vps-billing/backend/internal/billing/email_settings_test.go": {
+      "upstream_path": "vps-billing/backend/internal/billing/email_settings_test.go",
+      "upstream_sha256": "043e581a08b7534fe5e9f9e2736b7c8d75941274b7331a3f118209a6827bd370",
+      "exported_sha256": "043e581a08b7534fe5e9f9e2736b7c8d75941274b7331a3f118209a6827bd370"
+    },
+    "vps-billing/backend/internal/billing/email_smtp_e2e_test.go": {
+      "upstream_path": "vps-billing/backend/internal/billing/email_smtp_e2e_test.go",
+      "upstream_sha256": "fb11247c54caba39735fd9d4af3597bdc7d16207f8a5f8226ee7dff6ffa22811",
+      "exported_sha256": "fb11247c54caba39735fd9d4af3597bdc7d16207f8a5f8226ee7dff6ffa22811"
+    },
+    "vps-billing/backend/internal/billing/email_store.go": {
+      "upstream_path": "vps-billing/backend/internal/billing/email_store.go",
+      "upstream_sha256": "6a27531a2b88e471e00525e072a618eb6a28b81acd89681c5c81d5aa69ff3eea",
+      "exported_sha256": "6a27531a2b88e471e00525e072a618eb6a28b81acd89681c5c81d5aa69ff3eea"
+    },
+    "vps-billing/backend/internal/billing/http.go": {
+      "upstream_path": "vps-billing/backend/internal/billing/http.go",
+      "upstream_sha256": "e9b7dbb5bb5865a273f177f59f36bfd19f6f22df064a16e264ed5e45eb99aaf6",
+      "exported_sha256": "e9b7dbb5bb5865a273f177f59f36bfd19f6f22df064a16e264ed5e45eb99aaf6"
+    },
+    "vps-billing/backend/internal/billing/http_performance_probe_test.go": {
+      "upstream_path": "vps-billing/backend/internal/billing/http_performance_probe_test.go",
+      "upstream_sha256": "1fce710200b1e483b6d7a3509e6b9dbc26f2ad34bdbb9ac652b6ddc162e139e3",
+      "exported_sha256": "1fce710200b1e483b6d7a3509e6b9dbc26f2ad34bdbb9ac652b6ddc162e139e3"
+    },
+    "vps-billing/backend/internal/billing/http_performance_test.go": {
+      "upstream_path": "vps-billing/backend/internal/billing/http_performance_test.go",
+      "upstream_sha256": "a1618c8f852d88d45cbcaeb822796152226e1f65a24b580f501be44259edb7c9",
+      "exported_sha256": "a1618c8f852d88d45cbcaeb822796152226e1f65a24b580f501be44259edb7c9"
+    },
+    "vps-billing/backend/internal/billing/http_test.go": {
+      "upstream_path": "vps-billing/backend/internal/billing/http_test.go",
+      "upstream_sha256": "bbac97b7758ff0fe0c7b2adf349d0e895ff8f85fcbf0e0cea667fba1bfef247b",
+      "exported_sha256": "bbac97b7758ff0fe0c7b2adf349d0e895ff8f85fcbf0e0cea667fba1bfef247b"
+    },
+    "vps-billing/backend/internal/billing/integrations_test.go": {
+      "upstream_path": "vps-billing/backend/internal/billing/integrations_test.go",
+      "upstream_sha256": "7c2a2235cf0e6bc816a8d7d46b6fe0d130ec3696e68c56e8dfcac3c7d895b744",
+      "exported_sha256": "7c2a2235cf0e6bc816a8d7d46b6fe0d130ec3696e68c56e8dfcac3c7d895b744"
+    },
+    "vps-billing/backend/internal/billing/locale.go": {
+      "upstream_path": "vps-billing/backend/internal/billing/locale.go",
+      "upstream_sha256": "02f0f366527becc0cbc190ee712104d857ca0f593da2cd09fae06ce8f45529cc",
+      "exported_sha256": "02f0f366527becc0cbc190ee712104d857ca0f593da2cd09fae06ce8f45529cc"
+    },
+    "vps-billing/backend/internal/billing/memory.go": {
+      "upstream_path": "vps-billing/backend/internal/billing/memory.go",
+      "upstream_sha256": "b7d0b9ce304805d27cdf86a75c57e3c30012ccf77ce1ffb547332b771a241b91",
+      "exported_sha256": "b7d0b9ce304805d27cdf86a75c57e3c30012ccf77ce1ffb547332b771a241b91"
+    },
+    "vps-billing/backend/internal/billing/migration_safety.go": {
+      "upstream_path": "vps-billing/backend/internal/billing/migration_safety.go",
+      "upstream_sha256": "0fb5e85fb157fba8689c53c5c6f65176c1da599f99fd8d74d60c7b8dddd7548a",
+      "exported_sha256": "0fb5e85fb157fba8689c53c5c6f65176c1da599f99fd8d74d60c7b8dddd7548a"
+    },
+    "vps-billing/backend/internal/billing/migrations_acceptance_test.go": {
+      "upstream_path": "vps-billing/backend/internal/billing/migrations_acceptance_test.go",
+      "upstream_sha256": "4791aaa5d38ecdf1c8beb8e238ab5939d9bc12ce395452a7224ed2cc3d8d95b5",
+      "exported_sha256": "4791aaa5d38ecdf1c8beb8e238ab5939d9bc12ce395452a7224ed2cc3d8d95b5"
+    },
+    "vps-billing/backend/internal/billing/models.go": {
+      "upstream_path": "vps-billing/backend/internal/billing/models.go",
+      "upstream_sha256": "2bca0fc7189a7f289d0728803d81db9b3ab4cce740b11bb1668afda0fca557ef",
+      "exported_sha256": "2bca0fc7189a7f289d0728803d81db9b3ab4cce740b11bb1668afda0fca557ef"
+    },
+    "vps-billing/backend/internal/billing/mysql.go": {
+      "upstream_path": "vps-billing/backend/internal/billing/mysql.go",
+      "upstream_sha256": "558f8a9a3bd8dfcbaf52e0c3c58f3c99ff8a7656b2d576fc102444725d7d8449",
+      "exported_sha256": "558f8a9a3bd8dfcbaf52e0c3c58f3c99ff8a7656b2d576fc102444725d7d8449"
+    },
+    "vps-billing/backend/internal/billing/mysql_order_snapshot_test.go": {
+      "upstream_path": "vps-billing/backend/internal/billing/mysql_order_snapshot_test.go",
+      "upstream_sha256": "a4f39873ecdee3cc245fda26a6c4bb50d929099bb4256a2933050e11bf5924f1",
+      "exported_sha256": "a4f39873ecdee3cc245fda26a6c4bb50d929099bb4256a2933050e11bf5924f1"
+    },
+    "vps-billing/backend/internal/billing/mysql_recent_orders_test.go": {
+      "upstream_path": "vps-billing/backend/internal/billing/mysql_recent_orders_test.go",
+      "upstream_sha256": "0902246d3219c730431941b279cb5b082a9251c5b38dc72a0f16d62b044d7785",
+      "exported_sha256": "0902246d3219c730431941b279cb5b082a9251c5b38dc72a0f16d62b044d7785"
+    },
+    "vps-billing/backend/internal/billing/mysql_test.go": {
+      "upstream_path": "vps-billing/backend/internal/billing/mysql_test.go",
+      "upstream_sha256": "c81b3181c7743361354fa48b167e964c30f51583c5abcb3555ec2e2c3ca96ffd",
+      "exported_sha256": "c81b3181c7743361354fa48b167e964c30f51583c5abcb3555ec2e2c3ca96ffd"
+    },
+    "vps-billing/backend/internal/billing/observability.go": {
+      "upstream_path": "vps-billing/backend/internal/billing/observability.go",
+      "upstream_sha256": "0cb1ea04bd5608be590b46e9a63ab3ff9ee3a0464d6c73eaaf61459d6c85c66a",
+      "exported_sha256": "0cb1ea04bd5608be590b46e9a63ab3ff9ee3a0464d6c73eaaf61459d6c85c66a"
+    },
+    "vps-billing/backend/internal/billing/observability_test.go": {
+      "upstream_path": "vps-billing/backend/internal/billing/observability_test.go",
+      "upstream_sha256": "78de98434a4ac9e4463ffa6ae247721ec02f2553d7e1282b74ea55d0a5138633",
+      "exported_sha256": "78de98434a4ac9e4463ffa6ae247721ec02f2553d7e1282b74ea55d0a5138633"
+    },
+    "vps-billing/backend/internal/billing/order_detail.go": {
+      "upstream_path": "vps-billing/backend/internal/billing/order_detail.go",
+      "upstream_sha256": "2756b7fbf325ba44e86ec9001e3c038330368684be189ee6222f47b8536dd1b8",
+      "exported_sha256": "2756b7fbf325ba44e86ec9001e3c038330368684be189ee6222f47b8536dd1b8"
+    },
+    "vps-billing/backend/internal/billing/order_detail_test.go": {
+      "upstream_path": "vps-billing/backend/internal/billing/order_detail_test.go",
+      "upstream_sha256": "fc3ed9519b27fcf680b1a78d96c5d724ffc769badb0da8511618769c3bbf836a",
+      "exported_sha256": "fc3ed9519b27fcf680b1a78d96c5d724ffc769badb0da8511618769c3bbf836a"
+    },
+    "vps-billing/backend/internal/billing/order_list_benchmark_test.go": {
+      "upstream_path": "vps-billing/backend/internal/billing/order_list_benchmark_test.go",
+      "upstream_sha256": "9e9cde02b39361920da157d4fd194565f778ccc62bd76961a1565fa1c1c04edd",
+      "exported_sha256": "9e9cde02b39361920da157d4fd194565f778ccc62bd76961a1565fa1c1c04edd"
+    },
+    "vps-billing/backend/internal/billing/order_snapshot_memo_test.go": {
+      "upstream_path": "vps-billing/backend/internal/billing/order_snapshot_memo_test.go",
+      "upstream_sha256": "0a01928d55ecab35dc35c8be26c284f6efe07fb18e5c9a57e79a0255f01d9384",
+      "exported_sha256": "0a01928d55ecab35dc35c8be26c284f6efe07fb18e5c9a57e79a0255f01d9384"
+    },
+    "vps-billing/backend/internal/billing/payment.go": {
+      "upstream_path": "vps-billing/backend/internal/billing/payment.go",
+      "upstream_sha256": "e6b1e0e0855b591a895d1ce900de6a609b026aa39a4f7dcd9e97127a9efebd9f",
+      "exported_sha256": "e6b1e0e0855b591a895d1ce900de6a609b026aa39a4f7dcd9e97127a9efebd9f"
+    },
+    "vps-billing/backend/internal/billing/payment_http.go": {
+      "upstream_path": "vps-billing/backend/internal/billing/payment_http.go",
+      "upstream_sha256": "af6ee95f63e4c38b6a8a1efe85c3ad568dd9cecde39128d7dae9fda87edb1ee0",
+      "exported_sha256": "af6ee95f63e4c38b6a8a1efe85c3ad568dd9cecde39128d7dae9fda87edb1ee0"
+    },
+    "vps-billing/backend/internal/billing/payment_http_test.go": {
+      "upstream_path": "vps-billing/backend/internal/billing/payment_http_test.go",
+      "upstream_sha256": "2e65591188c9f1cf008940dc57f4e53645ac00cb5790b93ab81f1b4fd275c100",
+      "exported_sha256": "2e65591188c9f1cf008940dc57f4e53645ac00cb5790b93ab81f1b4fd275c100"
+    },
+    "vps-billing/backend/internal/billing/payment_maintenance_repro_test.go": {
+      "upstream_path": "vps-billing/backend/internal/billing/payment_maintenance_repro_test.go",
+      "upstream_sha256": "61b9830a6b1cf7d2053f074af9f5da9a216a239ccdcdc19bd84cc0a45cc8c7c8",
+      "exported_sha256": "61b9830a6b1cf7d2053f074af9f5da9a216a239ccdcdc19bd84cc0a45cc8c7c8"
+    },
+    "vps-billing/backend/internal/billing/payment_memory.go": {
+      "upstream_path": "vps-billing/backend/internal/billing/payment_memory.go",
+      "upstream_sha256": "5a2df7f4417481713e419b5c6ea45bbae7fbd407d79e1d324254280ea5e7938e",
+      "exported_sha256": "5a2df7f4417481713e419b5c6ea45bbae7fbd407d79e1d324254280ea5e7938e"
+    },
+    "vps-billing/backend/internal/billing/payment_migration_test.go": {
+      "upstream_path": "vps-billing/backend/internal/billing/payment_migration_test.go",
+      "upstream_sha256": "fcd6062b2f554fe61e57de5f578bdb05c5ccb420d18ee2bfc2a805313b61e914",
+      "exported_sha256": "fcd6062b2f554fe61e57de5f578bdb05c5ccb420d18ee2bfc2a805313b61e914"
+    },
+    "vps-billing/backend/internal/billing/payment_mysql.go": {
+      "upstream_path": "vps-billing/backend/internal/billing/payment_mysql.go",
+      "upstream_sha256": "2f92b0e4568e9997715cf5ad476baaec87d4f9f38815ba3ee1c99b62f2a25491",
+      "exported_sha256": "2f92b0e4568e9997715cf5ad476baaec87d4f9f38815ba3ee1c99b62f2a25491"
+    },
+    "vps-billing/backend/internal/billing/payment_mysql_test.go": {
+      "upstream_path": "vps-billing/backend/internal/billing/payment_mysql_test.go",
+      "upstream_sha256": "5139045c095e798e11092ec703f392e44aae86918984f69c0f2a37d06a11b3c0",
+      "exported_sha256": "5139045c095e798e11092ec703f392e44aae86918984f69c0f2a37d06a11b3c0"
+    },
+    "vps-billing/backend/internal/billing/payment_test.go": {
+      "upstream_path": "vps-billing/backend/internal/billing/payment_test.go",
+      "upstream_sha256": "57691132352625e9aa4bcbc6b158741534db689caf8abdaaa8227383f215d7a8",
+      "exported_sha256": "57691132352625e9aa4bcbc6b158741534db689caf8abdaaa8227383f215d7a8"
+    },
+    "vps-billing/backend/internal/billing/preflight.go": {
+      "upstream_path": "vps-billing/backend/internal/billing/preflight.go",
+      "upstream_sha256": "d257fc81ac3407dfe4922864d0f982eafbc363667130c28cd82fbf8d34170b70",
+      "exported_sha256": "d257fc81ac3407dfe4922864d0f982eafbc363667130c28cd82fbf8d34170b70"
+    },
+    "vps-billing/backend/internal/billing/preflight_schema.go": {
+      "upstream_path": "vps-billing/backend/internal/billing/preflight_schema.go",
+      "upstream_sha256": "f9d10c676ffbad952164619984806a28d7703534525b0245fc7e0d99841d34e7",
+      "exported_sha256": "f9d10c676ffbad952164619984806a28d7703534525b0245fc7e0d99841d34e7"
+    },
+    "vps-billing/backend/internal/billing/preflight_test.go": {
+      "upstream_path": "vps-billing/backend/internal/billing/preflight_test.go",
+      "upstream_sha256": "c23e8f34ea0f4132e116d92b9fed21677687b007ec9c8e669d043bf284c08130",
+      "exported_sha256": "c23e8f34ea0f4132e116d92b9fed21677687b007ec9c8e669d043bf284c08130"
+    },
+    "vps-billing/backend/internal/billing/product_configuration.go": {
+      "upstream_path": "vps-billing/backend/internal/billing/product_configuration.go",
+      "upstream_sha256": "0a2882d9c50fa586c9e750657f6e6fc7b26e704b0f60a9eade6efb5122098600",
+      "exported_sha256": "0a2882d9c50fa586c9e750657f6e6fc7b26e704b0f60a9eade6efb5122098600"
+    },
+    "vps-billing/backend/internal/billing/product_configuration_http.go": {
+      "upstream_path": "vps-billing/backend/internal/billing/product_configuration_http.go",
+      "upstream_sha256": "310f6dc7b1eae645d4eff3b2a7decf37a29672f0507055086aab906b4803c819",
+      "exported_sha256": "310f6dc7b1eae645d4eff3b2a7decf37a29672f0507055086aab906b4803c819"
+    },
+    "vps-billing/backend/internal/billing/product_configuration_http_test.go": {
+      "upstream_path": "vps-billing/backend/internal/billing/product_configuration_http_test.go",
+      "upstream_sha256": "ac4b8ce3e06793bdc2712d527a64e5b648ebaa27e679aa2a87da5bdd14957f02",
+      "exported_sha256": "ac4b8ce3e06793bdc2712d527a64e5b648ebaa27e679aa2a87da5bdd14957f02"
+    },
+    "vps-billing/backend/internal/billing/product_configuration_migration.go": {
+      "upstream_path": "vps-billing/backend/internal/billing/product_configuration_migration.go",
+      "upstream_sha256": "79fb43eb4cc48cbc52e15736b159d9043846de2bb0ae7d3e84358008f8f26a7b",
+      "exported_sha256": "79fb43eb4cc48cbc52e15736b159d9043846de2bb0ae7d3e84358008f8f26a7b"
+    },
+    "vps-billing/backend/internal/billing/product_configuration_migration_test.go": {
+      "upstream_path": "vps-billing/backend/internal/billing/product_configuration_migration_test.go",
+      "upstream_sha256": "e1b0fc8c114a0c633d2f4da3233236c8890773e2bd338eab3b6db3611fa18c34",
+      "exported_sha256": "e1b0fc8c114a0c633d2f4da3233236c8890773e2bd338eab3b6db3611fa18c34"
+    },
+    "vps-billing/backend/internal/billing/product_configuration_mysql.go": {
+      "upstream_path": "vps-billing/backend/internal/billing/product_configuration_mysql.go",
+      "upstream_sha256": "04eb1b9dca75116187f4f4879a1dcd24ac7023a34b23f827009df3d695e6c226",
+      "exported_sha256": "04eb1b9dca75116187f4f4879a1dcd24ac7023a34b23f827009df3d695e6c226"
+    },
+    "vps-billing/backend/internal/billing/product_configuration_mysql_test.go": {
+      "upstream_path": "vps-billing/backend/internal/billing/product_configuration_mysql_test.go",
+      "upstream_sha256": "93988591807cbc6f347d94c3a9ff042b6acf886fb43d44e05748234e68988372",
+      "exported_sha256": "93988591807cbc6f347d94c3a9ff042b6acf886fb43d44e05748234e68988372"
+    },
+    "vps-billing/backend/internal/billing/product_configuration_test.go": {
+      "upstream_path": "vps-billing/backend/internal/billing/product_configuration_test.go",
+      "upstream_sha256": "80b97426c0df35242743827335c35eafd7d3e45c9fd902c19cbacb00bac15cc4",
+      "exported_sha256": "80b97426c0df35242743827335c35eafd7d3e45c9fd902c19cbacb00bac15cc4"
+    },
+    "vps-billing/backend/internal/billing/provisioning_jobs.go": {
+      "upstream_path": "vps-billing/backend/internal/billing/provisioning_jobs.go",
+      "upstream_sha256": "44e843c9a27795885fee09bd01879524b772f28c54082167aeb52aa1102b05e3",
+      "exported_sha256": "44e843c9a27795885fee09bd01879524b772f28c54082167aeb52aa1102b05e3"
+    },
+    "vps-billing/backend/internal/billing/provisioning_jobs_mysql.go": {
+      "upstream_path": "vps-billing/backend/internal/billing/provisioning_jobs_mysql.go",
+      "upstream_sha256": "03d958cf89d9f90fe759eaff56e5cf9766034d6ca3c4109b034d57b51e2cf97f",
+      "exported_sha256": "03d958cf89d9f90fe759eaff56e5cf9766034d6ca3c4109b034d57b51e2cf97f"
+    },
+    "vps-billing/backend/internal/billing/provisioning_jobs_mysql_test.go": {
+      "upstream_path": "vps-billing/backend/internal/billing/provisioning_jobs_mysql_test.go",
+      "upstream_sha256": "26338b80fced78ffdae3765ca19cb647baa3bad1931bc45054e07c8bc7069395",
+      "exported_sha256": "26338b80fced78ffdae3765ca19cb647baa3bad1931bc45054e07c8bc7069395"
+    },
+    "vps-billing/backend/internal/billing/provisioning_jobs_test.go": {
+      "upstream_path": "vps-billing/backend/internal/billing/provisioning_jobs_test.go",
+      "upstream_sha256": "518b9226fbb58218715690cfaea0e3baaaf01c0ee92aef6eed61726f4057c6d0",
+      "exported_sha256": "518b9226fbb58218715690cfaea0e3baaaf01c0ee92aef6eed61726f4057c6d0"
+    },
+    "vps-billing/backend/internal/billing/quote_test.go": {
+      "upstream_path": "vps-billing/backend/internal/billing/quote_test.go",
+      "upstream_sha256": "b7e9cc647db5ef93faf3cc196a1af293df727c2fa6fbcabe22d986d9f9652597",
+      "exported_sha256": "b7e9cc647db5ef93faf3cc196a1af293df727c2fa6fbcabe22d986d9f9652597"
+    },
+    "vps-billing/backend/internal/billing/recent_orders_test.go": {
+      "upstream_path": "vps-billing/backend/internal/billing/recent_orders_test.go",
+      "upstream_sha256": "84da34aa007866239a886b7ca44860a1fac2ed12ca1924d39d35e9ae10e79d5f",
+      "exported_sha256": "84da34aa007866239a886b7ca44860a1fac2ed12ca1924d39d35e9ae10e79d5f"
+    },
+    "vps-billing/backend/internal/billing/runtime_plugins_test.go": {
+      "upstream_path": "vps-billing/backend/internal/billing/runtime_plugins_test.go",
+      "upstream_sha256": "593cd770116716656d9db138c3751abddc6173276849cccc278452b3afe44754",
+      "exported_sha256": "593cd770116716656d9db138c3751abddc6173276849cccc278452b3afe44754"
+    },
+    "vps-billing/backend/internal/billing/settings.go": {
+      "upstream_path": "vps-billing/backend/internal/billing/settings.go",
+      "upstream_sha256": "733bbae35632f9936ee97248ca7f637bbfb16a9978049efca99c8c0b0bc669f4",
+      "exported_sha256": "733bbae35632f9936ee97248ca7f637bbfb16a9978049efca99c8c0b0bc669f4"
+    },
+    "vps-billing/backend/internal/billing/settings_test.go": {
+      "upstream_path": "vps-billing/backend/internal/billing/settings_test.go",
+      "upstream_sha256": "32aa3f4cc908c4ab6194c2795b6345d02308bdfbe466839c1dd5eb5dc7b97c5b",
+      "exported_sha256": "32aa3f4cc908c4ab6194c2795b6345d02308bdfbe466839c1dd5eb5dc7b97c5b"
+    },
+    "vps-billing/backend/internal/billing/smtp_key.go": {
+      "upstream_path": "vps-billing/backend/internal/billing/smtp_key.go",
+      "upstream_sha256": "86af655a6910a39c91b27fcc0a11a1652bec9b290a59733bd7141ec956f47992",
+      "exported_sha256": "86af655a6910a39c91b27fcc0a11a1652bec9b290a59733bd7141ec956f47992"
+    },
+    "vps-billing/backend/internal/billing/store_payment_commit_ack_test.go": {
+      "upstream_path": "vps-billing/backend/internal/billing/store_payment_commit_ack_test.go",
+      "upstream_sha256": "4c0d69a524526ea89356b66bfdfca4bd14107d3d907d957115ff8b7a07ba6aaf",
+      "exported_sha256": "4c0d69a524526ea89356b66bfdfca4bd14107d3d907d957115ff8b7a07ba6aaf"
+    },
+    "vps-billing/backend/internal/billing/taxonomy_migration_check_test.go": {
+      "upstream_path": "vps-billing/backend/internal/billing/taxonomy_migration_check_test.go",
+      "upstream_sha256": "6ffb5613bf2df374eab91c44d179fff5a3e281ff33b927963ff9239f122924b5",
+      "exported_sha256": "6ffb5613bf2df374eab91c44d179fff5a3e281ff33b927963ff9239f122924b5"
+    },
+    "vps-billing/backend/internal/billing/taxonomy_mysql_test.go": {
+      "upstream_path": "vps-billing/backend/internal/billing/taxonomy_mysql_test.go",
+      "upstream_sha256": "20fedea15ca9f2762b63eb44672ee0a2a348ed6dbdb105938e6e2e694a32b733",
+      "exported_sha256": "20fedea15ca9f2762b63eb44672ee0a2a348ed6dbdb105938e6e2e694a32b733"
+    },
+    "vps-billing/backend/internal/billing/taxonomy_nodes_mysql_test.go": {
+      "upstream_path": "vps-billing/backend/internal/billing/taxonomy_nodes_mysql_test.go",
+      "upstream_sha256": "1b59e84e8c5038a273c1b19aa4d95ac460691bf8add5db8ac0be11abe31bf48a",
+      "exported_sha256": "1b59e84e8c5038a273c1b19aa4d95ac460691bf8add5db8ac0be11abe31bf48a"
+    },
+    "vps-billing/backend/internal/billing/taxonomy_nodes_test.go": {
+      "upstream_path": "vps-billing/backend/internal/billing/taxonomy_nodes_test.go",
+      "upstream_sha256": "e07314dad981e3a814aae98659c4f82e7815ec44d38c036e796dc44c165e3383",
+      "exported_sha256": "e07314dad981e3a814aae98659c4f82e7815ec44d38c036e796dc44c165e3383"
+    },
+    "vps-billing/backend/internal/billing/taxonomy_test.go": {
+      "upstream_path": "vps-billing/backend/internal/billing/taxonomy_test.go",
+      "upstream_sha256": "726bc117f0eea13a6cbd84b7e738d3f5fd93662334c1bce4bf21f3bc3b4e7132",
+      "exported_sha256": "726bc117f0eea13a6cbd84b7e738d3f5fd93662334c1bce4bf21f3bc3b4e7132"
+    },
+    "vps-billing/backend/internal/billing/update_http.go": {
+      "upstream_path": "vps-billing/backend/internal/billing/update_http.go",
+      "upstream_sha256": "8da7c0c39783e7de25656df119d56278497b0791e948390184c30e57a744981f",
+      "exported_sha256": "8da7c0c39783e7de25656df119d56278497b0791e948390184c30e57a744981f"
+    },
+    "vps-billing/backend/internal/billing/update_http_test.go": {
+      "upstream_path": "vps-billing/backend/internal/billing/update_http_test.go",
+      "upstream_sha256": "7438834d3414e58aa86630319d9b5728acca3b2af2344b7190c69fd7016213f9",
+      "exported_sha256": "7438834d3414e58aa86630319d9b5728acca3b2af2344b7190c69fd7016213f9"
+    },
+    "vps-billing/backend/internal/controllers/client.go": {
+      "upstream_path": "vps-billing/backend/internal/controllers/client.go",
+      "upstream_sha256": "0ef1476aa70ecf5efef644fc64c1539d4600c8f4945ca0014b2d2e1ce80469de",
+      "exported_sha256": "0ef1476aa70ecf5efef644fc64c1539d4600c8f4945ca0014b2d2e1ce80469de"
+    },
+    "vps-billing/backend/internal/controllers/client_test.go": {
+      "upstream_path": "vps-billing/backend/internal/controllers/client_test.go",
+      "upstream_sha256": "44e81c1e3112739a51d2b324888841c4903913085e914ec3c0e7e274576570d5",
+      "exported_sha256": "44e81c1e3112739a51d2b324888841c4903913085e914ec3c0e7e274576570d5"
+    },
+    "vps-billing/backend/internal/controllers/contract.go": {
+      "upstream_path": "vps-billing/backend/internal/controllers/contract.go",
+      "upstream_sha256": "096fc9b1ca26e69a1396f39a8bbcfd983014a722ef864045b306b88086a7b555",
+      "exported_sha256": "096fc9b1ca26e69a1396f39a8bbcfd983014a722ef864045b306b88086a7b555"
+    },
+    "vps-billing/backend/internal/controllers/contract_test.go": {
+      "upstream_path": "vps-billing/backend/internal/controllers/contract_test.go",
+      "upstream_sha256": "6094c9ad78648bd17f7c02fa9a51f073148067075481393da43870de6c20d961",
+      "exported_sha256": "6094c9ad78648bd17f7c02fa9a51f073148067075481393da43870de6c20d961"
+    },
+    "vps-billing/backend/internal/integrations/config_file.go": {
+      "upstream_path": "vps-billing/backend/internal/integrations/config_file.go",
+      "upstream_sha256": "6dec2f8b49ebe479f9b7d9b0bfea30bb5c79d600e500432d0fbfe73d3f5249a6",
+      "exported_sha256": "6dec2f8b49ebe479f9b7d9b0bfea30bb5c79d600e500432d0fbfe73d3f5249a6"
+    },
+    "vps-billing/backend/internal/integrations/example_payment_test.go": {
+      "upstream_path": "vps-billing/backend/internal/integrations/example_payment_test.go",
+      "upstream_sha256": "bf409b6229d08bad0f8ae97cc6b9c84512cd3f741fac070b8743e15b53c06976",
+      "exported_sha256": "bf409b6229d08bad0f8ae97cc6b9c84512cd3f741fac070b8743e15b53c06976"
+    },
+    "vps-billing/backend/internal/integrations/registry.go": {
+      "upstream_path": "vps-billing/backend/internal/integrations/registry.go",
+      "upstream_sha256": "7488b7b00e5e832f3e53cd581230032f6abb61960c3b3e86f38b9fc26f8c89ef",
+      "exported_sha256": "7488b7b00e5e832f3e53cd581230032f6abb61960c3b3e86f38b9fc26f8c89ef"
+    },
+    "vps-billing/backend/internal/integrations/registry_test.go": {
+      "upstream_path": "vps-billing/backend/internal/integrations/registry_test.go",
+      "upstream_sha256": "443c948583e7f51b01ee31a2b1bc9a4dc4c0fd2ee216eab22afef6ae5a7b705d",
+      "exported_sha256": "443c948583e7f51b01ee31a2b1bc9a4dc4c0fd2ee216eab22afef6ae5a7b705d"
+    },
+    "vps-billing/backend/internal/integrations/settlement.go": {
+      "upstream_path": "vps-billing/backend/internal/integrations/settlement.go",
+      "upstream_sha256": "7074ed1ef780c8edbe001f06ca8bf18212f4baf413e50b32113e94fe81ebf249",
+      "exported_sha256": "7074ed1ef780c8edbe001f06ca8bf18212f4baf413e50b32113e94fe81ebf249"
+    },
+    "vps-billing/backend/internal/integrations/types.go": {
+      "upstream_path": "vps-billing/backend/internal/integrations/types.go",
+      "upstream_sha256": "40313192085322d0fc65f43dfbc4345fc5a8694ec19e5b20f67758c6b852cbea",
+      "exported_sha256": "40313192085322d0fc65f43dfbc4345fc5a8694ec19e5b20f67758c6b852cbea"
+    },
+    "vps-billing/backend/internal/runtimeplugins/client_linux.go": {
+      "upstream_path": "vps-billing/backend/internal/runtimeplugins/client_linux.go",
+      "upstream_sha256": "bce84a6b0092b8809e38de380ca5c281ebd2366fffd4ff1f4260afcebbb88575",
+      "exported_sha256": "bce84a6b0092b8809e38de380ca5c281ebd2366fffd4ff1f4260afcebbb88575"
+    },
+    "vps-billing/backend/internal/runtimeplugins/discovery_linux.go": {
+      "upstream_path": "vps-billing/backend/internal/runtimeplugins/discovery_linux.go",
+      "upstream_sha256": "4a78fb02c27479b1c986a6723807c76440c374bc668309fbf90edf845bc26f3b",
+      "exported_sha256": "4a78fb02c27479b1c986a6723807c76440c374bc668309fbf90edf845bc26f3b"
+    },
+    "vps-billing/backend/internal/runtimeplugins/files_linux.go": {
+      "upstream_path": "vps-billing/backend/internal/runtimeplugins/files_linux.go",
+      "upstream_sha256": "d8f290ad59be3b4470c7559bbb62220124b6489fefacc9d05de9a3324d1a9dbe",
+      "exported_sha256": "d8f290ad59be3b4470c7559bbb62220124b6489fefacc9d05de9a3324d1a9dbe"
+    },
+    "vps-billing/backend/internal/runtimeplugins/payment_linux.go": {
+      "upstream_path": "vps-billing/backend/internal/runtimeplugins/payment_linux.go",
+      "upstream_sha256": "3358f183b06f93f1afd5f3ca202cc625a0d216998acc2f655a62ef3a3606bb51",
+      "exported_sha256": "3358f183b06f93f1afd5f3ca202cc625a0d216998acc2f655a62ef3a3606bb51"
+    },
+    "vps-billing/backend/internal/runtimeplugins/payment_linux_test.go": {
+      "upstream_path": "vps-billing/backend/internal/runtimeplugins/payment_linux_test.go",
+      "upstream_sha256": "6adbec95ed03bfb883fabdb4d70ec88ca66b73f5a234cb75e32b9e8d61c4b66c",
+      "exported_sha256": "6adbec95ed03bfb883fabdb4d70ec88ca66b73f5a234cb75e32b9e8d61c4b66c"
+    },
+    "vps-billing/backend/internal/runtimeplugins/payment_maintenance_repro_test.go": {
+      "upstream_path": "vps-billing/backend/internal/runtimeplugins/payment_maintenance_repro_test.go",
+      "upstream_sha256": "58bd81a2180aabe37a45bb8f54d4c1383adcfc5615642ddf9b51ca1980a246ee",
+      "exported_sha256": "58bd81a2180aabe37a45bb8f54d4c1383adcfc5615642ddf9b51ca1980a246ee"
+    },
+    "vps-billing/backend/internal/runtimeplugins/resource_linux.go": {
+      "upstream_path": "vps-billing/backend/internal/runtimeplugins/resource_linux.go",
+      "upstream_sha256": "1c6d43f6920770e162f8bfb1c5d38187ba08bef9b6d32e1fb202fea62ad0861e",
+      "exported_sha256": "1c6d43f6920770e162f8bfb1c5d38187ba08bef9b6d32e1fb202fea62ad0861e"
+    },
+    "vps-billing/backend/internal/runtimeplugins/resource_linux_test.go": {
+      "upstream_path": "vps-billing/backend/internal/runtimeplugins/resource_linux_test.go",
+      "upstream_sha256": "1d35bdd84e0be4296a6df63553a2d9671ef707b824931653fb1b2b8e8aa7c27d",
+      "exported_sha256": "1d35bdd84e0be4296a6df63553a2d9671ef707b824931653fb1b2b8e8aa7c27d"
+    },
+    "vps-billing/backend/internal/runtimeplugins/runtime_linux_test.go": {
+      "upstream_path": "vps-billing/backend/internal/runtimeplugins/runtime_linux_test.go",
+      "upstream_sha256": "ca2e0a42fc931743ad09808a8b6fc6b498eaeac67d6f6704e039481108f1b4d5",
+      "exported_sha256": "ca2e0a42fc931743ad09808a8b6fc6b498eaeac67d6f6704e039481108f1b4d5"
+    },
+    "vps-billing/backend/internal/staffaccess/snapshot.go": {
+      "upstream_path": "vps-billing/backend/internal/staffaccess/snapshot.go",
+      "upstream_sha256": "71195e8038dec2fd1c4b5013f7bbadad64fb3a188b853a3ca8faf5ef6d90ff6d",
+      "exported_sha256": "71195e8038dec2fd1c4b5013f7bbadad64fb3a188b853a3ca8faf5ef6d90ff6d"
+    },
+    "vps-billing/backend/internal/staffaccess/snapshot_test.go": {
+      "upstream_path": "vps-billing/backend/internal/staffaccess/snapshot_test.go",
+      "upstream_sha256": "e2bd0172a111af85b97d1b650345d92691f75d4f4805ee59467ae5cdf4e49dbc",
+      "exported_sha256": "e2bd0172a111af85b97d1b650345d92691f75d4f4805ee59467ae5cdf4e49dbc"
+    },
+    "vps-billing/backend/internal/updates/credential_linux.go": {
+      "upstream_path": "vps-billing/backend/internal/updates/credential_linux.go",
+      "upstream_sha256": "a0aac43f85f064f4377949b6a632c0e631b401c97b26a971ca6416acbbdae7e2",
+      "exported_sha256": "a0aac43f85f064f4377949b6a632c0e631b401c97b26a971ca6416acbbdae7e2"
+    },
+    "vps-billing/backend/internal/updates/credential_linux_test.go": {
+      "upstream_path": "vps-billing/backend/internal/updates/credential_linux_test.go",
+      "upstream_sha256": "915c3f427a84bf97fca4a2381f00ea16697a2397e05af7cd49b6cfb6a6c62fb1",
+      "exported_sha256": "915c3f427a84bf97fca4a2381f00ea16697a2397e05af7cd49b6cfb6a6c62fb1"
+    },
+    "vps-billing/backend/internal/updates/distribution.go": {
+      "upstream_path": "vps-billing/backend/internal/updates/distribution.go",
+      "upstream_sha256": "fd9d1793364104f5cc06dc030344a2c4dc66c6f2535d0c6e8fa455bf71b09d99",
+      "exported_sha256": "fd9d1793364104f5cc06dc030344a2c4dc66c6f2535d0c6e8fa455bf71b09d99"
+    },
+    "vps-billing/backend/internal/updates/distribution_test.go": {
+      "upstream_path": "vps-billing/backend/internal/updates/distribution_test.go",
+      "upstream_sha256": "91d24419492e0621a3a5dfa3a6b09c64022d76e99a77ec85091af35309d078a2",
+      "exported_sha256": "91d24419492e0621a3a5dfa3a6b09c64022d76e99a77ec85091af35309d078a2"
+    },
+    "vps-billing/backend/internal/updates/export_test.go": {
+      "upstream_path": "vps-billing/backend/internal/updates/export_test.go",
+      "upstream_sha256": "2e5060e46d4183214cf04af4ea8a9325281a4396b1ec8f13b114d96d74c2d827",
+      "exported_sha256": "2e5060e46d4183214cf04af4ea8a9325281a4396b1ec8f13b114d96d74c2d827"
+    },
+    "vps-billing/backend/internal/updates/github.go": {
+      "upstream_path": "vps-billing/backend/internal/updates/github.go",
+      "upstream_sha256": "82987b48a553c39397dbfdf4668cc17d0c622728df1b874d1d8df945494e45fc",
+      "exported_sha256": "82987b48a553c39397dbfdf4668cc17d0c622728df1b874d1d8df945494e45fc"
+    },
+    "vps-billing/backend/internal/updates/handler_integration_test.go": {
+      "upstream_path": "vps-billing/backend/internal/updates/handler_integration_test.go",
+      "upstream_sha256": "47cc9079e042877c4eebf6e3be80dc9a0a76d2a51871e3e0c47d42276586993d",
+      "exported_sha256": "47cc9079e042877c4eebf6e3be80dc9a0a76d2a51871e3e0c47d42276586993d"
+    },
+    "vps-billing/backend/internal/updates/live_catalog_test.go": {
+      "upstream_path": "vps-billing/backend/internal/updates/live_catalog_test.go",
+      "upstream_sha256": "43eeddf7dcb103c5dc4f95ced4d908168d528fb18f69b2cecd71002879c2039a",
+      "exported_sha256": "43eeddf7dcb103c5dc4f95ced4d908168d528fb18f69b2cecd71002879c2039a"
+    },
+    "vps-billing/backend/internal/updates/operation.go": {
+      "upstream_path": "vps-billing/backend/internal/updates/operation.go",
+      "upstream_sha256": "018e4c234d181f3a775a457afa9334c9abc498a68870258de1469b9f616cc0dd",
+      "exported_sha256": "018e4c234d181f3a775a457afa9334c9abc498a68870258de1469b9f616cc0dd"
+    },
+    "vps-billing/backend/internal/updates/operation_linux.go": {
+      "upstream_path": "vps-billing/backend/internal/updates/operation_linux.go",
+      "upstream_sha256": "c092204464e3eb9e295131c59484b619b88f598eddc4110678187d0197d3d1b9",
+      "exported_sha256": "c092204464e3eb9e295131c59484b619b88f598eddc4110678187d0197d3d1b9"
+    },
+    "vps-billing/backend/internal/updates/operation_linux_test.go": {
+      "upstream_path": "vps-billing/backend/internal/updates/operation_linux_test.go",
+      "upstream_sha256": "84e114417ee46c38fb29ecc19b2d682c7017b1489b96d3708b457b83c8e3dedf",
+      "exported_sha256": "84e114417ee46c38fb29ecc19b2d682c7017b1489b96d3708b457b83c8e3dedf"
+    },
+    "vps-billing/backend/internal/updates/operation_test.go": {
+      "upstream_path": "vps-billing/backend/internal/updates/operation_test.go",
+      "upstream_sha256": "e182eff8130961fd28c06dfedf6c417f32df8cf6d4885acd309d71bdcae9d516",
+      "exported_sha256": "e182eff8130961fd28c06dfedf6c417f32df8cf6d4885acd309d71bdcae9d516"
+    },
+    "vps-billing/backend/internal/updates/service.go": {
+      "upstream_path": "vps-billing/backend/internal/updates/service.go",
+      "upstream_sha256": "db56088a23a99a1e4692e30e6f1678344aaeda161e56afcebfe9d1292a550a4b",
+      "exported_sha256": "db56088a23a99a1e4692e30e6f1678344aaeda161e56afcebfe9d1292a550a4b"
+    },
+    "vps-billing/backend/internal/updates/service_test.go": {
+      "upstream_path": "vps-billing/backend/internal/updates/service_test.go",
+      "upstream_sha256": "1c98f37f2d5ecf09b0b623dc9cad83fcde5dbb866d217973c165e3f5c9c2d2e8",
+      "exported_sha256": "1c98f37f2d5ecf09b0b623dc9cad83fcde5dbb866d217973c165e3f5c9c2d2e8"
+    },
+    "vps-billing/backend/migrations/001_initial.sql": {
+      "upstream_path": "vps-billing/backend/migrations/001_initial.sql",
+      "upstream_sha256": "820c7dd58337da334097016a5278f2e31919766c76de896dafe199f2319a353c",
+      "exported_sha256": "820c7dd58337da334097016a5278f2e31919766c76de896dafe199f2319a353c"
+    },
+    "vps-billing/backend/migrations/002_site_settings.sql": {
+      "upstream_path": "vps-billing/backend/migrations/002_site_settings.sql",
+      "upstream_sha256": "43713837a1d1649f6011e0b7210ea063a03e5b308b71c17cf01120bf96f85fa8",
+      "exported_sha256": "43713837a1d1649f6011e0b7210ea063a03e5b308b71c17cf01120bf96f85fa8"
+    },
+    "vps-billing/backend/migrations/003_currencies.sql": {
+      "upstream_path": "vps-billing/backend/migrations/003_currencies.sql",
+      "upstream_sha256": "a934b302afadb514de6e792d86d401d32185c974f93296889ca891709999b14e",
+      "exported_sha256": "a934b302afadb514de6e792d86d401d32185c974f93296889ca891709999b14e"
+    },
+    "vps-billing/backend/migrations/004_billing_snapshots.sql": {
+      "upstream_path": "vps-billing/backend/migrations/004_billing_snapshots.sql",
+      "upstream_sha256": "8299e2463116256c84340cc578c209cde4685fd1972f636f5788b1014d397feb",
+      "exported_sha256": "8299e2463116256c84340cc578c209cde4685fd1972f636f5788b1014d397feb"
+    },
+    "vps-billing/backend/migrations/005_exact_currency_codes.sql": {
+      "upstream_path": "vps-billing/backend/migrations/005_exact_currency_codes.sql",
+      "upstream_sha256": "38db56389f071bf9a81b8885128930a8039eb1908c61e32fd70d910678ceb083",
+      "exported_sha256": "38db56389f071bf9a81b8885128930a8039eb1908c61e32fd70d910678ceb083"
+    },
+    "vps-billing/backend/migrations/006_email_settings.sql": {
+      "upstream_path": "vps-billing/backend/migrations/006_email_settings.sql",
+      "upstream_sha256": "60531806ef1ac55ce38bad09e95a3c03789bc46e2db7869f7c212a606381feab",
+      "exported_sha256": "60531806ef1ac55ce38bad09e95a3c03789bc46e2db7869f7c212a606381feab"
+    },
+    "vps-billing/backend/migrations/007_currency_registry.sql": {
+      "upstream_path": "vps-billing/backend/migrations/007_currency_registry.sql",
+      "upstream_sha256": "a4e073da363299a5c0f6d231219a30003d57afa33c0fdae2bc38e244b06ba5bf",
+      "exported_sha256": "a4e073da363299a5c0f6d231219a30003d57afa33c0fdae2bc38e244b06ba5bf"
+    },
+    "vps-billing/backend/migrations/008_payment_runtime.sql": {
+      "upstream_path": "vps-billing/backend/migrations/008_payment_runtime.sql",
+      "upstream_sha256": "e8d476d53d9f146743d9b5985e874bebf808d97854099709a037e562b70ee8fc",
+      "exported_sha256": "e8d476d53d9f146743d9b5985e874bebf808d97854099709a037e562b70ee8fc"
+    },
+    "vps-billing/backend/migrations/009_audit_query_indexes.sql": {
+      "upstream_path": "vps-billing/backend/migrations/009_audit_query_indexes.sql",
+      "upstream_sha256": "76e472332ce370dd79fb79f397016550eaa11e0c1921064e0497a673f737fa51",
+      "exported_sha256": "76e472332ce370dd79fb79f397016550eaa11e0c1921064e0497a673f737fa51"
+    },
+    "vps-billing/backend/migrations/010_customer_accounts.sql": {
+      "upstream_path": "vps-billing/backend/migrations/010_customer_accounts.sql",
+      "upstream_sha256": "d480b19112b928ace4729185f3da8dde663b1ce1ba060200647454564799b6de",
+      "exported_sha256": "d480b19112b928ace4729185f3da8dde663b1ce1ba060200647454564799b6de"
+    },
+    "vps-billing/backend/migrations/011_catalog_taxonomy.sql": {
+      "upstream_path": "vps-billing/backend/migrations/011_catalog_taxonomy.sql",
+      "upstream_sha256": "112d211fe1e0328efec9293edd6fd9963e19203ce20bf5182091290d73633559",
+      "exported_sha256": "112d211fe1e0328efec9293edd6fd9963e19203ce20bf5182091290d73633559"
+    },
+    "vps-billing/backend/migrations/012_catalog_nodes.sql": {
+      "upstream_path": "vps-billing/backend/migrations/012_catalog_nodes.sql",
+      "upstream_sha256": "59eb82cc6ef58953418bb8fb5e8ef710f75775e3054c4399504eee5223880dc5",
+      "exported_sha256": "59eb82cc6ef58953418bb8fb5e8ef710f75775e3054c4399504eee5223880dc5"
+    },
+    "vps-billing/backend/migrations/013_product_configurations.sql": {
+      "upstream_path": "vps-billing/backend/migrations/013_product_configurations.sql",
+      "upstream_sha256": "d83d912b75cfb598696d0065bb3e8365f2a77616426ad3d1ff39e4d0d42acdef",
+      "exported_sha256": "d83d912b75cfb598696d0065bb3e8365f2a77616426ad3d1ff39e4d0d42acdef"
+    },
+    "vps-billing/backend/migrations/embed.go": {
+      "upstream_path": "vps-billing/backend/migrations/embed.go",
+      "upstream_sha256": "3fb7750f94f53069ac839ea7f05c0e63b53d09d57cee5f08ffdbae09f0e7f806",
+      "exported_sha256": "3fb7750f94f53069ac839ea7f05c0e63b53d09d57cee5f08ffdbae09f0e7f806"
+    },
+    "vps-billing/backend/pkg/pluginapi/payment.go": {
+      "upstream_path": "vps-billing/backend/pkg/pluginapi/payment.go",
+      "upstream_sha256": "57a59876c89a5901ad4a412c934690a556a48dbefc2ad23fb33657651357fe01",
+      "exported_sha256": "57a59876c89a5901ad4a412c934690a556a48dbefc2ad23fb33657651357fe01"
+    },
+    "vps-billing/backend/pkg/pluginapi/paymentv1/types.go": {
+      "upstream_path": "vps-billing/backend/pkg/pluginapi/paymentv1/types.go",
+      "upstream_sha256": "2b90ecc81818fc9043f11ccb8bb3f776389545201731bfcc21be2c57c4309c49",
+      "exported_sha256": "2b90ecc81818fc9043f11ccb8bb3f776389545201731bfcc21be2c57c4309c49"
+    },
+    "vps-billing/backend/pkg/pluginapi/peer_linux.go": {
+      "upstream_path": "vps-billing/backend/pkg/pluginapi/peer_linux.go",
+      "upstream_sha256": "a9599f238838434b55d7757ac3d444a1d1f5d4104cbdb712caeb976117f09bc3",
+      "exported_sha256": "a9599f238838434b55d7757ac3d444a1d1f5d4104cbdb712caeb976117f09bc3"
+    },
+    "vps-billing/backend/pkg/pluginapi/protocol.go": {
+      "upstream_path": "vps-billing/backend/pkg/pluginapi/protocol.go",
+      "upstream_sha256": "b352cfd471f3f400079723ef942cfecbaed97106330557a6e1eb68ffa438d424",
+      "exported_sha256": "b352cfd471f3f400079723ef942cfecbaed97106330557a6e1eb68ffa438d424"
+    },
+    "vps-billing/backend/pkg/pluginapi/protocol_test.go": {
+      "upstream_path": "vps-billing/backend/pkg/pluginapi/protocol_test.go",
+      "upstream_sha256": "e5c11ba888dd8b6acc4e118bcbbd1166da69133762b20e185f8ee4ad4205f7ca",
+      "exported_sha256": "e5c11ba888dd8b6acc4e118bcbbd1166da69133762b20e185f8ee4ad4205f7ca"
+    },
+    "vps-billing/backend/pkg/pluginapi/resource.go": {
+      "upstream_path": "vps-billing/backend/pkg/pluginapi/resource.go",
+      "upstream_sha256": "95dad93646c41a192e7186bc6007e78927dcb163dfda7abaa91259f38a074b2b",
+      "exported_sha256": "95dad93646c41a192e7186bc6007e78927dcb163dfda7abaa91259f38a074b2b"
+    },
+    "vps-billing/backend/pkg/pluginapi/resourcev1/contract.go": {
+      "upstream_path": "vps-billing/backend/pkg/pluginapi/resourcev1/contract.go",
+      "upstream_sha256": "4fcfcf2c7c3b3def1ea2194a7d362204c50635965445c6a254d4717b614225c1",
+      "exported_sha256": "4fcfcf2c7c3b3def1ea2194a7d362204c50635965445c6a254d4717b614225c1"
+    },
+    "vps-billing/backend/pkg/pluginapi/resourcev1/contract_test.go": {
+      "upstream_path": "vps-billing/backend/pkg/pluginapi/resourcev1/contract_test.go",
+      "upstream_sha256": "6d5ddc077eb2d25b56f50e414703b749a9e3bd78ae339f5f51fd10f674a5cbab",
+      "exported_sha256": "6d5ddc077eb2d25b56f50e414703b749a9e3bd78ae339f5f51fd10f674a5cbab"
+    },
+    "vps-billing/backend/pkg/pluginapi/smtpv1/types.go": {
+      "upstream_path": "vps-billing/backend/pkg/pluginapi/smtpv1/types.go",
+      "upstream_sha256": "b7ce17796dd8433bb2fe420aa54dcc2123a216e032c64472025ab8cd7be90eeb",
+      "exported_sha256": "b7ce17796dd8433bb2fe420aa54dcc2123a216e032c64472025ab8cd7be90eeb"
+    },
+    "vps-billing/backend/pkg/pluginserver/payment_linux.go": {
+      "upstream_path": "vps-billing/backend/pkg/pluginserver/payment_linux.go",
+      "upstream_sha256": "64e33c62121b08818b7812a26e961fb88e3d0fd57531500ae3a9c29323acdd29",
+      "exported_sha256": "64e33c62121b08818b7812a26e961fb88e3d0fd57531500ae3a9c29323acdd29"
+    },
+    "vps-billing/backend/pkg/pluginserver/resource_linux.go": {
+      "upstream_path": "vps-billing/backend/pkg/pluginserver/resource_linux.go",
+      "upstream_sha256": "47ed3f60294d15c1f858192deb614040fbf0116ee422f370590f9b4ea8b7e364",
+      "exported_sha256": "47ed3f60294d15c1f858192deb614040fbf0116ee422f370590f9b4ea8b7e364"
+    },
+    "vps-billing/backend/pkg/pluginserver/server_linux.go": {
+      "upstream_path": "vps-billing/backend/pkg/pluginserver/server_linux.go",
+      "upstream_sha256": "00d436b5a35ababcbc58be75541857611ed12d882d1f7df3453d06ed9a47cc38",
+      "exported_sha256": "00d436b5a35ababcbc58be75541857611ed12d882d1f7df3453d06ed9a47cc38"
+    },
+    "vps-billing/backend/plugins/paymentfixture/cmd/plugin/credential_linux.go": {
+      "upstream_path": "vps-billing/backend/plugins/paymentfixture/cmd/plugin/credential_linux.go",
+      "upstream_sha256": "cc7a2680fa815f62f15484812b350b22c1eaf7c35dd76f4ff9703211b41dd35a",
+      "exported_sha256": "cc7a2680fa815f62f15484812b350b22c1eaf7c35dd76f4ff9703211b41dd35a"
+    },
+    "vps-billing/backend/plugins/paymentfixture/cmd/plugin/credential_linux_test.go": {
+      "upstream_path": "vps-billing/backend/plugins/paymentfixture/cmd/plugin/credential_linux_test.go",
+      "upstream_sha256": "dfdae40fba659144c275e29f8fb99f27fc3eb0198a6d1d51450514d372a2465f",
+      "exported_sha256": "dfdae40fba659144c275e29f8fb99f27fc3eb0198a6d1d51450514d372a2465f"
+    },
+    "vps-billing/backend/plugins/paymentfixture/cmd/plugin/main_linux.go": {
+      "upstream_path": "vps-billing/backend/plugins/paymentfixture/cmd/plugin/main_linux.go",
+      "upstream_sha256": "693cebcae80908820d1b0cf164d9998c663586f7e4a64330d5dd62906f58d00f",
+      "exported_sha256": "693cebcae80908820d1b0cf164d9998c663586f7e4a64330d5dd62906f58d00f"
+    },
+    "vps-billing/backend/plugins/paymentfixture/cmd/plugin/main_linux_test.go": {
+      "upstream_path": "vps-billing/backend/plugins/paymentfixture/cmd/plugin/main_linux_test.go",
+      "upstream_sha256": "591d3b747c7e26b854731ec1b3df7dca380e1776e14dea5f397953cad1ec8682",
+      "exported_sha256": "591d3b747c7e26b854731ec1b3df7dca380e1776e14dea5f397953cad1ec8682"
+    },
+    "vps-billing/backend/plugins/paymentfixture/fixture.go": {
+      "upstream_path": "vps-billing/backend/plugins/paymentfixture/fixture.go",
+      "upstream_sha256": "bca33bc2693d4fc1960508d9503b6491823d75e66894c34ddfc9d207d7adabed",
+      "exported_sha256": "bca33bc2693d4fc1960508d9503b6491823d75e66894c34ddfc9d207d7adabed"
+    },
+    "vps-billing/backend/plugins/paymentfixture/fixture_test.go": {
+      "upstream_path": "vps-billing/backend/plugins/paymentfixture/fixture_test.go",
+      "upstream_sha256": "7c5bf7577d9a1d3174ff47a43bb30dd068d48ca408babd38ed4e327160938bb8",
+      "exported_sha256": "7c5bf7577d9a1d3174ff47a43bb30dd068d48ca408babd38ed4e327160938bb8"
+    },
+    "vps-billing/backend/plugins/resourcebridge/cmd/plugin/main_linux.go": {
+      "upstream_path": "vps-billing/backend/plugins/resourcebridge/cmd/plugin/main_linux.go",
+      "upstream_sha256": "8b74f6ec3a88c9763145a427b98fc1e0ba29e5c5daf0dc35959546b203c4dbc5",
+      "exported_sha256": "8b74f6ec3a88c9763145a427b98fc1e0ba29e5c5daf0dc35959546b203c4dbc5"
+    },
+    "vps-billing/backend/plugins/resourcebridge/config.go": {
+      "upstream_path": "vps-billing/backend/plugins/resourcebridge/config.go",
+      "upstream_sha256": "9e416e92a566fc66b70da0200996c005f6ca4b4ef8e28da74adb8240e927b179",
+      "exported_sha256": "9e416e92a566fc66b70da0200996c005f6ca4b4ef8e28da74adb8240e927b179"
+    },
+    "vps-billing/backend/plugins/resourcebridge/config_test.go": {
+      "upstream_path": "vps-billing/backend/plugins/resourcebridge/config_test.go",
+      "upstream_sha256": "2052c29b6ae96c3695f5da503dc0a8a6cd857ddad289cfda043e8f939fd86e6f",
+      "exported_sha256": "2052c29b6ae96c3695f5da503dc0a8a6cd857ddad289cfda043e8f939fd86e6f"
+    },
+    "vps-billing/backend/plugins/resourcebridge/credentials_linux.go": {
+      "upstream_path": "vps-billing/backend/plugins/resourcebridge/credentials_linux.go",
+      "upstream_sha256": "8acae8506418127e9df8e5de8893abfd5a836d9deb34d2dfa49221a4d1acb56f",
+      "exported_sha256": "8acae8506418127e9df8e5de8893abfd5a836d9deb34d2dfa49221a4d1acb56f"
+    },
+    "vps-billing/backend/plugins/resourcebridge/credentials_linux_test.go": {
+      "upstream_path": "vps-billing/backend/plugins/resourcebridge/credentials_linux_test.go",
+      "upstream_sha256": "0a2628e726e2bcbe1a25bb23bfbafa93254b0eeeeba0f06d2370cd61e9e68196",
+      "exported_sha256": "0a2628e726e2bcbe1a25bb23bfbafa93254b0eeeeba0f06d2370cd61e9e68196"
+    },
+    "vps-billing/backend/plugins/smtp/README.md": {
+      "upstream_path": "vps-billing/backend/plugins/smtp/README.md",
+      "upstream_sha256": "f455ba3a616a514b9a6396def5fe7809c73256e594ee707f30549b40f8797010",
+      "exported_sha256": "f455ba3a616a514b9a6396def5fe7809c73256e594ee707f30549b40f8797010"
+    },
+    "vps-billing/backend/plugins/smtp/VERSION": {
+      "upstream_path": "vps-billing/backend/plugins/smtp/VERSION",
+      "upstream_sha256": "1575e1af4a95f12f70b4ee6a6adce8160953d93ea17dc2611b90883ccc3ad3b8",
+      "exported_sha256": "1575e1af4a95f12f70b4ee6a6adce8160953d93ea17dc2611b90883ccc3ad3b8"
+    },
+    "vps-billing/backend/plugins/smtp/cmd/plugin/main_linux.go": {
+      "upstream_path": "vps-billing/backend/plugins/smtp/cmd/plugin/main_linux.go",
+      "upstream_sha256": "bbf6b7e51c3356b916d7bf791c63bafeab616b367a1fd6c141052dc3e4458c59",
+      "exported_sha256": "bbf6b7e51c3356b916d7bf791c63bafeab616b367a1fd6c141052dc3e4458c59"
+    },
+    "vps-billing/backend/plugins/smtp/smtp.go": {
+      "upstream_path": "vps-billing/backend/plugins/smtp/smtp.go",
+      "upstream_sha256": "7a72f2e7ad15157fe350f9e834d3528a5c127b58a0775dcfde676a7452a54475",
+      "exported_sha256": "7a72f2e7ad15157fe350f9e834d3528a5c127b58a0775dcfde676a7452a54475"
+    },
+    "vps-billing/backend/plugins/smtp/smtp_test.go": {
+      "upstream_path": "vps-billing/backend/plugins/smtp/smtp_test.go",
+      "upstream_sha256": "b83b9b7d9b01821d90746d1911da26e6c23be101e7a7c904ab79ec147ea485e9",
+      "exported_sha256": "b83b9b7d9b01821d90746d1911da26e6c23be101e7a7c904ab79ec147ea485e9"
+    },
+    "vps-billing/deploy/.gitignore": {
+      "upstream_path": "vps-billing/deploy/.gitignore",
+      "upstream_sha256": "3c9109120edf14585af71fbe8a70b04aa25e99349a11feb7112a087ef5d34aa1",
+      "exported_sha256": "3c9109120edf14585af71fbe8a70b04aa25e99349a11feb7112a087ef5d34aa1"
+    },
+    "vps-billing/deploy/ci/accept-native-http.py": {
+      "upstream_path": "vps-billing/deploy/ci/accept-native-http.py",
+      "upstream_sha256": "8a89b1c84ce6ec15001b2ce3e9e6b226cb7b15e679f9dc7da3f61e1aee5a7756",
+      "exported_sha256": "8a89b1c84ce6ec15001b2ce3e9e6b226cb7b15e679f9dc7da3f61e1aee5a7756"
+    },
+    "vps-billing/deploy/ci/accept-native.sh": {
+      "upstream_path": "vps-billing/deploy/ci/accept-native.sh",
+      "upstream_sha256": "fe4d290af45e1082bd5c5380898f029979811854ee2f6b9121f1f7b35345da82",
+      "exported_sha256": "fe4d290af45e1082bd5c5380898f029979811854ee2f6b9121f1f7b35345da82"
+    },
+    "vps-billing/deploy/ci/browser-demo.py": {
+      "upstream_path": "vps-billing/deploy/ci/browser-demo.py",
+      "upstream_sha256": "10c81472545fc2112b024db165e17081266d68837318197d806f28e60d90f08f",
+      "exported_sha256": "10c81472545fc2112b024db165e17081266d68837318197d806f28e60d90f08f"
+    },
+    "vps-billing/deploy/ci/browser-mysql-fixture.gotxt": {
+      "upstream_path": "vps-billing/deploy/ci/browser-mysql-fixture.gotxt",
+      "upstream_sha256": "17842af3ab125e96e00de08173f9b55cc60f63a4042609698650426cfdd850a8",
+      "exported_sha256": "17842af3ab125e96e00de08173f9b55cc60f63a4042609698650426cfdd850a8"
+    },
+    "vps-billing/deploy/ci/browser-mysql.py": {
+      "upstream_path": "vps-billing/deploy/ci/browser-mysql.py",
+      "upstream_sha256": "4d399afbb05e72e00a040016099e61297f86e6f485bb50e45abd73aaa747b558",
+      "exported_sha256": "4d399afbb05e72e00a040016099e61297f86e6f485bb50e45abd73aaa747b558"
+    },
+    "vps-billing/deploy/ci/browser-mysql.sh": {
+      "upstream_path": "vps-billing/deploy/ci/browser-mysql.sh",
+      "upstream_sha256": "9e512f94b1c4a120f2d6b36604be7fccd398ffaa5cecd51260b2f1daa3b9f10e",
+      "exported_sha256": "9e512f94b1c4a120f2d6b36604be7fccd398ffaa5cecd51260b2f1daa3b9f10e"
+    },
+    "vps-billing/deploy/ci/check-resource-package.sh": {
+      "upstream_path": "vps-billing/deploy/ci/check-resource-package.sh",
+      "upstream_sha256": "3f3e77b5388ed918485f1bdc61e2775a73e4bf0fd1351740419195767d8bb51d",
+      "exported_sha256": "3f3e77b5388ed918485f1bdc61e2775a73e4bf0fd1351740419195767d8bb51d"
+    },
+    "vps-billing/deploy/ci/check.sh": {
+      "upstream_path": "vps-billing/deploy/ci/check.sh",
+      "upstream_sha256": "c52ac90e5e2af3fef748c1fc0ca153b4598668e49200da817d9de0f34b19a268",
+      "exported_sha256": "c52ac90e5e2af3fef748c1fc0ca153b4598668e49200da817d9de0f34b19a268"
+    },
+    "vps-billing/deploy/ci/core-native.py": {
+      "upstream_path": "vps-billing/deploy/ci/core-native.py",
+      "upstream_sha256": "d9512028244449273033e46fc2851d7769d308d75b5b78b836adcfc7b71c5896",
+      "exported_sha256": "d9512028244449273033e46fc2851d7769d308d75b5b78b836adcfc7b71c5896"
+    },
+    "vps-billing/deploy/ci/core-native.sh": {
+      "upstream_path": "vps-billing/deploy/ci/core-native.sh",
+      "upstream_sha256": "797572ce97b8d4ae5ee47f08fc903e80f088e18de6d8aca8009838597d034a83",
+      "exported_sha256": "797572ce97b8d4ae5ee47f08fc903e80f088e18de6d8aca8009838597d034a83"
+    },
+    "vps-billing/deploy/ci/edge-observability.py": {
+      "upstream_path": "vps-billing/deploy/ci/edge-observability.py",
+      "upstream_sha256": "e9a404b7a8103e575c474325197f3cfa32a65db2987fbe7f064d7b2c37e2746e",
+      "exported_sha256": "e9a404b7a8103e575c474325197f3cfa32a65db2987fbe7f064d7b2c37e2746e"
+    },
+    "vps-billing/deploy/ci/historical-artifacts.json": {
+      "upstream_path": "vps-billing/deploy/ci/historical-artifacts.json",
+      "upstream_sha256": "13ac0ff6c1ece748c638e6c4a260566450efeb5f711134cfbd959a098a1be3b0",
+      "exported_sha256": "13ac0ff6c1ece748c638e6c4a260566450efeb5f711134cfbd959a098a1be3b0"
+    },
+    "vps-billing/deploy/ci/mysql-distribution-ubuntu22.json": {
+      "upstream_path": "vps-billing/deploy/ci/mysql-distribution-ubuntu22.json",
+      "upstream_sha256": "0595467f4c22d0db298736e3b524a88b93c99030b6676e38028c6b8377bdebdb",
+      "exported_sha256": "0595467f4c22d0db298736e3b524a88b93c99030b6676e38028c6b8377bdebdb"
+    },
+    "vps-billing/deploy/ci/mysql-distribution.json": {
+      "upstream_path": "vps-billing/deploy/ci/mysql-distribution.json",
+      "upstream_sha256": "3bf29355429a795edecccec6243481a888d3de976ce02a7d7e19cae07e446ac8",
+      "exported_sha256": "3bf29355429a795edecccec6243481a888d3de976ce02a7d7e19cae07e446ac8"
+    },
+    "vps-billing/deploy/ci/mysql-distribution.py": {
+      "upstream_path": "vps-billing/deploy/ci/mysql-distribution.py",
+      "upstream_sha256": "a81114fbf80fe3116f3cd714fdd0068ca081c35a2423b67f661fc9bb8dd92ab7",
+      "exported_sha256": "a81114fbf80fe3116f3cd714fdd0068ca081c35a2423b67f661fc9bb8dd92ab7"
+    },
+    "vps-billing/deploy/ci/mysql-native.sh": {
+      "upstream_path": "vps-billing/deploy/ci/mysql-native.sh",
+      "upstream_sha256": "e741ac1df91c2767a35d58c72e905bac4fef48a4d5e25f497c31ec95588b188e",
+      "exported_sha256": "e741ac1df91c2767a35d58c72e905bac4fef48a4d5e25f497c31ec95588b188e"
+    },
+    "vps-billing/deploy/ci/payment-native.py": {
+      "upstream_path": "vps-billing/deploy/ci/payment-native.py",
+      "upstream_sha256": "8beb287351bcabe443ff857ab20ee4c085550309c190cbe29ef6a341481a23a8",
+      "exported_sha256": "8beb287351bcabe443ff857ab20ee4c085550309c190cbe29ef6a341481a23a8"
+    },
+    "vps-billing/deploy/ci/payment-native.sh": {
+      "upstream_path": "vps-billing/deploy/ci/payment-native.sh",
+      "upstream_sha256": "18a3819bb04a15ae720cefbc6f0511bbb0376b4104ef4008641cbe0165148776",
+      "exported_sha256": "18a3819bb04a15ae720cefbc6f0511bbb0376b4104ef4008641cbe0165148776"
+    },
+    "vps-billing/deploy/ci/performance-native.sh": {
+      "upstream_path": "vps-billing/deploy/ci/performance-native.sh",
+      "upstream_sha256": "8d8821f4df1c13c4e30905030f965e30134a115ac9f6175426b8337ee7a46939",
+      "exported_sha256": "8d8821f4df1c13c4e30905030f965e30134a115ac9f6175426b8337ee7a46939"
+    },
+    "vps-billing/deploy/ci/performance-report.py": {
+      "upstream_path": "vps-billing/deploy/ci/performance-report.py",
+      "upstream_sha256": "f745087854b053bcad00e5956f4cd44d2634778cc0526f24f7e6c480bc6e577f",
+      "exported_sha256": "f745087854b053bcad00e5956f4cd44d2634778cc0526f24f7e6c480bc6e577f"
+    },
+    "vps-billing/deploy/ci/plugin-native.py": {
+      "upstream_path": "vps-billing/deploy/ci/plugin-native.py",
+      "upstream_sha256": "7f2b634af9b0a4ba7024b2c575a387cd32d197b2b017c95a87c549f3a3d8b934",
+      "exported_sha256": "7f2b634af9b0a4ba7024b2c575a387cd32d197b2b017c95a87c549f3a3d8b934"
+    },
+    "vps-billing/deploy/ci/plugin-native.sh": {
+      "upstream_path": "vps-billing/deploy/ci/plugin-native.sh",
+      "upstream_sha256": "9641378322812ceb158949157f65e5e10a55e4dbf9a7975ac485e8a938177b6b",
+      "exported_sha256": "9641378322812ceb158949157f65e5e10a55e4dbf9a7975ac485e8a938177b6b"
+    },
+    "vps-billing/deploy/ci/prepare-browser.py": {
+      "upstream_path": "vps-billing/deploy/ci/prepare-browser.py",
+      "upstream_sha256": "270d82de4cbf166d7efdbf4e373426c457c572fb1d831a88d3cf93393e5c3938",
+      "exported_sha256": "270d82de4cbf166d7efdbf4e373426c457c572fb1d831a88d3cf93393e5c3938"
+    },
+    "vps-billing/deploy/ci/prepare-native-runner.sh": {
+      "upstream_path": "vps-billing/deploy/ci/prepare-native-runner.sh",
+      "upstream_sha256": "a028cdbf33020139dfa8b8889acbe8a5bbca07f277056b58281f8d12e3d6b270",
+      "exported_sha256": "f6d3a696063d0ae2c5364213752292b54390796f6aa7a90df82bbd65bee4ec1c",
+      "adapted_for_independent_repository": true
+    },
+    "vps-billing/deploy/ci/public-core-prepare.py": {
+      "upstream_path": "vps-billing/deploy/ci/public-core-prepare.py",
+      "upstream_sha256": "925aad901049b229e8a63fe39fcee16f83d95346ebcbab90831e63fefda8dddc",
+      "exported_sha256": "925aad901049b229e8a63fe39fcee16f83d95346ebcbab90831e63fefda8dddc"
+    },
+    "vps-billing/deploy/ci/release_pipeline.py": {
+      "upstream_path": "vps-billing/deploy/ci/release_pipeline.py",
+      "upstream_sha256": "bb6ee2b3afc372a1aa0ad1c8178680ab3cc0fba189958cab4fd36a5e5c98ea30",
+      "exported_sha256": "bb6ee2b3afc372a1aa0ad1c8178680ab3cc0fba189958cab4fd36a5e5c98ea30"
+    },
+    "vps-billing/deploy/ci/resource_package_gate.py": {
+      "upstream_path": "vps-billing/deploy/ci/resource_package_gate.py",
+      "upstream_sha256": "d0423a1c426ac8f4ef65a365b5bbef981d3db36caf4e00a1ec4a114a08a06978",
+      "exported_sha256": "d0423a1c426ac8f4ef65a365b5bbef981d3db36caf4e00a1ec4a114a08a06978"
+    },
+    "vps-billing/deploy/ci/smtp-loopback-fixture.py": {
+      "upstream_path": "vps-billing/deploy/ci/smtp-loopback-fixture.py",
+      "upstream_sha256": "e918546d597c8ec28c9be12963ee285acfba830d26a04b996c5b3c28102af2fe",
+      "exported_sha256": "e918546d597c8ec28c9be12963ee285acfba830d26a04b996c5b3c28102af2fe"
+    },
+    "vps-billing/deploy/ci/test_accept_native.py": {
+      "upstream_path": "vps-billing/deploy/ci/test_accept_native.py",
+      "upstream_sha256": "ff66d8fe02857585ee3c93a17a0e9ee3c5afd719a59b336a234f42d025f67bee",
+      "exported_sha256": "ff66d8fe02857585ee3c93a17a0e9ee3c5afd719a59b336a234f42d025f67bee"
+    },
+    "vps-billing/deploy/ci/test_backup_native.py": {
+      "upstream_path": "vps-billing/deploy/ci/test_backup_native.py",
+      "upstream_sha256": "56a30ec73737120022c6ec3efe7f9db1a175aa6dd423189ebfec795445664869",
+      "exported_sha256": "56a30ec73737120022c6ec3efe7f9db1a175aa6dd423189ebfec795445664869"
+    },
+    "vps-billing/deploy/ci/test_browser_demo.py": {
+      "upstream_path": "vps-billing/deploy/ci/test_browser_demo.py",
+      "upstream_sha256": "e6e57fb4a301d2268859c561c130f2d6796726d81ed2cebe5e684acf0e86566e",
+      "exported_sha256": "e6e57fb4a301d2268859c561c130f2d6796726d81ed2cebe5e684acf0e86566e"
+    },
+    "vps-billing/deploy/ci/test_browser_mysql.py": {
+      "upstream_path": "vps-billing/deploy/ci/test_browser_mysql.py",
+      "upstream_sha256": "e2a50d237196e7774cffbe6bf58b8c29ea689383f4bfb1e971155f59c42d918e",
+      "exported_sha256": "e2a50d237196e7774cffbe6bf58b8c29ea689383f4bfb1e971155f59c42d918e"
+    },
+    "vps-billing/deploy/ci/test_check.py": {
+      "upstream_path": "vps-billing/deploy/ci/test_check.py",
+      "upstream_sha256": "5890842a972f3960655bf7f36536a4c0d1b67c418552f3d1ea753a2de8789fb3",
+      "exported_sha256": "5890842a972f3960655bf7f36536a4c0d1b67c418552f3d1ea753a2de8789fb3"
+    },
+    "vps-billing/deploy/ci/test_historical_archives.py": {
+      "upstream_path": "vps-billing/deploy/ci/test_historical_archives.py",
+      "upstream_sha256": "2f571d9376bb497947d054d8e79a0a16b306597210326a8510bfc265b9c29e21",
+      "exported_sha256": "2f571d9376bb497947d054d8e79a0a16b306597210326a8510bfc265b9c29e21"
+    },
+    "vps-billing/deploy/ci/test_mysql_distribution.py": {
+      "upstream_path": "vps-billing/deploy/ci/test_mysql_distribution.py",
+      "upstream_sha256": "f5eff58f5ef2cc29cafdf3249d0ff7fcc6c0bf1d6c9e2bcb9ca2d52663b189db",
+      "exported_sha256": "f5eff58f5ef2cc29cafdf3249d0ff7fcc6c0bf1d6c9e2bcb9ca2d52663b189db"
+    },
+    "vps-billing/deploy/ci/test_mysql_native.py": {
+      "upstream_path": "vps-billing/deploy/ci/test_mysql_native.py",
+      "upstream_sha256": "bac74b508d80fdec003b35498c72c566b03fb9ca2477c7c7a3eac5d4e3b22dc7",
+      "exported_sha256": "bac74b508d80fdec003b35498c72c566b03fb9ca2477c7c7a3eac5d4e3b22dc7"
+    },
+    "vps-billing/deploy/ci/test_payment_native.py": {
+      "upstream_path": "vps-billing/deploy/ci/test_payment_native.py",
+      "upstream_sha256": "3cc5ca211365f7606d3fda1abce87c28feffdc2b558f77f6b916723139c97f9e",
+      "exported_sha256": "3cc5ca211365f7606d3fda1abce87c28feffdc2b558f77f6b916723139c97f9e"
+    },
+    "vps-billing/deploy/ci/test_performance_report.py": {
+      "upstream_path": "vps-billing/deploy/ci/test_performance_report.py",
+      "upstream_sha256": "5c60927421939a32d8fc6cefcd5f670ecd592ec1676146a19a7eac9ba05d380b",
+      "exported_sha256": "5c60927421939a32d8fc6cefcd5f670ecd592ec1676146a19a7eac9ba05d380b"
+    },
+    "vps-billing/deploy/ci/test_performance_runner.py": {
+      "upstream_path": "vps-billing/deploy/ci/test_performance_runner.py",
+      "upstream_sha256": "4ed5d2e5dbe25ce517261387ee6777a6f7dd93e1839b53eedff2fd8de746f624",
+      "exported_sha256": "4ed5d2e5dbe25ce517261387ee6777a6f7dd93e1839b53eedff2fd8de746f624"
+    },
+    "vps-billing/deploy/ci/test_plugin_native.py": {
+      "upstream_path": "vps-billing/deploy/ci/test_plugin_native.py",
+      "upstream_sha256": "de5af947087d3b96865b1fe009948f12e944bb507c216d0b66d1e2a8ea627d4d",
+      "exported_sha256": "de5af947087d3b96865b1fe009948f12e944bb507c216d0b66d1e2a8ea627d4d"
+    },
+    "vps-billing/deploy/ci/test_prepare_browser.py": {
+      "upstream_path": "vps-billing/deploy/ci/test_prepare_browser.py",
+      "upstream_sha256": "db7d57ce3e7c6bbcc527f496f70dc8f6996ca4c8d54cd3360898699760d1f452",
+      "exported_sha256": "db7d57ce3e7c6bbcc527f496f70dc8f6996ca4c8d54cd3360898699760d1f452"
+    },
+    "vps-billing/deploy/ci/test_public_core_prepare.py": {
+      "upstream_path": "vps-billing/deploy/ci/test_public_core_prepare.py",
+      "upstream_sha256": "1cacfc61e0ecda5291fec52912ad44523d788f7d40a718ba882af54e6f82ff07",
+      "exported_sha256": "1cacfc61e0ecda5291fec52912ad44523d788f7d40a718ba882af54e6f82ff07"
+    },
+    "vps-billing/deploy/ci/test_release_docs.py": {
+      "upstream_path": "vps-billing/deploy/ci/test_release_docs.py",
+      "upstream_sha256": "4b26537c9f0dac41121bb36acd109e4b99b6a85806cc88f803863620465f418d",
+      "exported_sha256": "4b26537c9f0dac41121bb36acd109e4b99b6a85806cc88f803863620465f418d"
+    },
+    "vps-billing/deploy/ci/test_release_pipeline.py": {
+      "upstream_path": "vps-billing/deploy/ci/test_release_pipeline.py",
+      "upstream_sha256": "9160bf01afe699a46c0befc9c854a92b11badd0482add93b660c175520145064",
+      "exported_sha256": "9160bf01afe699a46c0befc9c854a92b11badd0482add93b660c175520145064"
+    },
+    "vps-billing/deploy/ci/test_resource_package.py": {
+      "upstream_path": "vps-billing/deploy/ci/test_resource_package.py",
+      "upstream_sha256": "a101a55cb4ef88ccd21e12ea3830d96303e5bab2c42130015d438a74c40ddbfa",
+      "exported_sha256": "a101a55cb4ef88ccd21e12ea3830d96303e5bab2c42130015d438a74c40ddbfa"
+    },
+    "vps-billing/deploy/ci/test_runtime_release.py": {
+      "upstream_path": "vps-billing/deploy/ci/test_runtime_release.py",
+      "upstream_sha256": "c2577687b6e1a0095241116f9471090c1ff6b0bbdc2085d06ab10bfa3a061cbc",
+      "exported_sha256": "c2577687b6e1a0095241116f9471090c1ff6b0bbdc2085d06ab10bfa3a061cbc"
+    },
+    "vps-billing/deploy/nginx.native.conf": {
+      "upstream_path": "vps-billing/deploy/nginx.native.conf",
+      "upstream_sha256": "0d1e43fa05ded34bf04c8d0bd761c385529981b7111fc38f67f59e6ca0debb21",
+      "exported_sha256": "0d1e43fa05ded34bf04c8d0bd761c385529981b7111fc38f67f59e6ca0debb21"
+    },
+    "vps-billing/deploy/scripts/backup-native.sh": {
+      "upstream_path": "vps-billing/deploy/scripts/backup-native.sh",
+      "upstream_sha256": "0f5d30c70fc5281b76e9b00387c4b70393765a00d554abfd89ec3e50619b02c4",
+      "exported_sha256": "0f5d30c70fc5281b76e9b00387c4b70393765a00d554abfd89ec3e50619b02c4"
+    },
+    "vps-billing/deploy/scripts/build-resource-plugin.py": {
+      "upstream_path": "vps-billing/deploy/scripts/build-resource-plugin.py",
+      "upstream_sha256": "b59222a35e151b2b07ee1cddb444b951ba71ad7c56ab24ccca695ff1731fbe49",
+      "exported_sha256": "b59222a35e151b2b07ee1cddb444b951ba71ad7c56ab24ccca695ff1731fbe49"
+    },
+    "vps-billing/deploy/scripts/core-manager.py": {
+      "upstream_path": "vps-billing/deploy/scripts/core-manager.py",
+      "upstream_sha256": "d06a16c535b01cba54b7f1a9ce1dc80f1ccde4cf7aa510dc9abfa0e131ba4d16",
+      "exported_sha256": "d06a16c535b01cba54b7f1a9ce1dc80f1ccde4cf7aa510dc9abfa0e131ba4d16"
+    },
+    "vps-billing/deploy/scripts/core-operation.py": {
+      "upstream_path": "vps-billing/deploy/scripts/core-operation.py",
+      "upstream_sha256": "39e220574c6db3a2749a80c1b2896ffc9821322ccaaad97f2a77376ea543bdfa",
+      "exported_sha256": "39e220574c6db3a2749a80c1b2896ffc9821322ccaaad97f2a77376ea543bdfa"
+    },
+    "vps-billing/deploy/scripts/package-release.sh": {
+      "upstream_path": "vps-billing/deploy/scripts/package-release.sh",
+      "upstream_sha256": "e7ce012f675e9bc5bb5ef968712c21b243329bac942d50011a804e457015e424",
+      "exported_sha256": "e7ce012f675e9bc5bb5ef968712c21b243329bac942d50011a804e457015e424"
+    },
+    "vps-billing/deploy/scripts/plugin-manager.py": {
+      "upstream_path": "vps-billing/deploy/scripts/plugin-manager.py",
+      "upstream_sha256": "6803e3e06890cda019cd06b657e05d84d92abdff04412e783b93467cc5eb2346",
+      "exported_sha256": "6803e3e06890cda019cd06b657e05d84d92abdff04412e783b93467cc5eb2346"
+    },
+    "vps-billing/deploy/scripts/release-manifest.py": {
+      "upstream_path": "vps-billing/deploy/scripts/release-manifest.py",
+      "upstream_sha256": "ff6c4b2c4cc1e6b6baf2c84394ee9b1d694a5b169bc3430114be031ce847d321",
+      "exported_sha256": "ff6c4b2c4cc1e6b6baf2c84394ee9b1d694a5b169bc3430114be031ce847d321"
+    },
+    "vps-billing/deploy/scripts/test-backup-native.sh": {
+      "upstream_path": "vps-billing/deploy/scripts/test-backup-native.sh",
+      "upstream_sha256": "f19beabe01e5ee2df8bb3602a152a39a9513aa7bea675fb80996e3fbf6ae577b",
+      "exported_sha256": "f19beabe01e5ee2df8bb3602a152a39a9513aa7bea675fb80996e3fbf6ae577b"
+    },
+    "vps-billing/deploy/scripts/test-core-manager.py": {
+      "upstream_path": "vps-billing/deploy/scripts/test-core-manager.py",
+      "upstream_sha256": "cdff0423d8f6c0254a052ddbac039d957d81659784e44e87a77057beb501e9d3",
+      "exported_sha256": "cdff0423d8f6c0254a052ddbac039d957d81659784e44e87a77057beb501e9d3"
+    },
+    "vps-billing/deploy/scripts/test-core-operation.py": {
+      "upstream_path": "vps-billing/deploy/scripts/test-core-operation.py",
+      "upstream_sha256": "97a99a6e466277c92b19a3d0caa849aa672cf168802d2f8cc43334cd2b0336ae",
+      "exported_sha256": "97a99a6e466277c92b19a3d0caa849aa672cf168802d2f8cc43334cd2b0336ae"
+    },
+    "vps-billing/deploy/scripts/test-plugin-manager.py": {
+      "upstream_path": "vps-billing/deploy/scripts/test-plugin-manager.py",
+      "upstream_sha256": "f1cd46e7f47149ccd1da59c07d6eb6700da2f0e6985e45c9a2e3338b613aac75",
+      "exported_sha256": "f1cd46e7f47149ccd1da59c07d6eb6700da2f0e6985e45c9a2e3338b613aac75"
+    },
+    "vps-billing/deploy/scripts/test-release-manifest.py": {
+      "upstream_path": "vps-billing/deploy/scripts/test-release-manifest.py",
+      "upstream_sha256": "5c583ae646d1142ded4eed8d7e77db57ce59efd10dde0d400ca470bb75788de3",
+      "exported_sha256": "5c583ae646d1142ded4eed8d7e77db57ce59efd10dde0d400ca470bb75788de3"
+    },
+    "vps-billing/deploy/scripts/test-update-manager.py": {
+      "upstream_path": "vps-billing/deploy/scripts/test-update-manager.py",
+      "upstream_sha256": "9d508e6b95a7c74778acb837e48a885798e62a2b9151696e8fa245f39d84c3fe",
+      "exported_sha256": "9d508e6b95a7c74778acb837e48a885798e62a2b9151696e8fa245f39d84c3fe"
+    },
+    "vps-billing/deploy/scripts/update-manager.py": {
+      "upstream_path": "vps-billing/deploy/scripts/update-manager.py",
+      "upstream_sha256": "9aff13393b741141f9e1e3bb25824f1691aea90f36e36efa1ed3708f25e02689",
+      "exported_sha256": "9aff13393b741141f9e1e3bb25824f1691aea90f36e36efa1ed3708f25e02689"
+    },
+    "vps-billing/deploy/systemd/api.env.example": {
+      "upstream_path": "vps-billing/deploy/systemd/api.env.example",
+      "upstream_sha256": "7dff90e1736889587fc3f4347ccd6763f12a5c42d8e2e13b370ceb3696b78968",
+      "exported_sha256": "7dff90e1736889587fc3f4347ccd6763f12a5c42d8e2e13b370ceb3696b78968"
+    },
+    "vps-billing/deploy/systemd/aster-api.service": {
+      "upstream_path": "vps-billing/deploy/systemd/aster-api.service",
+      "upstream_sha256": "6512a79b455893b03ded5e529222cfd8df105ad6609d5e625b782c2b458b7ada",
+      "exported_sha256": "6512a79b455893b03ded5e529222cfd8df105ad6609d5e625b782c2b458b7ada"
+    },
+    "vps-billing/deploy/systemd/aster-payment.service": {
+      "upstream_path": "vps-billing/deploy/systemd/aster-payment.service",
+      "upstream_sha256": "3cbdebcc4105562243ab3b625790334163a4d75fb9d680833460f52da5810c7f",
+      "exported_sha256": "3cbdebcc4105562243ab3b625790334163a4d75fb9d680833460f52da5810c7f"
+    },
+    "vps-billing/deploy/systemd/aster-resource.service": {
+      "upstream_path": "vps-billing/deploy/systemd/aster-resource.service",
+      "upstream_sha256": "2dd4f1feb7f7302f4713b01285a8a09612a8c3d0fb339237dee012e332bda86a",
+      "exported_sha256": "2dd4f1feb7f7302f4713b01285a8a09612a8c3d0fb339237dee012e332bda86a"
+    },
+    "vps-billing/deploy/systemd/aster-smtp.service": {
+      "upstream_path": "vps-billing/deploy/systemd/aster-smtp.service",
+      "upstream_sha256": "a9109dc123bd815095b35cabff745b9628d55370bb088ddcbb45aaf92dd212e9",
+      "exported_sha256": "a9109dc123bd815095b35cabff745b9628d55370bb088ddcbb45aaf92dd212e9"
+    },
+    "vps-billing/deploy/systemd/journald-aster.conf.example": {
+      "upstream_path": "vps-billing/deploy/systemd/journald-aster.conf.example",
+      "upstream_sha256": "6d74ca2ba1758d7ede632e6aadc634ba6dd49f2bf27b67286a0c557eaaf66111",
+      "exported_sha256": "6d74ca2ba1758d7ede632e6aadc634ba6dd49f2bf27b67286a0c557eaaf66111"
+    },
+    "vps-billing/docs/ACCEPTANCE.md": {
+      "upstream_path": "vps-billing/docs/ACCEPTANCE.md",
+      "upstream_sha256": "fcb294a98dbbeb5711610211519e43173948a30d7311003e8cb5b43350332d54",
+      "exported_sha256": "fcb294a98dbbeb5711610211519e43173948a30d7311003e8cb5b43350332d54"
+    },
+    "vps-billing/docs/ADMIN_MANAGEMENT.md": {
+      "upstream_path": "vps-billing/docs/ADMIN_MANAGEMENT.md",
+      "upstream_sha256": "4b79a6038927b2612db88564c51a8af1ab3514991cb738f3431e7baf6c38cd67",
+      "exported_sha256": "4b79a6038927b2612db88564c51a8af1ab3514991cb738f3431e7baf6c38cd67"
+    },
+    "vps-billing/docs/BACKUP_RECOVERY.md": {
+      "upstream_path": "vps-billing/docs/BACKUP_RECOVERY.md",
+      "upstream_sha256": "4b029baf74b97e26627b745bbb74942d2ca6a880a8ec24e26b49c8d673c953cf",
+      "exported_sha256": "4b029baf74b97e26627b745bbb74942d2ca6a880a8ec24e26b49c8d673c953cf"
+    },
+    "vps-billing/docs/BAOTA.md": {
+      "upstream_path": "vps-billing/docs/BAOTA.md",
+      "upstream_sha256": "fc77d7f5642e8c8f2f2cd9bb7885852e6c917a9ea9ce5fbac4a85b7374e40040",
+      "exported_sha256": "fc77d7f5642e8c8f2f2cd9bb7885852e6c917a9ea9ce5fbac4a85b7374e40040"
+    },
+    "vps-billing/docs/CATALOG_TAXONOMY.md": {
+      "upstream_path": "vps-billing/docs/CATALOG_TAXONOMY.md",
+      "upstream_sha256": "70d40627485943ec4876f63b8d25eb7a9d54f0640e2aab2e23141266df9c5a34",
+      "exported_sha256": "70d40627485943ec4876f63b8d25eb7a9d54f0640e2aab2e23141266df9c5a34"
+    },
+    "vps-billing/docs/CHANGELOG.md": {
+      "upstream_path": "vps-billing/docs/CHANGELOG.md",
+      "upstream_sha256": "6a973507994c15bc01e5d25c84f6427e41906bb802ac3c7ec797ab5fdb20f152",
+      "exported_sha256": "00c005093b321e303546792aa02c78dd1ea72e88234e2e50acf7b100511b84e9",
+      "adapted_for_independent_repository": true
+    },
+    "vps-billing/docs/CI_RELEASE_AUTOMATION.md": {
+      "upstream_path": "vps-billing/docs/CI_RELEASE_AUTOMATION.md",
+      "upstream_sha256": "8c71db1d13639e03f63f293dede4d8f10656aa2d0240532b87d7ad69bc37a675",
+      "exported_sha256": "8c71db1d13639e03f63f293dede4d8f10656aa2d0240532b87d7ad69bc37a675"
+    },
+    "vps-billing/docs/CONTRACT.md": {
+      "upstream_path": "vps-billing/docs/CONTRACT.md",
+      "upstream_sha256": "9e1e93d38a9855e93903d2fc18a96a21a2595c316f5c1a453c5a9e106946934c",
+      "exported_sha256": "9e1e93d38a9855e93903d2fc18a96a21a2595c316f5c1a453c5a9e106946934c"
+    },
+    "vps-billing/docs/FINANCIAL_MODEL.md": {
+      "upstream_path": "vps-billing/docs/FINANCIAL_MODEL.md",
+      "upstream_sha256": "e1bebbf5d142c737071610986d5a120eb87e8244a9b9a64d12fd86d618fa1a0e",
+      "exported_sha256": "e1bebbf5d142c737071610986d5a120eb87e8244a9b9a64d12fd86d618fa1a0e"
+    },
+    "vps-billing/docs/GEMINI_UI_BRIEF.md": {
+      "upstream_path": "vps-billing/docs/GEMINI_UI_BRIEF.md",
+      "upstream_sha256": "d739254daa4e686f233524c16f0d95f69567b82453460aca06beddef61c9de96",
+      "exported_sha256": "d739254daa4e686f233524c16f0d95f69567b82453460aca06beddef61c9de96"
+    },
+    "vps-billing/docs/GETTING_STARTED.md": {
+      "upstream_path": "vps-billing/docs/GETTING_STARTED.md",
+      "upstream_sha256": "e7b71872c70a29965b68981feec0d1158f7c2cb05d42882e768f91b3875d730b",
+      "exported_sha256": "e7b71872c70a29965b68981feec0d1158f7c2cb05d42882e768f91b3875d730b"
+    },
+    "vps-billing/docs/INSTALL.md": {
+      "upstream_path": "vps-billing/docs/INSTALL.md",
+      "upstream_sha256": "6ce0bbee8493e5b5cc183e8a01e7e54f6195624e4f7aad9d91393fedb282a082",
+      "exported_sha256": "6ce0bbee8493e5b5cc183e8a01e7e54f6195624e4f7aad9d91393fedb282a082"
+    },
+    "vps-billing/docs/LOGGING.md": {
+      "upstream_path": "vps-billing/docs/LOGGING.md",
+      "upstream_sha256": "9953ef51909642041fa3e4196b489e25a53c7d6a4deefa9e4280414d19f4a949",
+      "exported_sha256": "9953ef51909642041fa3e4196b489e25a53c7d6a4deefa9e4280414d19f4a949"
+    },
+    "vps-billing/docs/OPERATIONS.md": {
+      "upstream_path": "vps-billing/docs/OPERATIONS.md",
+      "upstream_sha256": "8bdb05313e9479948074d23ddec527353972d94097d88717cf80e2f7d28aa8a4",
+      "exported_sha256": "8bdb05313e9479948074d23ddec527353972d94097d88717cf80e2f7d28aa8a4"
+    },
+    "vps-billing/docs/PAYMENT_PLUGINS.md": {
+      "upstream_path": "vps-billing/docs/PAYMENT_PLUGINS.md",
+      "upstream_sha256": "99493ccb2eb7a6f7d2b66ec53698e6ddf6bcf42961055ef8a20f5ee91bd36ec5",
+      "exported_sha256": "99493ccb2eb7a6f7d2b66ec53698e6ddf6bcf42961055ef8a20f5ee91bd36ec5"
+    },
+    "vps-billing/docs/PLUGINS.md": {
+      "upstream_path": "vps-billing/docs/PLUGINS.md",
+      "upstream_sha256": "934074bc19aa3d95512692339ad189433cc2446c727e941b6a3546e37ef912fc",
+      "exported_sha256": "934074bc19aa3d95512692339ad189433cc2446c727e941b6a3546e37ef912fc"
+    },
+    "vps-billing/docs/PLUGIN_PROTOCOL.md": {
+      "upstream_path": "vps-billing/docs/PLUGIN_PROTOCOL.md",
+      "upstream_sha256": "b5a56f292b5a736ceec3359c64d74029b768700715b9c7dfff1571153077043a",
+      "exported_sha256": "b5a56f292b5a736ceec3359c64d74029b768700715b9c7dfff1571153077043a"
+    },
+    "vps-billing/docs/PRODUCT_CONFIGURATION.md": {
+      "upstream_path": "vps-billing/docs/PRODUCT_CONFIGURATION.md",
+      "upstream_sha256": "17c8baf2af8fb0319cc297a351b508d363616bb7322ad4677a71d5b70aa8635e",
+      "exported_sha256": "17c8baf2af8fb0319cc297a351b508d363616bb7322ad4677a71d5b70aa8635e"
+    },
+    "vps-billing/docs/REFERENCE_SCOPE.md": {
+      "upstream_path": "vps-billing/docs/REFERENCE_SCOPE.md",
+      "upstream_sha256": "e19d2a06b589b16e36cd59440302c24f8c987d14bf3151921b8fc63a4ed6f494",
+      "exported_sha256": "e19d2a06b589b16e36cd59440302c24f8c987d14bf3151921b8fc63a4ed6f494"
+    },
+    "vps-billing/docs/RELEASE-v0.5.10.md": {
+      "upstream_path": "vps-billing/docs/RELEASE-v0.5.10.md",
+      "upstream_sha256": "2f74a34c0c9210226dc6d915d1dfe382b5374c49367ccfb80d9176a74a1dcad6",
+      "exported_sha256": "2f74a34c0c9210226dc6d915d1dfe382b5374c49367ccfb80d9176a74a1dcad6"
+    },
+    "vps-billing/docs/RELEASE-v0.5.7.md": {
+      "upstream_path": "vps-billing/docs/RELEASE-v0.5.7.md",
+      "upstream_sha256": "c0e72b1e5a3d6463bfa9f34f2225024b5439dbf5a2e043fef2aae1f627d897e1",
+      "exported_sha256": "c0e72b1e5a3d6463bfa9f34f2225024b5439dbf5a2e043fef2aae1f627d897e1"
+    },
+    "vps-billing/docs/RELEASE-v0.5.8.md": {
+      "upstream_path": "vps-billing/docs/RELEASE-v0.5.8.md",
+      "upstream_sha256": "a5e8c262988e427881ec2abf5f4a44ed7d7449d4b313363ba7f199c4220b2c6e",
+      "exported_sha256": "a5e8c262988e427881ec2abf5f4a44ed7d7449d4b313363ba7f199c4220b2c6e"
+    },
+    "vps-billing/docs/RELEASE-v0.5.9.md": {
+      "upstream_path": "vps-billing/docs/RELEASE-v0.5.9.md",
+      "upstream_sha256": "28c2504d45fbcc4bae8e7db4db034165e4d09ffe1cb951e88a3bfcd08e6c9386",
+      "exported_sha256": "28c2504d45fbcc4bae8e7db4db034165e4d09ffe1cb951e88a3bfcd08e6c9386"
+    },
+    "vps-billing/docs/RELEASE.md": {
+      "upstream_path": "vps-billing/docs/RELEASE.md",
+      "upstream_sha256": "ff7214cbc758c4e7762005b990df5a7cdb0d9e8a5747a1400fa818bf7c0fc4f3",
+      "exported_sha256": "ff7214cbc758c4e7762005b990df5a7cdb0d9e8a5747a1400fa818bf7c0fc4f3"
+    },
+    "vps-billing/docs/RESOURCE_PLUGINS.md": {
+      "upstream_path": "vps-billing/docs/RESOURCE_PLUGINS.md",
+      "upstream_sha256": "33d50136d586bdcaf62c1988238140f7a6e660a89b177d3cb5074360ebb1ecc9",
+      "exported_sha256": "33d50136d586bdcaf62c1988238140f7a6e660a89b177d3cb5074360ebb1ecc9"
+    },
+    "vps-billing/docs/RESOURCE_PLUGIN_VALIDATION.md": {
+      "upstream_path": "vps-billing/docs/RESOURCE_PLUGIN_VALIDATION.md",
+      "upstream_sha256": "fc60095e2d0aaf8c02a3bc683e970a4b3cb0ebde67bf7f27b290e3d2e6c4aa5c",
+      "exported_sha256": "fc60095e2d0aaf8c02a3bc683e970a4b3cb0ebde67bf7f27b290e3d2e6c4aa5c"
+    },
+    "vps-billing/docs/SECURITY.md": {
+      "upstream_path": "vps-billing/docs/SECURITY.md",
+      "upstream_sha256": "eb0aedfff09640dde12f458f9f7d9efff1d101a6055719e7992ad6218c9188c9",
+      "exported_sha256": "eb0aedfff09640dde12f458f9f7d9efff1d101a6055719e7992ad6218c9188c9"
+    },
+    "vps-billing/docs/SITE_SETTINGS.md": {
+      "upstream_path": "vps-billing/docs/SITE_SETTINGS.md",
+      "upstream_sha256": "d216a43a75335ffcab0e84771cf3c8231b9dd8ea679450231c7e10067382e27d",
+      "exported_sha256": "d216a43a75335ffcab0e84771cf3c8231b9dd8ea679450231c7e10067382e27d"
+    },
+    "vps-billing/docs/UI_API_REFERENCE.md": {
+      "upstream_path": "vps-billing/docs/UI_API_REFERENCE.md",
+      "upstream_sha256": "37306145ee19c67fac8cfc14fadbb0b1c4d0fc216f8412cace1dd3af09cac707",
+      "exported_sha256": "37306145ee19c67fac8cfc14fadbb0b1c4d0fc216f8412cace1dd3af09cac707"
+    },
+    "vps-billing/docs/UI_GUIDELINES.md": {
+      "upstream_path": "vps-billing/docs/UI_GUIDELINES.md",
+      "upstream_sha256": "6ae9949a1a173e901011670553c3b88839f71698b99d7bcf6869f7060052afaa",
+      "exported_sha256": "3508601b41ebda9800bae82ce391b8f5e2c7620b2cbdcf63629305b9911627eb",
+      "adapted_for_independent_repository": true
+    },
+    "vps-billing/docs/UPDATES.md": {
+      "upstream_path": "vps-billing/docs/UPDATES.md",
+      "upstream_sha256": "5cc9f9ac221fc493b4420245c754c846ccf3cdfbe577260509a4b4caf793c044",
+      "exported_sha256": "5cc9f9ac221fc493b4420245c754c846ccf3cdfbe577260509a4b4caf793c044"
+    },
+    "vps-billing/docs/UPGRADE.md": {
+      "upstream_path": "vps-billing/docs/UPGRADE.md",
+      "upstream_sha256": "a3b7fe94e7529e2cdc75592fc72ce2001e0ceda6d1df75928498dbf5069c878b",
+      "exported_sha256": "a3b7fe94e7529e2cdc75592fc72ce2001e0ceda6d1df75928498dbf5069c878b"
+    },
+    "vps-billing/docs/VALIDATION.md": {
+      "upstream_path": "vps-billing/docs/VALIDATION.md",
+      "upstream_sha256": "e6b5172e268af77b49829225ece57cc77a8b385233f425e32cc979a21687f083",
+      "exported_sha256": "34ffb550ec2a477ea40a3a158e6770176ca01fd716ad79abb82bc7d40f0d3189",
+      "adapted_for_independent_repository": true
+    },
+    "vps-billing/tests/README.md": {
+      "upstream_path": "vps-billing/tests/README.md",
+      "upstream_sha256": "acfda62da3beb475bedbfae7a37fffa07ec224ace04da0a0c67d42289af8a161",
+      "exported_sha256": "acfda62da3beb475bedbfae7a37fffa07ec224ace04da0a0c67d42289af8a161"
+    },
+    "vps-billing/tests/SECURITY_REVIEW.md": {
+      "upstream_path": "vps-billing/tests/SECURITY_REVIEW.md",
+      "upstream_sha256": "9c5a0558ad0f87d553db33d75a3ba000be6dd08eacd15bbb087d93c1d5f4ea20",
+      "exported_sha256": "9c5a0558ad0f87d553db33d75a3ba000be6dd08eacd15bbb087d93c1d5f4ea20"
+    },
+    "vps-billing/tests/config_smoke.py": {
+      "upstream_path": "vps-billing/tests/config_smoke.py",
+      "upstream_sha256": "19884518826325ff7aa415c0aa7c541611c6a3719403b38d7f13ffccb462c0ba",
+      "exported_sha256": "19884518826325ff7aa415c0aa7c541611c6a3719403b38d7f13ffccb462c0ba"
+    },
+    "vps-billing/tests/security_smoke.py": {
+      "upstream_path": "vps-billing/tests/security_smoke.py",
+      "upstream_sha256": "8e0c0f17a5e8dbb47c038de38faf5620345911de62f2e2d4f4d032a1c4abca0e",
+      "exported_sha256": "8e0c0f17a5e8dbb47c038de38faf5620345911de62f2e2d4f4d032a1c4abca0e"
+    }
+  },
+  "initial_import_only": true,
+  "not_release_attestation": true
+}

@@ -1,0 +1,65 @@
+[Unit]
+Description=Aster independent SMTP plugin
+Documentation=file:/opt/aster/current/docs/PLUGINS.md
+After=network-online.target
+Wants=network-online.target
+RequiresMountsFor=/opt/aster/plugins /etc/aster
+StartLimitIntervalSec=60
+StartLimitBurst=3
+
+[Service]
+Type=simple
+# Fixed independent UID. Never add this account to the API's aster group.
+User=aster-smtp
+Group=aster-plugins
+WorkingDirectory=/opt/aster/plugins
+# This launcher verifies root-owned policy, manifest, hash and exact executable
+# descriptor before exec. No credentials or API EnvironmentFile are inherited.
+ExecStart=/opt/aster/current/bin/aster-plugin-host --root /opt/aster/plugins --policy /etc/aster/plugins.json
+Restart=on-failure
+RestartSec=5
+TimeoutStopSec=15
+KillMode=control-group
+UMask=0077
+RuntimeDirectory=aster-smtp
+RuntimeDirectoryMode=0750
+RuntimeDirectoryPreserve=no
+
+# Only the transient socket directory is writable. A private temporary namespace
+# is not durable storage; the SMTP worker has no database or secret-file access.
+ReadWritePaths=/run/aster-smtp
+InaccessiblePaths=-/etc/aster/api.env -/etc/aster/secrets -/run/mysqld -/var/lib/mysql
+NoNewPrivileges=true
+PrivateTmp=true
+PrivateDevices=true
+ProtectSystem=strict
+ProtectHome=true
+ProtectClock=true
+ProtectHostname=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectKernelLogs=true
+ProtectControlGroups=true
+ProtectProc=invisible
+RestrictSUIDSGID=true
+RestrictRealtime=true
+RestrictNamespaces=true
+LockPersonality=true
+MemoryDenyWriteExecute=true
+SystemCallArchitectures=native
+CapabilityBoundingSet=
+AmbientCapabilities=
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+LimitCORE=0
+LimitNOFILE=64
+TasksMax=64
+MemoryMax=192M
+CPUQuota=50%
+
+# Plugin-controlled text must not place request data or SMTP credentials in
+# journald. systemd still records lifecycle failures without process payloads.
+StandardOutput=null
+StandardError=null
+
+[Install]
+WantedBy=multi-user.target

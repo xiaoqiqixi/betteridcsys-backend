@@ -1,0 +1,336 @@
+// CI-only overlay. This file is never part of a production build or ordinary go test.
+package billing
+
+import (
+	"context"
+	"crypto/sha256"
+	"crypto/tls"
+	"encoding/hex"
+	"encoding/json"
+	"net"
+	"net/http"
+	"os"
+	"path/filepath"
+	"reflect"
+	"regexp"
+	"runtime"
+	"sort"
+	"strings"
+	"sync/atomic"
+	"testing"
+	"time"
+
+	"golang.org/x/crypto/bcrypt"
+)
+
+// Every row except short-lived authentication sessions is compared after UI
+// acceptance. This includes exact money, issuer/currency/product snapshots,
+// audit events, idempotency records, outbox, provisioning and settings.
+func browserMySQLHistory(t *testing.T, ctx context.Context, m *MySQL) map[string]string {
+	t.Helper()
+	tables, err := m.DB.QueryContext(ctx, "SHOW TABLES")
+	if err != nil {
+		t.Fatal("cannot enumerate isolated fixture tables")
+	}
+	var names []string
+	for tables.Next() {
+		var name string
+		if tables.Scan(&name) != nil {
+			t.Fatal("cannot read fixture table name")
+		}
+		if !regexp.MustCompile(`^[a-z_]+$`).MatchString(name) {
+			t.Fatal("unexpected fixture table name")
+		}
+		if name != "sessions" {
+			names = append(names, name)
+		}
+	}
+	if tables.Err() != nil {
+		t.Fatal("cannot finish fixture table enumeration")
+	}
+	tables.Close()
+	result := map[string]string{}
+	for _, name := range names {
+		rows, err := m.DB.QueryContext(ctx, "SELECT * FROM `"+name+"`")
+		if err != nil {
+			t.Fatal("cannot read isolated historical rows")
+		}
+		columns, err := rows.Columns()
+		if err != nil {
+			t.Fatal("cannot inspect isolated historical rows")
+		}
+		var records []string
+		for rows.Next() {
+			values, pointers := make([]any, len(columns)), make([]any, len(columns))
+			for i := range values {
+				pointers[i] = &values[i]
+			}
+			if rows.Scan(pointers...) != nil {
+				t.Fatal("cannot scan isolated historical rows")
+			}
+			encoded, err := json.Marshal(values)
+			if err != nil {
+				t.Fatal("cannot encode isolated historical rows")
+			}
+			records = append(records, string(encoded))
+			if len(records) > 10000 {
+				t.Fatal("fixture unexpectedly large")
+			}
+		}
+		if rows.Err() != nil {
+			t.Fatal("cannot finish isolated history read")
+		}
+		rows.Close()
+		sort.Strings(records)
+		raw, _ := json.Marshal(records)
+		sum := sha256.Sum256(raw)
+		result[name] = hex.EncodeToString(sum[:])
+	}
+	return result
+}
+
+func TestOwnedBrowserMySQLFixture(t *testing.T) {
+	if os.Getenv("ASTER_BILLING_BROWSER_CI") != "1" || runtime.GOOS != "linux" || runtime.GOARCH != "amd64" || os.Geteuid() == 0 {
+		t.Fatal("requires explicit unprivileged Linux amd64 browser CI")
+	}
+	caseDir, fixtureRoot := os.Getenv("ASTER_BILLING_BROWSER_CASE"), os.Getenv("ASTER_NATIVE_MYSQL_FIXTURE_ROOT")
+	for _, dir := range []string{caseDir, fixtureRoot} {
+		info, err := os.Lstat(dir)
+		resolved, resolveErr := filepath.EvalSymlinks(dir)
+		if err != nil || resolveErr != nil || !filepath.IsAbs(dir) || resolved != dir || !info.IsDir() || info.Mode().Perm() != 0700 {
+			t.Fatal("requires canonical private fixture directories")
+		}
+	}
+	cfg, err := mysqlConfiguration(os.Getenv("ASTER_MYSQL_TEST_DSN"), true)
+	if err != nil || cfg.DBName != "aster_ci_test" || cfg.Net != "unix" || cfg.Addr != filepath.Join(fixtureRoot, "mysql.sock") || cfg.Addr != os.Getenv("ASTER_NATIVE_MYSQL_SOCKET") {
+		t.Fatal("requires mysql-native private Unix fixture")
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Minute)
+	defer cancel()
+	admin, err := OpenMySQL(ctx, cfg.FormatDSN(), true)
+	if err != nil {
+		t.Fatal("cannot connect isolated native fixture")
+	}
+	defer admin.DB.Close()
+	var datadir string
+	if admin.DB.QueryRowContext(ctx, "SELECT @@datadir").Scan(&datadir) != nil || filepath.Clean(datadir) != filepath.Join(fixtureRoot, "data") {
+		t.Fatal("actual MySQL datadir is outside owned fixture")
+	}
+	name := "aster_browser_test_" + ID()
+	if !regexp.MustCompile(`^aster_browser_test_[a-f0-9]{32}$`).MatchString(name) {
+		t.Fatal("invalid isolated database name")
+	}
+	var exists int
+	if admin.DB.QueryRowContext(ctx, "SELECT COUNT(*) FROM information_schema.schemata WHERE schema_name=?", name).Scan(&exists) != nil || exists != 0 {
+		t.Fatal("isolated database must not exist before creation")
+	}
+	if _, err = admin.DB.ExecContext(ctx, "CREATE DATABASE `"+name+"` CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci"); err != nil {
+		t.Fatal("cannot create uniquely owned browser database")
+	}
+	// Ownership starts ONLY after this exact CREATE succeeds. No IF EXISTS, prefix
+	// enumeration or external database name may be used for cleanup.
+	dropped := false
+	defer func() {
+		if !dropped {
+			cleanup, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+			defer cancel()
+			if _, e := admin.DB.ExecContext(cleanup, "DROP DATABASE `"+name+"`"); e != nil {
+				t.Error("owned browser database cleanup failed")
+			}
+		}
+	}()
+	cfg.DBName = name
+	m, err := OpenMySQL(ctx, cfg.FormatDSN(), true)
+	if err != nil {
+		t.Fatal("cannot open uniquely owned browser database")
+	}
+	defer m.DB.Close()
+	if m.Migrate(ctx) != nil {
+		t.Fatal("isolated browser database migration failed")
+	}
+	// Preserve the migrated CNY quote. USD is an independently configured test
+	// price, never an exchange-rate conversion or a new production default.
+	var originalCNY int64
+	if m.DB.QueryRowContext(ctx, "SELECT amount_minor FROM plan_prices WHERE plan_id='starter' AND currency='CNY'").Scan(&originalCNY) != nil || originalCNY <= 0 {
+		t.Fatal("migrated CNY fixture quote is missing")
+	}
+	credentials := map[string]any{}
+	for _, role := range []string{"customer", "admin"} {
+		password := "AsterBrowser-" + ID()
+		hash, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+		if err != nil {
+			t.Fatal("cannot hash synthetic password")
+		}
+		user := User{ID: ID(), Email: "browser-" + role + "@example.invalid", Name: "Synthetic browser " + role, Role: role, PasswordHash: string(hash)}
+		if m.AddUser(ctx, user) != nil {
+			t.Fatal("cannot create isolated browser account")
+		}
+		credentials[role] = map[string]string{"email": user.Email, "password": password}
+		if role == "customer" {
+			if _, err = m.DB.ExecContext(ctx, "UPDATE plans SET available=TRUE WHERE id='starter'"); err != nil {
+				t.Fatal("cannot enable isolated product")
+			}
+			if _, err = m.DB.ExecContext(ctx, "UPDATE plan_prices SET available=TRUE WHERE plan_id='starter' AND currency='CNY'"); err != nil {
+				t.Fatal("cannot enable isolated prices")
+			}
+			if _, _, err = m.CreateOrder(ctx, user, "starter", "browser-fixture", "browser-"+ID(), "CNY"); err != nil {
+				t.Fatal("cannot create isolated pending order and audit history")
+			}
+		} else {
+			// AddUser persists revision 1; do not use the stale in-memory revision
+			// zero identity for subsequent audited production Store operations.
+			persistedAdmin, e := m.UserByID(ctx, user.ID)
+			if e != nil || persistedAdmin.Role != "admin" || persistedAdmin.Revision < 1 {
+				t.Fatal("cannot reload isolated administrator revision")
+			}
+			configureTestCurrency(t, m, persistedAdmin, "USD", 2, "6.00")
+		}
+	}
+	registry, err := m.Currencies(ctx, true)
+	if err != nil || registry.DefaultCurrency != "CNY" {
+		t.Fatal("isolated browser fixture must retain the CNY default")
+	}
+	for _, code := range []string{"CNY", "USD"} {
+		currency, ok := registry.find(code)
+		if !ok || !currency.Enabled || currency.DecimalPlaces != 2 {
+			t.Fatal("isolated browser fixture requires enabled CNY and USD with precision two")
+		}
+		plans, e := m.Plans(ctx, code)
+		if e != nil {
+			t.Fatal("cannot reread isolated sellable quotes")
+		}
+		found := false
+		for _, plan := range plans {
+			if plan.ID != "starter" {
+				continue
+			}
+			wanted := originalCNY
+			if code == "USD" {
+				wanted = 600
+			}
+			if !plan.Available || plan.Currency != code || plan.CurrencyFormat.Code != code || plan.PriceMinor != wanted {
+				t.Fatal("isolated quotes must preserve CNY and independently price USD at six")
+			}
+			found = true
+		}
+		if !found {
+			t.Fatal("required isolated starter quote is missing")
+		}
+	}
+	before := browserMySQLHistory(t, ctx, m)
+	var pending, unpaid, jobs int
+	if m.DB.QueryRowContext(ctx, "SELECT COUNT(*) FROM orders WHERE status='pending_payment'").Scan(&pending) != nil || pending != 1 {
+		t.Fatal("fixture requires exactly one unpaid order")
+	}
+	if m.DB.QueryRowContext(ctx, "SELECT COUNT(*) FROM invoices WHERE status='unpaid'").Scan(&unpaid) != nil || unpaid != 1 {
+		t.Fatal("fixture requires exactly one unpaid invoice")
+	}
+	if m.DB.QueryRowContext(ctx, "SELECT COUNT(*) FROM provisioning_jobs").Scan(&jobs) != nil || jobs != 0 {
+		t.Fatal("fixture must not provision resources")
+	}
+	listener, err := net.Listen("tcp4", "127.0.0.1:0")
+	if err != nil {
+		t.Fatal("cannot listen on owned loopback socket")
+	}
+	defer listener.Close()
+	origin := "https://localhost:" + strings.Split(listener.Addr().String(), ":")[1]
+	app := NewApp(m, Config{Demo: false, Origin: origin, Secret: ID() + ID(), SecureCookie: true})
+	api := app.Handler()
+	dist := os.Getenv("ASTER_BILLING_BROWSER_DIST")
+	if info, e := os.Stat(filepath.Join(dist, "index.html")); e != nil || !filepath.IsAbs(dist) || !info.Mode().IsRegular() {
+		t.Fatal("real frontend dist is required")
+	}
+	static := http.FileServer(http.Dir(dist))
+	var blocked, logins, logouts, audits atomic.Int64
+	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Host != strings.TrimPrefix(origin, "https://") {
+			http.Error(w, "invalid host", 421)
+			return
+		}
+		if r.Method != "GET" && r.Method != "HEAD" {
+			if r.Method != "POST" || (r.URL.Path != "/api/v1/auth/login" && r.URL.Path != "/api/v1/auth/logout") {
+				blocked.Add(1)
+				http.Error(w, "read-only browser fixture", 403)
+				return
+			}
+		}
+		if strings.HasPrefix(r.URL.Path, "/api/") || r.URL.Path == "/healthz" || r.URL.Path == "/readyz" {
+			if r.URL.Path == "/api/v1/auth/login" && r.Method == "POST" {
+				logins.Add(1)
+			}
+			if r.URL.Path == "/api/v1/auth/logout" && r.Method == "POST" {
+				logouts.Add(1)
+			}
+			if strings.HasSuffix(r.URL.Path, "/audit-events") && r.Method == "GET" {
+				audits.Add(1)
+			}
+			api.ServeHTTP(w, r)
+			return
+		}
+		w.Header().Set("X-Content-Type-Options", "nosniff")
+		w.Header().Set("Cache-Control", "no-store")
+		static.ServeHTTP(w, r)
+	})
+	cert, err := tls.LoadX509KeyPair(filepath.Join(caseDir, "server.pem"), filepath.Join(caseDir, "server.key"))
+	if err != nil {
+		t.Fatal("cannot load private localhost certificate")
+	}
+	server := &http.Server{Handler: handler, ReadHeaderTimeout: 5 * time.Second, ReadTimeout: 15 * time.Second, WriteTimeout: 20 * time.Second, IdleTimeout: 60 * time.Second, MaxHeaderBytes: 16384}
+	done := make(chan error, 1)
+	go func() {
+		done <- server.Serve(tls.NewListener(listener, &tls.Config{MinVersion: tls.VersionTLS12, Certificates: []tls.Certificate{cert}}))
+	}()
+	defer server.Close()
+	credentials["origin"] = origin
+	raw, _ := json.Marshal(credentials)
+	if os.WriteFile(filepath.Join(caseDir, "credentials.pending"), raw, 0600) != nil {
+		t.Fatal("cannot hand off private credentials")
+	}
+	if os.Rename(filepath.Join(caseDir, "credentials.pending"), filepath.Join(caseDir, "credentials.json")) != nil {
+		t.Fatal("cannot atomically expose private readiness")
+	}
+	ticker := time.NewTicker(100 * time.Millisecond)
+	defer ticker.Stop()
+waiting:
+	for {
+		select {
+		case <-ctx.Done():
+			t.Fatal("owned browser fixture lifetime exceeded")
+		case <-done:
+			t.Fatal("owned browser HTTPS service exited early")
+		case <-ticker.C:
+			if _, e := os.Stat(filepath.Join(caseDir, "stop")); e == nil {
+				break waiting
+			}
+		}
+	}
+	shutdown, cancelShutdown := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancelShutdown()
+	if server.Shutdown(shutdown) != nil {
+		t.Fatal("owned HTTPS service did not drain")
+	}
+	if blocked.Load() != 0 || logins.Load() != 4 || logouts.Load() != 4 || audits.Load() < 4 {
+		t.Fatal("required real API acceptance did not complete or attempted a business write")
+	}
+	if !reflect.DeepEqual(before, browserMySQLHistory(t, ctx, m)) {
+		t.Fatal("historical rows or business settings changed during UI acceptance")
+	}
+	var sessions int
+	if m.DB.QueryRowContext(ctx, "SELECT COUNT(*) FROM sessions").Scan(&sessions) != nil || sessions != 0 {
+		t.Fatal("synthetic authenticated sessions were not revoked")
+	}
+	if m.DB.Close() != nil {
+		t.Fatal("owned browser database did not close")
+	}
+	if _, err = admin.DB.ExecContext(ctx, "DROP DATABASE `"+name+"`"); err != nil {
+		t.Fatal("owned browser database cleanup failed")
+	}
+	dropped = true
+	if admin.DB.QueryRowContext(ctx, "SELECT COUNT(*) FROM information_schema.schemata WHERE schema_name=?", name).Scan(&exists) != nil || exists != 0 {
+		t.Fatal("owned browser database still exists")
+	}
+	// This marker appears only after row equality AND verified owned-db removal.
+	if os.WriteFile(filepath.Join(caseDir, "fixture-passed"), []byte("real-mysql-history-and-cleanup-verified\n"), 0600) != nil {
+		t.Fatal("cannot persist bounded fixture result")
+	}
+}

@@ -1,0 +1,33 @@
+{
+  "schema": 2,
+  "status": "pinned_official_metadata",
+  "version": "8.4.13",
+  "package_version": "8.4.13-1ubuntu22.04",
+  "architecture": "amd64",
+  "distribution": "ubuntu-22.04",
+  "metadata_url": "https://repo.mysql.com/apt/ubuntu/dists/jammy/mysql-8.4-lts/binary-amd64/Packages",
+  "metadata_observed_utc": "2026-10-26",
+  "verification_note": "Exact sizes and SHA-256 values from Oracle official HTTPS Jammy Packages metadata (metadata SHA256 7d6280678cb4f0da3f9ad8a205d49bd4e1949e0fb5c9f1d5759203ea61d4aa3b). All four official packages were downloaded and their pinned size and SHA256 matched before committing these pins. This is not a claim of PGP InRelease verification, local extraction/execution, native Ubuntu22 acceptance or production installation. The fixture must verify all four packages before any extraction; no alternate URL, caller hash, extracted tree or fallback version is accepted. The existing Ubuntu24 8.4.11 pins remain unchanged.",
+  "packages": [
+    {
+      "name": "mysql-community-server-core",
+      "size": 37453742,
+      "sha256": "ad31a0b78c7775e50a4d97f26ba5db946e1e06e007c73ea0155dd2e2dab4867d"
+    },
+    {
+      "name": "mysql-community-client-core",
+      "size": 2282496,
+      "sha256": "f48296eab4fa8725f0e3c6c3e6b2a4e4d3b3dbd2ee56da7909113e243cd9cbc6"
+    },
+    {
+      "name": "mysql-community-client-plugins",
+      "size": 1657742,
+      "sha256": "7b4aaf9a3a474bec863ad306b1f48e827b28202225851699dba72427eb5ba8e4"
+    },
+    {
+      "name": "mysql-community-client",
+      "size": 3354550,
+      "sha256": "abd2a5ab6c6b8227478ad4cef1c26f9283a8e4fbd9aac87587b6ce713e3e657f"
+    }
+  ]
+}

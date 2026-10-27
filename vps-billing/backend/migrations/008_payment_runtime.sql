@@ -1,0 +1,37 @@
+CREATE TABLE IF NOT EXISTS payment_attempts (
+ id CHAR(32) CHARACTER SET ascii COLLATE ascii_bin NOT NULL PRIMARY KEY,
+ request_key VARCHAR(128) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ user_id CHAR(32) NOT NULL,
+ invoice_id CHAR(32) NOT NULL,
+ order_id CHAR(32) NOT NULL,
+ provider_id VARCHAR(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ merchant_account_id VARCHAR(128) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ amount_minor BIGINT NOT NULL,
+ currency CHAR(3) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ currency_decimal_places INT NOT NULL,
+ state ENUM('pending','checkout','uncertain','settled') NOT NULL,
+ checkout JSON NULL,
+ created_at DATETIME(6) NOT NULL,
+ updated_at DATETIME(6) NOT NULL,
+ UNIQUE KEY payment_attempts_request(user_id,request_key),
+ UNIQUE KEY payment_attempts_invoice(invoice_id),
+ CONSTRAINT payment_attempts_user FOREIGN KEY(user_id) REFERENCES users(id),
+ CONSTRAINT payment_attempts_invoice_fk FOREIGN KEY(invoice_id) REFERENCES invoices(id),
+ CONSTRAINT payment_attempts_order FOREIGN KEY(order_id) REFERENCES orders(id),
+ CONSTRAINT payment_attempts_positive_minor CHECK(amount_minor > 0),
+ CONSTRAINT payment_attempts_exact_minor CHECK(amount_minor <= 9007199254740991),
+ CONSTRAINT payment_attempts_decimal_places_min CHECK(currency_decimal_places >= 0),
+ CONSTRAINT payment_attempts_decimal_places_max CHECK(currency_decimal_places <= 6),
+ CONSTRAINT payment_attempts_currency_code CHECK(OCTET_LENGTH(currency) = 3 AND ASCII(SUBSTRING(currency,1,1)) BETWEEN 65 AND 90 AND ASCII(SUBSTRING(currency,2,1)) BETWEEN 65 AND 90 AND ASCII(SUBSTRING(currency,3,1)) BETWEEN 65 AND 90)
+) ENGINE=InnoDB;
+CREATE TABLE IF NOT EXISTS payment_settlements (
+ attempt_id CHAR(32) CHARACTER SET ascii COLLATE ascii_bin NOT NULL PRIMARY KEY,
+ provider_id VARCHAR(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ event_id VARCHAR(128) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ transaction_id VARCHAR(128) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ settled_at DATETIME(6) NOT NULL,
+ received_at DATETIME(6) NOT NULL,
+ UNIQUE KEY payment_settlements_event(provider_id,event_id),
+ UNIQUE KEY payment_settlements_transaction(provider_id,transaction_id),
+ CONSTRAINT payment_settlements_attempt FOREIGN KEY(attempt_id) REFERENCES payment_attempts(id)
+) ENGINE=InnoDB;

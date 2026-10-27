@@ -1,0 +1,82 @@
+{
+  "archives": [
+    {
+      "artifact_commit": "fb2371b06b1ceeb2e0004f61a2308fd09eb44cd8",
+      "attachment": {
+        "name": "historical-v0.3.0-rc.1.zip",
+        "sha256": "44c5007349f81ccc4b44b49f599627d1368565768c2adabfd7b43a0d27363424",
+        "size": 3767269
+      },
+      "files": {
+        "BUILD.json": {
+          "git_blob": "7f8aacc4c0c9ba9148f4ea93a955b66ff1ba5521",
+          "sha256": "aba3bfc99d9d1bd524698d2264c1652bd7e12bb321ec2addb783c1f529a4e9ed",
+          "size": 1659
+        },
+        "README.md": {
+          "git_blob": "ef07117dec83cf3ba3b3857af2f3c29412700dd3",
+          "sha256": "6d402c6c0842a5c4c83373e910dcf775750845957489ceafacd1977afec084d7",
+          "size": 3758
+        },
+        "SHA256SUMS": {
+          "git_blob": "76227cc686397012facd83a35a445fea7c07a161",
+          "sha256": "0a715edb8751cf6daa1011c790833af220564a42bf68becedf8db211eb516a8f",
+          "size": 280
+        },
+        "aster-0.3.0-rc.1-linux-amd64.tar.gz": {
+          "git_blob": "7e7c175788868864e99bd05e0fdc9a795dc86179",
+          "sha256": "068d6f65c9037aa6a8328ba61b8fa794e5df829a4704fdd751bdbe60829639ba",
+          "size": 3553194
+        },
+        "aster-0.3.0-rc.1-source.tar.gz": {
+          "git_blob": "cac202038ded71582e9eaef730f7dba0dfa609b4",
+          "sha256": "5cc6e544a5b7e84c18f0b720acc9d847b37044ce45aef3a839a3b61efc67817d",
+          "size": 206032
+        }
+      },
+      "original_source_commit": "0c849bc6739d8e8319ae4162c65a90d9883da27b",
+      "version": "0.3.0-rc.1"
+    },
+    {
+      "artifact_commit": "d39dc7848bef55031c1c4bb421c535994b1a5da1",
+      "attachment": {
+        "name": "historical-v0.3.0-rc.2.zip",
+        "sha256": "d5c4129fdc88a15159a44586680e0e2c157d1801e80b873a2106cda5ccdd43fc",
+        "size": 3828722
+      },
+      "files": {
+        "BUILD.json": {
+          "git_blob": "676aebfa1f12dbeb28f9a5f6cb79136ae60f1644",
+          "sha256": "c6d7c1d09c10f9a8e237382a331adadfdc8fdd9bb52d5e5c77d554428f98ba18",
+          "size": 1775
+        },
+        "README.md": {
+          "git_blob": "de93f74432725c1d0ec7257b954a6342371b432e",
+          "sha256": "0261327a355be0e2652a11e027f70fde507474e06fd1e76f0e7df61aa6d0a26e",
+          "size": 2909
+        },
+        "SHA256SUMS": {
+          "git_blob": "2601d180ac0c11610fedaf21c729cbb989286502",
+          "sha256": "3bf1a0eccbe03e633b84c102a77c7862b0eb1d0611fb03cebeba068d02f1d091",
+          "size": 280
+        },
+        "aster-0.3.0-rc.2-linux-amd64.tar.gz": {
+          "git_blob": "e47ea217a8f679ad219cd3997c9156aec698ed12",
+          "sha256": "42a59e0d778b433e150108b33d95bcaeb9f5b73159e26bb6fa8b56fdaee12bac",
+          "size": 3563686
+        },
+        "aster-0.3.0-rc.2-source.tar.gz": {
+          "git_blob": "00020f05ddaac7e71c41018f708c647945a4be29",
+          "sha256": "806c4425426e325f03aa1eedc15c4075859d8d6de050ade47ed36bea10966530",
+          "size": 257726
+        }
+      },
+      "original_source_commit": "1678652b90d56c39a624aa45ddc35ee8c8988a38",
+      "version": "0.3.0-rc.2"
+    }
+  ],
+  "release_tag": "v0.3.0-rc.3",
+  "repository": "xiaoqiqixi/betteridcsys",
+  "repository_id": 1418618420,
+  "schema": 1
+}

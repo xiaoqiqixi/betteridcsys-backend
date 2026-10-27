@@ -1,0 +1,33 @@
+{
+  "schema": 2,
+  "status": "pinned_official_metadata",
+  "version": "8.4.11",
+  "package_version": "8.4.11-1ubuntu24.04",
+  "architecture": "amd64",
+  "distribution": "ubuntu-24.04",
+  "metadata_url": "https://repo.mysql.com/apt/ubuntu/dists/noble/mysql-8.4-lts/binary-amd64/Packages",
+  "metadata_observed_utc": "2026-10-14",
+  "verification_note": "Exact package sizes and SHA-256 values transcribed from Oracle's official HTTPS Packages metadata. Every package is verified against these committed pins before extraction. This is not a claim of local InRelease signature verification: cloud access to InRelease and package downloads returned HTTP 403. Hosted-runner native acceptance remains required. No alternate mirror, unverified directory or other database version is accepted.",
+  "packages": [
+    {
+      "name": "mysql-community-server-core",
+      "size": 32065392,
+      "sha256": "dafb704d3e602980ef6dcadfbd9ca8b8660736cdbfbcbd1cdd5c0638ab097cfd"
+    },
+    {
+      "name": "mysql-community-client-core",
+      "size": 1822154,
+      "sha256": "6660b0d31fe5113997baabd48d1f4bdce66ab7e1e8446886366a3c3896424e9d"
+    },
+    {
+      "name": "mysql-community-client-plugins",
+      "size": 1451722,
+      "sha256": "1b48ea921a15622c2bf2756dded1f2c82e074458f8bcc00f5d27f857ce882bf4"
+    },
+    {
+      "name": "mysql-community-client",
+      "size": 2691188,
+      "sha256": "3f429d66881f78e366a9b2ecc241d62f5baa121a8bd65f89ab1306655849a6bc"
+    }
+  ]
+}

@@ -1,0 +1,66 @@
+[Unit]
+Description=Aster Billing API
+Documentation=file:/opt/aster/current/docs/INSTALL.md
+# MySQL is managed separately. Change mysql.service to the distribution's unit
+# name if necessary; this ordering never installs or initializes a database.
+After=network-online.target mysql.service
+Wants=network-online.target
+RequiresMountsFor=/opt/aster /etc/aster
+StartLimitIntervalSec=60
+StartLimitBurst=5
+
+[Service]
+Type=simple
+# A fixed, non-login system account; releases and configuration are root-owned.
+# The optional private SMTP key uses the ownership/mode specified in INSTALL.md.
+User=aster
+Group=aster
+# Only this socket group is shared with the independent SMTP worker. The worker
+# must never join the aster group that can read API configuration and secrets.
+SupplementaryGroups=aster-plugins
+WorkingDirectory=/opt/aster/current
+EnvironmentFile=/etc/aster/api.env
+ExecStart=/opt/aster/current/bin/aster-api
+Restart=on-failure
+RestartSec=5
+TimeoutStopSec=30
+KillMode=control-group
+UMask=0077
+
+# All durable application data lives in MySQL; output goes to journald.
+# No StateDirectory/ReadWritePaths is needed. The API cannot modify /opt,
+# /etc, or /var/lib. Private temporary space is not a backup or persistent data.
+NoNewPrivileges=true
+PrivateTmp=true
+PrivateDevices=true
+ProtectSystem=strict
+ProtectHome=true
+ProtectClock=true
+ProtectHostname=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectKernelLogs=true
+ProtectControlGroups=true
+ProtectProc=invisible
+RestrictSUIDSGID=true
+RestrictRealtime=true
+RestrictNamespaces=true
+LockPersonality=true
+MemoryDenyWriteExecute=true
+SystemCallArchitectures=native
+CapabilityBoundingSet=
+AmbientCapabilities=
+# Unix sockets for local MySQL; IP sockets for the loopback HTTP listener.
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=aster-api
+LimitCORE=0
+# Journal rate limits may discard messages; this is not a lossless audit sink.
+LogRateLimitIntervalSec=30s
+LogRateLimitBurst=10000
+
+# No ExecStartPre migration/bootstrap: reviewed database changes run separately
+# with a distinct credential that the aster runtime account cannot read.
+[Install]
+WantedBy=multi-user.target

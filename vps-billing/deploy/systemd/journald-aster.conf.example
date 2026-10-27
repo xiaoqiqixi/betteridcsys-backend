@@ -1,0 +1,20 @@
+# EXAMPLE ONLY: host-wide journal policy, NOT an application-local setting.
+# Review disk capacity, other services, forwarding and retention obligations
+# before explicitly installing a drop-in under /etc/systemd/journald.conf.d/.
+# The installer never applies this file or changes the host journal policy.
+# Journal access is privileged; review root/systemd-journal/adm membership and
+# any forwarded copies. Persistent does not mean encrypted or off-host.
+[Journal]
+Storage=persistent
+SystemMaxUse=256M
+SystemKeepFree=1G
+SystemMaxFileSize=32M
+RuntimeMaxUse=32M
+RuntimeKeepFree=64M
+RuntimeMaxFileSize=8M
+MaxRetentionSec=14day
+MaxFileSec=1day
+# Rate limiting can drop messages; neither these limits nor the service limits
+# guarantee complete event retention. Monitor suppression and disk pressure.
+RateLimitIntervalSec=30s
+RateLimitBurst=10000

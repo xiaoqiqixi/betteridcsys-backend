@@ -1,0 +1,69 @@
+[Unit]
+Description=Aster host-only resource plugin
+Documentation=file:/opt/aster/current/docs/RESOURCE_PLUGINS.md
+After=network-online.target
+Wants=network-online.target
+RequiresMountsFor=/opt/aster/plugins /etc/aster
+StartLimitIntervalSec=60
+StartLimitBurst=3
+
+[Service]
+Type=simple
+# A fixed non-login account, distinct from API, SMTP and payment. Root is
+# the only IPC client; the web API cannot connect to this private socket.
+User=aster-resource
+Group=aster-resource
+WorkingDirectory=/opt/aster/plugins
+# Verify administrator-approved identity, compatibility and hashes before exec.
+# No API EnvironmentFile, database credential or SMTP credential is inherited.
+# Fixed credentials are copied by systemd, never sent through RPC or argv.
+LoadCredential=resource-policy:/etc/aster/resource/policy.json
+LoadCredential=resource-token:/etc/aster/resource/controller.token
+# If custom_ca=true, add LoadCredential=resource-ca:/etc/aster/resource/ca.pem
+# in a root-owned service drop-in.
+ExecStart=/opt/aster/current/bin/aster-plugin-host --kind resource --root /opt/aster/plugins --policy /etc/aster/plugins.json
+Restart=on-failure
+RestartSec=5
+TimeoutStopSec=15
+KillMode=control-group
+UMask=0077
+RuntimeDirectory=aster-resource
+RuntimeDirectoryMode=0700
+RuntimeDirectoryPreserve=no
+
+ReadWritePaths=/run/aster-resource
+InaccessiblePaths=-/etc/aster/api.env -/etc/aster/secrets -/run/mysqld -/var/lib/mysql -/run/aster-smtp -/run/aster-payment
+NoNewPrivileges=true
+PrivateTmp=true
+PrivateDevices=true
+ProtectSystem=strict
+ProtectHome=true
+ProtectClock=true
+ProtectHostname=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectKernelLogs=true
+ProtectControlGroups=true
+ProtectProc=invisible
+RestrictSUIDSGID=true
+RestrictRealtime=true
+RestrictNamespaces=true
+LockPersonality=true
+MemoryDenyWriteExecute=true
+SystemCallArchitectures=native
+CapabilityBoundingSet=
+AmbientCapabilities=
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+LimitCORE=0
+LimitNOFILE=64
+TasksMax=64
+MemoryMax=192M
+CPUQuota=50%
+
+# Plugin output is untrusted and may contain callback data or channel secrets.
+# systemd records the lifecycle without copying process payloads to journald.
+StandardOutput=null
+StandardError=null
+
+[Install]
+WantedBy=multi-user.target

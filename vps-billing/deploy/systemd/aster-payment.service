@@ -1,0 +1,66 @@
+[Unit]
+Description=Aster independent payment plugin
+Documentation=file:/opt/aster/current/docs/PAYMENT_PLUGINS.md
+After=network-online.target
+Wants=network-online.target
+RequiresMountsFor=/opt/aster/plugins /etc/aster
+StartLimitIntervalSec=60
+StartLimitBurst=3
+
+[Service]
+Type=simple
+# A fixed non-login account, distinct from both the API and SMTP worker.
+# This account must never join the API's aster group or read its secrets.
+User=aster-payment
+Group=aster-plugins
+WorkingDirectory=/opt/aster/plugins
+# Verify administrator-approved identity, compatibility and hashes before exec.
+# No API EnvironmentFile, database credential or SMTP credential is inherited.
+# Channel developers document their own protected systemd LoadCredential files;
+# this generic unit intentionally contains no real channel or merchant secrets.
+ExecStart=/opt/aster/current/bin/aster-plugin-host --kind payment --root /opt/aster/plugins --policy /etc/aster/plugins.json
+Restart=on-failure
+RestartSec=5
+TimeoutStopSec=15
+KillMode=control-group
+UMask=0077
+RuntimeDirectory=aster-payment
+RuntimeDirectoryMode=0750
+RuntimeDirectoryPreserve=no
+
+ReadWritePaths=/run/aster-payment
+InaccessiblePaths=-/etc/aster/api.env -/etc/aster/secrets -/run/mysqld -/var/lib/mysql -/run/aster-smtp
+NoNewPrivileges=true
+PrivateTmp=true
+PrivateDevices=true
+ProtectSystem=strict
+ProtectHome=true
+ProtectClock=true
+ProtectHostname=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectKernelLogs=true
+ProtectControlGroups=true
+ProtectProc=invisible
+RestrictSUIDSGID=true
+RestrictRealtime=true
+RestrictNamespaces=true
+LockPersonality=true
+MemoryDenyWriteExecute=true
+SystemCallArchitectures=native
+CapabilityBoundingSet=
+AmbientCapabilities=
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+LimitCORE=0
+LimitNOFILE=64
+TasksMax=64
+MemoryMax=192M
+CPUQuota=50%
+
+# Plugin output is untrusted and may contain callback data or channel secrets.
+# systemd records the lifecycle without copying process payloads to journald.
+StandardOutput=null
+StandardError=null
+
+[Install]
+WantedBy=multi-user.target
