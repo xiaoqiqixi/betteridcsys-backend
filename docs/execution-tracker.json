@@ -10054,14 +10054,14 @@
       "independent cross-controller instance ownership transfer"
     ],
     "runtime_fence": {
-      "source_sha": "5c0aee3cb8b6bc1876cfd5d027b0d538413d95e4",
-      "ci": "https://github.com/xiaoqiqixi/betteridcsys-cloud/actions/runs/40557028613",
+      "source_sha": "8b2fda4e70b838ac490418875642851535525b6f",
+      "ci": "https://github.com/xiaoqiqixi/betteridcsys-cloud/actions/runs/40566463642",
       "linux22_24_real_cli": "passed",
       "actual_mysql_strict_https": "passed",
       "unknown_receipts_retained": 2,
       "all_database_rows_unchanged": true,
       "automatic_process_drain": true,
-      "full_ci": "passed_12_of_12_attempt2_browser_only_rerun",
+      "full_ci": "passed_12_of_12_attempt1",
       "source_isolated": false,
       "reboot_verified": false,
       "migration_ready": false,
@@ -10083,9 +10083,9 @@
       "export_restore": false,
       "admin_ui": false,
       "release_contains_changes": false,
-      "latest_implementation_source": "5c0aee3cb8b6bc1876cfd5d027b0d538413d95e4",
-      "latest_ci": "https://github.com/xiaoqiqixi/betteridcsys-cloud/actions/runs/40557028613",
-      "latest_ci_state": "passed_12_of_12_attempt2_browser_only_rerun",
+      "latest_implementation_source": "8b2fda4e70b838ac490418875642851535525b6f",
+      "latest_ci": "https://github.com/xiaoqiqixi/betteridcsys-cloud/actions/runs/40566463642",
+      "latest_ci_state": "passed_12_of_12_attempt1",
       "prior_full_ci": "d830356_passed_12_of_12; 258c2ad_attempt1_native24_rejected_host_interface_drift_before_QEMU",
       "hosted_environment_preparation": {
         "root_owned_opt_original_mode": "0777",
@@ -10095,8 +10095,8 @@
         "unmodified_hosted_image_acceptance": false
       },
       "mysql_job_ids": {
-        "ubuntu22": 122376431504,
-        "ubuntu24": 122376431993
+        "ubuntu22": 122408928848,
+        "ubuntu24": 122408929432
       },
       "all_database_rows_unchanged": true,
       "unknown_receipts_retained": 2,
@@ -10106,22 +10106,22 @@
       "admitted_http_request_drain_verified": true
     },
     "latest_verified_native_preparation": {
-      "source_sha": "5c0aee3cb8b6bc1876cfd5d027b0d538413d95e4",
-      "run_id": 40557028613,
+      "source_sha": "8b2fda4e70b838ac490418875642851535525b6f",
+      "run_id": 40566463642,
       "ubuntu22": true,
       "ubuntu24": true,
       "real_apt_systemd_libvirt": true,
       "real_kvm": false,
       "artifact_digests_verified": true,
-      "ubuntu22_zip_sha256": "aa6505136a80eeb6f34aa66b849cee5c043b0deea8f984749702dbb50a9253a2",
-      "ubuntu24_zip_sha256": "d5314eb49d7e5df0de75e9528dd9de537f1e263ab4e02ad82b14fd17544778ac",
-      "ubuntu22_artifact_id": 12760576928,
-      "ubuntu24_artifact_id": 12757373627,
+      "ubuntu22_zip_sha256": "0be03498ae8b05c7767ccfb9793cf68095cb0fd365b01896aead930dcb57a5b3",
+      "ubuntu24_zip_sha256": "b5af7f27bcd4b4f53835b0fd93ee152943571881022f019529a3be91abc148b2",
+      "ubuntu22_artifact_id": 12764291383,
+      "ubuntu24_artifact_id": 12763937245,
       "native_job_attempt": 1
     },
     "encrypted_export": {
-      "source_sha": "5c0aee3cb8b6bc1876cfd5d027b0d538413d95e4",
-      "ci": "https://github.com/xiaoqiqixi/betteridcsys-cloud/actions/runs/40557028613",
+      "source_sha": "8b2fda4e70b838ac490418875642851535525b6f",
+      "ci": "https://github.com/xiaoqiqixi/betteridcsys-cloud/actions/runs/40566463642",
       "state": "source_export_verified_native22_24_full_restore_pending",
       "source_readonly_transaction": true,
       "encrypted_container": "age_scrypt_18_per_operation_random_256bit_recovery_key",
@@ -10136,27 +10136,28 @@
       "migration_ready": false,
       "native_mysql22_24": "passed_real_source_export_and_post_export_resume_refusal",
       "mysql_jobs": {
-        "ubuntu22": 122376431504,
-        "ubuntu24": 122376431993
+        "ubuntu22": 122408928848,
+        "ubuntu24": 122408929432
       },
       "all_database_rows_unchanged": true,
       "unknown_receipts_retained": 2,
-      "full_ci": "passed_12_of_12_attempt2_browser_only_rerun",
+      "full_ci": "passed_12_of_12_attempt1",
       "existing_console_browser_regression": "passed_163_network_checks_29_identity_checks_80_screenshots",
       "migration_ui_tested": false,
-      "typed_snapshot_mysql22_24_source": "5c0aee3cb8b6bc1876cfd5d027b0d538413d95e4",
+      "typed_snapshot_mysql22_24_source": "8b2fda4e70b838ac490418875642851535525b6f",
       "typed_snapshot_mysql22_24_result": "passed",
       "installer_ownership_marker_verified": true,
       "source_marker_not_removed": true,
-      "installer_ownership_receipt_fixture": true
+      "installer_ownership_receipt_fixture": true,
+      "archived_source_bindings_verified": true
     },
     "empty_target_database_restore": {
-      "source_sha": "5c0aee3cb8b6bc1876cfd5d027b0d538413d95e4",
-      "ci": "https://github.com/xiaoqiqixi/betteridcsys-cloud/actions/runs/40557028613",
+      "source_sha": "8b2fda4e70b838ac490418875642851535525b6f",
+      "ci": "https://github.com/xiaoqiqixi/betteridcsys-cloud/actions/runs/40566463642",
       "state": "typed_database_roundtrip_verified_native22_24_host_restore_pending",
       "mysql_jobs": {
-        "ubuntu22": 122376431504,
-        "ubuntu24": 122376431993
+        "ubuntu22": 122408928848,
+        "ubuntu24": 122408929432
       },
       "tables": 34,
       "current_migration_version": 12,
@@ -10167,7 +10168,7 @@
       "all_restored_rows_byte_verified_before_commit": true,
       "null_binary_unicode_uint64_microseconds_autoincrement_preserved": true,
       "nonempty_target_and_repeated_restore_rejected": true,
-      "full_ci": "passed_12_of_12_attempt2",
+      "full_ci": "passed_12_of_12_attempt1",
       "existing_network_identity_browser_regression": "passed_163_network_checks_29_identity_checks_80_screenshots",
       "real_mysql_snapshot_source_unmodified": true,
       "target_host_coordinator": false,
@@ -10177,7 +10178,7 @@
       "migration_ui": false,
       "migration_ready": false,
       "installed_source_ownership_marker": "retained_source_marker_verified_against_private_receipt_schema_database_user_uuid_nonce",
-      "late_auth_and_fk_rollback_cases": "passed_real_mysql22_24_at_5c0aee3",
+      "late_auth_and_fk_rollback_cases": "passed_real_mysql22_24_at_8b2fda4",
       "regression_source": "00c1ae1303650282263402c29c4a64accf4296ea",
       "regression_ci": "https://github.com/xiaoqiqixi/betteridcsys-cloud/actions/runs/40554646950",
       "real_kvm": false,
@@ -10188,11 +10189,54 @@
       "previous_positive_source": "e1cd9bf7f36a60d8a83df32ba673e949144e33fe",
       "previous_ci": "10_passed_2_native_preparation_cancelled_by_successor_00c1ae1",
       "ownership_receipt_acceptance": "synthetic_private_root_receipt_paired_to_actual_SQL_marker_not_full_native_database_provisioning",
-      "browser_artifact_id": 12760887407,
-      "browser_zip_sha256": "deacef73a30abf6ff68f617b0377034f0147b25acb15489e4a7a375f01704e0c",
-      "browser_attempt": 2,
-      "browser_first_attempt": "900s_Azure_Ubuntu_mirror_font_download_timeout_before_browser_tests",
-      "browser_rerun": "one_fresh_same_source_job_no_test_or_security_changes"
+      "browser_artifact_id": 12763267271,
+      "browser_zip_sha256": "bdcd55fd308c54aa844e26044dcaccd29403c5818a4965215d8a8f2ff2f277cb",
+      "browser_attempt": 1,
+      "prior_browser_attempt_record": {
+        "source": "5c0aee3cb8b6bc1876cfd5d027b0d538413d95e4",
+        "first_attempt": "900s_Azure_Ubuntu_mirror_font_download_timeout_before_browser_tests",
+        "rerun": "one_fresh_same_source_job_no_test_or_security_changes"
+      }
+    },
+    "offline_source_validation": {
+      "source_sha": "8b2fda4e70b838ac490418875642851535525b6f",
+      "ci": "https://github.com/xiaoqiqixi/betteridcsys-cloud/actions/runs/40566463642",
+      "full_ci": "passed_12_of_12_attempt1",
+      "mysql_jobs": {
+        "ubuntu22": 122408928848,
+        "ubuntu24": 122408929432
+      },
+      "actual_installer_export_validated_on_22_24": true,
+      "independent_expected_source_sha_required": true,
+      "exact_config_plan_installation_and_isolation_bindings": true,
+      "source_paths_never_opened_on_target": true,
+      "source_database_or_nodes_contacted": false,
+      "ordered_complete_material_references_and_python_unicode_digest": true,
+      "tls_key_pairs_and_distinct_tokens_checked": true,
+      "archived_source_ownership_receipt_bound_to_source_dsn": true,
+      "actual_cli_subtests": 18,
+      "private_staging_cleanup_checked": true,
+      "publisher_provenance_verified": false,
+      "target_restore_approved": false,
+      "migration_ready": false,
+      "new_release": false
+    },
+    "target_marker_restoration": {
+      "source_sha": "ee0f8c01c40eccaf2e866bce9a13fd1fcb6fe8be",
+      "ci": "https://github.com/xiaoqiqixi/betteridcsys-cloud/actions/runs/40569296842",
+      "state": "implementation_pushed_real_mysql_pending",
+      "ordinary_zero_object_guard_unchanged": true,
+      "explicit_marked_empty_database_variant": true,
+      "marker_never_deleted_or_copied_from_source": true,
+      "operation_database_migration_user_server_uuid_nonce_schema_binding": true,
+      "local_full_go_race_vet_linux_build": "passed_sql_cases_skipped_without_isolated_dsn",
+      "real_mysql_verified": false,
+      "root_provisioning_verified": false,
+      "target_host_coordinator": false,
+      "target_session_revocation": false,
+      "node_takeover": false,
+      "migration_ready": false,
+      "release_contains_changes": false
     }
   }
 }
