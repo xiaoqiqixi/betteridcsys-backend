@@ -10043,15 +10043,60 @@
     "new_repository_release": false,
     "host_apply": false,
     "real_kvm_acceptance": false,
-    "migration_implementation": "contract_only_not_shipped",
+    "migration_implementation": "runtime_fence_implemented_host_isolation_under_native_verification",
     "pending": [
-      "source write freeze and persistent fencing",
+      "finish native managed-service isolation, reboot and in-flight task acceptance",
       "authenticated encrypted export and full restore",
       "empty-target identity-preserving import",
       "node and billing-connector reconnection",
       "single-active takeover and bounded rollback",
       "admin API/UI and real MySQL/browser lifecycle",
       "independent cross-controller instance ownership transfer"
-    ]
+    ],
+    "runtime_fence": {
+      "source_sha": "1a74e20a864b6f2c39c30699820ce7b8d9b9f515",
+      "ci": "https://github.com/xiaoqiqixi/betteridcsys-cloud/actions/runs/40504806662",
+      "linux22_24_real_cli": "passed",
+      "actual_mysql_strict_https": "passed",
+      "unknown_receipts_retained": 2,
+      "all_database_rows_unchanged": true,
+      "automatic_process_drain": true,
+      "full_ci": "failed_native22_tcg_deadline",
+      "source_isolated": false,
+      "reboot_verified": false,
+      "migration_ready": false
+    },
+    "managed_host_isolation": {
+      "source_sha": "74b2edecbc71b252f0d8c2b2194a7c6c949b6283",
+      "ci": "https://github.com/xiaoqiqixi/betteridcsys-cloud/actions/runs/40512617545",
+      "implementation": [
+        "installed_binary_capability_binding",
+        "persistent_host_seal",
+        "exact_systemd_masks_and_original_inode_recovery",
+        "approved_heartbeat_units",
+        "pre_export_resume_without_service_start"
+      ],
+      "native_mysql22_24": "failed_at_actual_installer_apply_diagnosis_in_progress",
+      "acceptance_complete": false,
+      "reboot_verified": false,
+      "export_restore": false,
+      "admin_ui": false,
+      "release_contains_changes": false,
+      "latest_implementation_source": "675bef0cf85685ae31b248e3cdbcdaea9a547b69",
+      "latest_ci": "https://github.com/xiaoqiqixi/betteridcsys-cloud/actions/runs/40516096261",
+      "latest_ci_state": "queued_not_accepted",
+      "prior_full_ci": "failed_10_success_2_mysql_systemd_failures"
+    },
+    "latest_verified_native_preparation": {
+      "source_sha": "74b2edecbc71b252f0d8c2b2194a7c6c949b6283",
+      "run_id": 40512617545,
+      "ubuntu22": true,
+      "ubuntu24": true,
+      "real_apt_systemd_libvirt": true,
+      "real_kvm": false,
+      "artifact_digests_verified": true,
+      "ubuntu22_zip_sha256": "e0792153a5415d626b6409c9bb9a268fbce063f055a078408d72ecef1b6114dd",
+      "ubuntu24_zip_sha256": "91d9b45db17ada08f511ba6fb585d62ac60233f549c645777fe82674b95ab78c"
+    }
   }
 }
