@@ -10256,7 +10256,7 @@
     },
     "target_host_preparation": {
       "source_sha": "40c0a62bc201d1e8800b2cec75dac87a42ca7e9c",
-      "state": "native_target_prepare_and_seal_verified_full_ci_pending_host_environment_retest",
+      "state": "native_target_prepare_and_seal_verified_full_ci_passed_attempt2",
       "entry_actions": [
         "target-plan",
         "target-seal",
@@ -10326,9 +10326,60 @@
         "qemu_process_verified": false,
         "report_zip_sha256": "adbde2277b1bc0ab832f6a3e856a8f1a3de3a515e1aa9744bd1e838667e69ac8",
         "production_or_test_checks_weakened": false,
-        "single_job_rerun_request": "HTTP403_workflow_still_running_no_rerun_started",
-        "next": "wait_same_run_terminal_then_one_exact_failed_job_rerun"
+        "single_job_rerun_request": "after_initial_HTTP403_run_terminal_then_exact_job_rerun_started",
+        "next": "resolved_same_source_attempt2_all_checks_passed_no_gate_change",
+        "rerun_job": 122454912681,
+        "rerun_result": "success",
+        "rerun_artifact_id": 12770800040,
+        "rerun_zip_sha256": "6b74e8b80b6e87d615aeb895766f76454ea248c6b0af8a090597a99a57f5619a",
+        "rerun_zip_size_and_digest_verified": true
+      },
+      "full_ci": "passed_12_of_12_final_after_one_native24_environment_rerun",
+      "existing_browser_regression": {
+        "artifact_id": 12766254660,
+        "zip_sha256": "46f07385eb47ebc48971cc83448ed8445601a776c36ded27226afcf2052a5a5e",
+        "size_and_digest_verified": true,
+        "screenshots": 80,
+        "migration_ui": false
       }
+    },
+    "target_database_provisioning": {
+      "source_sha": "894e1d76f0f3240c33970f3390ab0b03f97e7802",
+      "ci": "https://github.com/xiaoqiqixi/betteridcsys-cloud/actions/runs/40582502777",
+      "state": "implemented_local_checks_passed_new_native22_24_gates_running",
+      "entry_actions": [
+        "target-database-plan",
+        "target-provision"
+      ],
+      "only_installed_manifest_checked_coordinator": true,
+      "complete_authenticated_records_before_apt_or_sql": true,
+      "immutable_source_target_operation_bound_data_plan": true,
+      "source_encoding_preserved": true,
+      "root_visible_accounts_roles_objects_and_minimal_grants_required": true,
+      "actual_both_credentials_and_own_marker_checked": true,
+      "lost_credentials_never_reset": true,
+      "ordinary_installer_database_name_validation_unchanged": true,
+      "native_fixture": "signed_ubuntu22_24_TCG_actual_APT_systemd_MySQL_with_synthetic_source_headers_not_data_import",
+      "native_verified": false,
+      "local_full_go_race_vet_linux_build": "passed_real_SQL_cases_skipped_no_local_isolated_DSN",
+      "local_python_package_unit_contract_entry_harness_counts": [
+        26,
+        19,
+        111,
+        2,
+        52
+      ],
+      "govulncheck_reachable": 0,
+      "govulncheck_module_only_unimported": "GO-2026-5932 openpgp",
+      "target_database_import": false,
+      "crash_recovery_complete": false,
+      "target_session_revocation": false,
+      "configuration_material_installation": false,
+      "node_takeover": false,
+      "reboot_acceptance": false,
+      "migration_ui": false,
+      "migration_ready": false,
+      "new_release": false
     }
   }
 }
