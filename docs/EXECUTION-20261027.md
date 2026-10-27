@@ -312,3 +312,28 @@ host_apply、service_started、real_kvm_acceptance均false，详见[公开验收
 随后该2020855源码财务40453853089 **5/5**、Cloud40453853002 **11/11**及独立性能40453853030全部成功；
 未修改的生产green_checks再读实际API确认16项的名称、event/main/source/attempt与全部success，不拼接旧源码。
 台账与公开验收续记据此更新；下一源码仍需自身CI，staff功能未开放、离线文档布局与其余W07/W08–W17继续实施。
+
+## 独立后端 9e49224：真正运行制品完成实库浏览器验收
+
+后端source `9e49224f29f7ef99167431e0f35708bf2f4fcf45` 与前端 `aa86bf06eb4de9dd4fc95ff8d902c164de76784f`，
+[CI40492139422](https://github.com/xiaoqiqixi/betteridcsys-backend/actions/runs/40492139422)实际4/4成功。
+这轮实际运行候选包中的生产API ELF，提供包中的静态前端；不是原先在测试进程中构造source handler。
+20项浏览器检查、12张截图、严格TLS、真实MySQL历史比较、原进程/数据库清理均通过，金融业务写入0，未修改宿主信任。
+重新下载四份artifact并逐一核验API摘要/大小，Ubuntu22与24的后端清单及归档字节完全一致；
+归档SHA256 `ae6af32825f2f32ba67adf04a74e7f8c2a408f6d7a15ed9ff2f81ecd7b2f9183`。
+已人工查看本轮中文手机审计页和桌面客户页面；这些测试截图不是全站视觉设计已完成的声明。
+包内容检查实际再次通过71文件；这是候选进程验收，仍非签名Release、原生整站安装/升级/备份恢复。
+
+## 统一云安装入口与主控迁移新增要求
+
+用户要求一个命令选择主控/被控，并参考魔方云主控迁移。独立云仓库main `92e484389a84312ab5b5f8d25688a93d7047926f`
+已实现统一入口，保留旧bootstrap和签名策略原字节。六项真实tty/CLI检查通过；
+[公开四组合40497444837](https://github.com/xiaoqiqixi/betteridcsys-cloud/actions/runs/40497444837)实际4/4成功，
+每组均从真实菜单输入角色，实际下载、验签并运行生产安装器只读plan。三JSON/ZIP的大小/hash与入口摘要已全部复核。
+没有host apply/start/KVM证明；当前仍下载原仓库0.1.0-rc.1，不冒充新仓库首发，不删除原仓库。
+
+主控搬家与跨主控实例移交分别设计。合同覆盖停写排空、源隔离、加密一致备份、控制身份/证书/原任务保留、
+空目标导入、重新登录、节点与财务连接重连、避免双活、接管后新写入保护和回退。
+[完整实施合同](https://github.com/xiaoqiqixi/betteridcsys-cloud/blob/main/docs/development/INSTALL_AND_MIGRATION.md)
+明确M01–M06尚未实现，不能把已有VM冷迁移或数据库上传视为主控迁移完成。
+既有金额/支付/币种/历史快照实现和269项原items保持不变；原未提交员工权限工作未覆盖。

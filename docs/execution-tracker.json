@@ -9983,16 +9983,28 @@
       }
     },
     "paired_runtime_candidate": {
-      "state": "implemented_local_ci_pending",
+      "state": "actual_packaged_process_browser_passed",
       "format": "paired-runtime-candidate-v1",
       "cli_tests": 6,
       "portable_browser_guards": 49,
       "compiled_go_overlay": true,
       "actual_staging_files": 109,
       "implementation": "Exact candidate API binary and static frontend; private loopback process, strict TLS browser, fixture history comparison and explicit shutdown proof. No source-handler fallback when candidate mode is selected.",
-      "actual_packaged_api_browser_run": "pending_new_source_ci",
+      "actual_packaged_api_browser_run": "passed: production API ELF and packaged static files, not source-handler fixture",
       "authenticated_release": false,
-      "native_install_upgrade_acceptance": false
+      "native_install_upgrade_acceptance": false,
+      "verified_backend_source": "9e49224f29f7ef99167431e0f35708bf2f4fcf45",
+      "verified_frontend_source": "aa86bf06eb4de9dd4fc95ff8d902c164de76784f",
+      "ci": "https://github.com/xiaoqiqixi/betteridcsys-backend/actions/runs/40492139422",
+      "ci_state": "success_4_of_4",
+      "browser_checks": 20,
+      "browser_screenshots": 12,
+      "artifact_digests_verified": true,
+      "historical_data_unchanged": true,
+      "owned_process_database_cleanup": true,
+      "host_trust_modified": false,
+      "linux22_24_candidates_identical": true,
+      "backend_archive_sha256": "ae6af32825f2f32ba67adf04a74e7f8c2a408f6d7a15ed9ff2f81ecd7b2f9183"
     }
   },
   "builtin_upgrades": {
@@ -10004,7 +10016,7 @@
     ],
     "contract": "development/BUILTIN_UPGRADES.md",
     "state": "design_and_u01_partial_ci",
-    "implemented_scope": "Independent frontend/backend candidate formats and immutable source pairing; e6eb16c Ubuntu22/24 real builds and MySQL, strict-TLS source browser passed. Candidate-byte staging and actual packaged-API browser integration locally tested and awaiting its own CI. Authenticated release composition, native installation and built-in upgrade executor/API/UI remain incomplete.",
+    "implemented_scope": "Independent frontend/backend candidate formats and immutable source pairing; 9e49224 Ubuntu22/24 MySQL/build/security CI and actual packaged API/static frontend strict-TLS browser passed. Authenticated releases, native installation and built-in upgrade executor/API/UI remain incomplete.",
     "pending": [
       "U01 authenticated three-repository composition",
       "U02 protected native upgrade services",
@@ -10015,5 +10027,31 @@
     ]
   },
   "active_batch": "20261027-cloud-public-staff-snapshot",
-  "batch_record": "EXECUTION-20261027.md"
+  "batch_record": "EXECUTION-20261027.md",
+  "cloud_install_migration": {
+    "contract": "https://github.com/xiaoqiqixi/betteridcsys-cloud/blob/main/docs/development/INSTALL_AND_MIGRATION.md",
+    "scope": [
+      "unified_controller_node_installation",
+      "whole_controller_host_relocation",
+      "cross_controller_instance_transfer"
+    ],
+    "unified_entry_source": "92e484389a84312ab5b5f8d25688a93d7047926f",
+    "unified_download_ci": "https://github.com/xiaoqiqixi/betteridcsys-cloud/actions/runs/40497444837",
+    "verified_matrix": "Ubuntu22/24 x controller/node, 4/4 actual tty menu, anonymous publisher signatures and readonly installer plan",
+    "artifact_digests_verified": true,
+    "delegated_release": "betteridcsys/cloud-v0.1.0-rc.1",
+    "new_repository_release": false,
+    "host_apply": false,
+    "real_kvm_acceptance": false,
+    "migration_implementation": "contract_only_not_shipped",
+    "pending": [
+      "source write freeze and persistent fencing",
+      "authenticated encrypted export and full restore",
+      "empty-target identity-preserving import",
+      "node and billing-connector reconnection",
+      "single-active takeover and bounded rollback",
+      "admin API/UI and real MySQL/browser lifecycle",
+      "independent cross-controller instance ownership transfer"
+    ]
+  }
 }
