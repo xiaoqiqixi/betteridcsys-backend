@@ -1,45 +1,59 @@
 # 星屿云 · 财务系统后端
 
-Go / MySQL 财务 Core：商品分类和独立报价、客户/管理员账户、订单/账单、历史快照、会话安全、审计与插件运行时。不内置真实收款渠道，不把付款成功等同于虚拟机已开通。
+面向云服务业务的商品、客户和账务管理系统。提供商品配置、独立币种报价、订单与账单、账户权限、审计日志和插件接口，配合[财务前端](https://github.com/xiaoqiqixi/betteridcsys-frontend)构建客户门户与管理后台。
 
-[财务前端](https://github.com/xiaoqiqixi/betteridcsys-frontend) · [财务后端](https://github.com/xiaoqiqixi/betteridcsys-backend) · [主控与被控](https://github.com/xiaoqiqixi/betteridcsys-cloud)
+采用 Go + MySQL，原生 Linux 部署。默认中文、人民币，支持英文和美元；销售与账务由财务系统管理，计算资源通过独立插件连接云主控。
 
-## 目录与兼容
+[使用文档](docs/README.md) · [API 文档](vps-billing/docs/CONTRACT.md) · [发行版本](https://github.com/xiaoqiqixi/betteridcsys-backend/releases) · [问题反馈](https://github.com/xiaoqiqixi/betteridcsys-backend/issues)
 
-| 目录 | 内容 |
+## 主要功能
+
+| 模块 | 功能 |
 | --- | --- |
-| `vps-billing/backend/` | 独立 Go 模块、API、schema 1–13、插件协议与测试 |
-| `vps-billing/deploy/` | systemd/Nginx、原生安装、受控升级、备份与 CI 工具 |
-| `vps-billing/docs/` | [API](vps-billing/docs/CONTRACT.md)、[安装](vps-billing/docs/INSTALL.md)、[运维](vps-billing/docs/UPGRADE.md)与能力边界 |
-| `docs/` | 跨系统合同、开发清单和历史验收记录，不是新仓库已验收声明 |
+| 商品管理 | 类型/地区/节点分类，新增与复制商品、规格编辑、独立定价、上下架 |
+| 客户与权限 | 客户和管理员账户、角色管理、账户状态与会话控制 |
+| 订单与账单 | 购买确认、单笔详情、状态管理、付款入口、历史商品与价格快照 |
+| 站点运营 | 品牌与语言设置、默认币种、邮件配置、业务日志与审计 |
+| 扩展接口 | SMTP、支付、资源插件，独立运行时身份与授权 |
+| 运维工具 | 版本检查、主机升级工具、备份恢复、健康检查与 systemd 服务 |
 
-Core **0.5.10** / schema13 / 23表；Ubuntu 22.04 / 24.04 amd64、Oracle MySQL 8.4 LTS、原生 Linux，不使用 Docker；暂不支持 Ubuntu26。默认中文 / CNY，保留独立币种报价，不自动换汇，不重算历史金额。
+不同币种独立定价，不自动换汇或重算历史订单。支付渠道需单独安装和配置；付款成功不等于虚拟机已开通。
 
-## 构建与测试
+## 运行环境
 
-开发环境使用 Go 1.27.3。运行已编译服务不需要 Go 或 Node。
+| 项目 | 要求 |
+| --- | --- |
+| 操作系统 | Ubuntu 22.04 / 24.04，amd64，systemd |
+| 数据库 | Oracle MySQL 8.4 LTS |
+| Web 入口 | Nginx，同源 HTTPS，可信 TLS 证书 |
+| 部署方式 | 原生服务，无 Docker、Redis 依赖 |
 
-```sh
-cd vps-billing/backend
-go mod download
-go test -race -count=1 ./...
-go vet ./...
-CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -trimpath -buildvcs=false -o ../../bin/aster-api ./cmd/server
-CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -trimpath -buildvcs=false -o ../../bin/aster-plugin-host ./cmd/plugin-host
-```
+运行发行二进制不需要 Go 或 Node.js。计算节点应独立部署，不与财务数据库混用。
 
-未提供 `ASTER_MYSQL_TEST_DSN` 时数据库测试会明确跳过，不算完整验收。真实测试须使用名称含 `_test` 的隔离库；不要把生产凭据交给测试。原生 CI 在 Ubuntu22/24 自建、清理 socket-only MySQL，检查 Go 测试没有跳过。
+## 一键安装
 
-前端来自独立仓库；此处不复制 Vue 应用或混入未提交前端。站点部署需要与已验证前端发行产物配对，并由 Nginx 提供同源 HTTPS。
+安装入口将随首个发行版本提供；当前没有已验证的新仓库一键命令，请勿用开发脚本代替生产安装。
 
-## 安装与更新通道
+安装向导按以下顺序配置：
 
-保留的安装/发行脚本仍含原项目的固定来源合同；迁移前不能把它们当作本仓库已有正式下载通道。不会简单替换仓库字符串或跳过 SHA/签名校验来“兼容”。新仓库的首版发行、前端产物组合、安装/更新来源及旧实例受控迁移均在 [迁移清单](MIGRATION.md)中单独验收。
+1. 使用发行版提供的安装入口，自动下载并核验配套的后端与前端文件。
+2. 按[原生安装手册](vps-billing/docs/INSTALL.md)配置专用数据库、域名、TLS 和匹配的前端文件。使用宝塔时阅读[宝塔部署](vps-billing/docs/BAOTA.md)。
+3. 创建自己的管理员账户，按[首次使用](vps-billing/docs/GETTING_STARTED.md)设置站点、分类和商品。
+4. 上线前完成备份与恢复演练，核对邮件、支付和资源插件的独立配置。
 
-## 拆分与交付状态
+用户不需要安装编译工具。系统没有通用默认管理员密码。
 
-本仓库从已提交、通过原项目 CI 的 main `fa4d2139ff5ecfc2802c0825e839134ca488d138` 拆出，不包含原工作区未完成的 schema14/员工权限改动。保留 Apache-2.0 许可证；初始来源见 [SOURCE_ORIGIN.json](SOURCE_ORIGIN.json)。它是来源清单，不是发行签名或本仓库的验收证明。
+## 运维与扩展
 
-只使用 `main` 分支，不导入旧 Git 历史、贡献者署名或旧标签。原仓库 CI 结果不自动继承；本仓库构建与验收以自己的提交和运行记录为准。
+- [版本更新](vps-billing/docs/UPDATES.md) · [升级与回退](vps-billing/docs/UPGRADE.md) · [备份恢复](vps-billing/docs/BACKUP_RECOVERY.md)
+- [日志与审计](vps-billing/docs/LOGGING.md) · [日常运维](vps-billing/docs/OPERATIONS.md)
+- [插件管理](vps-billing/docs/PLUGINS.md) · [支付插件](vps-billing/docs/PAYMENT_PLUGINS.md) · [资源插件](vps-billing/docs/RESOURCE_PLUGINS.md)
+- [云主控与 KVM 被控](https://github.com/xiaoqiqixi/betteridcsys-cloud) · [商品资源配置](vps-billing/docs/PRODUCT_CONFIGURATION.md)
 
-三个新仓库均完成构建、首版 Release、匿名产物下载/校验和安装更新来源迁移后，才删除原仓库及其 Releases。未完成迁移门禁时不得删除；具体门禁见 [仓库迁移清单](MIGRATION.md)。
+## 开发与集成
+
+[API 文档](vps-billing/docs/CONTRACT.md) · [插件开发](vps-billing/docs/PLUGIN_PROTOCOL.md) · [开发文档](docs/development/README.md)
+
+## 许可证
+
+[Apache License 2.0](LICENSE)。

@@ -9900,6 +9900,20 @@
   },
   "real_kvm_acceptance": "deferred_by_user",
   "requirements_scope": "原269项逐项保留现状、下一步与验收；1625个末级字段/交互细节在原功能树中，不能把工作包完成等同全部叶子完成。",
+  "repository_transition": {
+    "prior_release_repository": "xiaoqiqixi/betteridcsys",
+    "imported_evidence_scope": "Existing evidence retains its original repository and SHA scope; it is not inherited acceptance of the split repositories.",
+    "new_repositories": ["xiaoqiqixi/betteridcsys-frontend", "xiaoqiqixi/betteridcsys-backend", "xiaoqiqixi/betteridcsys-cloud"],
+    "new_release_state": "unreleased",
+    "original_deletion": "blocked_by_unfulfilled_release_and_channel_gates"
+  },
+  "builtin_upgrades": {
+    "work_packages": ["W02", "W03", "W13", "W16"],
+    "contract": "development/BUILTIN_UPGRADES.md",
+    "state": "design_and_u01_partial_local",
+    "implemented_scope": "Frontend static bundle build/inspection and CI hook; no authenticated release or upgrade execution yet",
+    "pending": ["U01 authenticated three-repository composition", "U02 protected native upgrade services", "U03 finance API and browser workflow", "U04 controller upgrade and non-root API", "U05 rolling node upgrade", "U06 native regression and product release"]
+  },
   "active_batch": "20261027-cloud-public-staff-snapshot",
   "batch_record": "EXECUTION-20261027.md"
 }

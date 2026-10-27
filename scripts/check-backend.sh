@@ -7,6 +7,7 @@ root=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd -P)
 scratch=$(mktemp -d "${RUNNER_TEMP:-/tmp}/aster-backend-check.XXXXXXXX")
 trap 'rm -rf -- "$scratch"' EXIT
 cd "$root/vps-billing/backend"
+go mod download
 go mod verify
 go test -mod=readonly -race -count=1 -v -timeout=20m ./... | tee "$scratch/tests.log"
 if grep -Eq -- '^[[:space:]]*--- SKIP:' "$scratch/tests.log"; then
