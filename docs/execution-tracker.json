@@ -10346,7 +10346,7 @@
     "target_database_provisioning": {
       "source_sha": "894e1d76f0f3240c33970f3390ab0b03f97e7802",
       "ci": "https://github.com/xiaoqiqixi/betteridcsys-cloud/actions/runs/40582502777",
-      "state": "implemented_local_checks_passed_new_native22_24_gates_running",
+      "state": "first_native_attempt_failed_12_other_gates_passed_no_automatic_rerun",
       "entry_actions": [
         "target-database-plan",
         "target-provision"
@@ -10377,6 +10377,82 @@
       "configuration_material_installation": false,
       "node_takeover": false,
       "reboot_acceptance": false,
+      "migration_ui": false,
+      "migration_ready": false,
+      "new_release": false,
+      "full_ci": "12_passed_2_native_target_provision_failed",
+      "first_failures": {
+        "ubuntu22": {
+          "job": 122465313569,
+          "code": "TARGET_PROVISION_UNCONFIRMED",
+          "phase": "target-provision",
+          "artifact": 12771458596,
+          "zip_sha256": "bb77cc04966349cd612f36f497566a258ae80ae48ea93a68428d06d4a8f023a5",
+          "root_cause": "not_established_generic_error"
+        },
+        "ubuntu24": {
+          "job": 122465313438,
+          "code": "GUEST_VM_DEADLINE_EXCEEDED",
+          "phase": "before_runcmd_enter",
+          "artifact": 12771203108,
+          "zip_sha256": "befa6e5f396891fec71f479328bc7c37962cfcaaf46813f96200d4d375cd7956",
+          "guest_result_seen": false
+        }
+      },
+      "artifact_sizes_and_digests_verified": true,
+      "host_network_before_after_unchanged": true
+    },
+    "target_import_readback": {
+      "source_sha": "f61d6cf4649d10e441cb521edb9c85b3a0252f37",
+      "ci": "https://github.com/xiaoqiqixi/betteridcsys-cloud/actions/runs/40587676929",
+      "state": "implemented_local_checks_passed_same_SHA_native_and_SQL_CI_running",
+      "entry_actions": [
+        "target-restore",
+        "target-data-status"
+      ],
+      "fixed_installed_coordinator_only": true,
+      "root_inventory_and_minimal_grants_before_import": true,
+      "foreign_databases_refused": true,
+      "intent_fsynced_before_DDL": true,
+      "structure_proof_persisted_before_any_source_row_change": true,
+      "proof_binds_operation_database_UUID_ownership_manifest_full_SHOW_CREATE": true,
+      "reentry_only_readonly_byte_and_constraint_verification": true,
+      "no_DDL_or_INSERT_replay": true,
+      "failed_proof_leaves_inactive_DDL_no_source_rows": true,
+      "native_scenario": "controller-restore_actual_isolated_source_SQL_snapshot_and_signed22_24_target_APT_MySQL_root_entry",
+      "native_checks": [
+        "runtime_DDL_denied_1142",
+        "unknown_account_and_missing_credential_refused",
+        "foreign_database_refused",
+        "typed_rows_and_auto_increment",
+        "super_read_only_reentry",
+        "changed_rows_and_removed_FK_refused"
+      ],
+      "native_source_host_identity": "synthetic_not_actual_source_export_or_takeover",
+      "native_result": "pending",
+      "real_sql_result": "pending",
+      "local_checks": {
+        "go_race_vet_linux_build": "passed",
+        "Python310_actionlint": "passed",
+        "package_installer_unit_contract_entry_harness_counts": [
+          26,
+          19,
+          111,
+          2,
+          53
+        ],
+        "real_SQL": "skipped_no_local_isolated_DSN"
+      },
+      "previous_failure_response": "fixed_phase_errors_and_no_unneeded_test_executable_in_restore_guest_seed",
+      "native_deadline_seconds": 1800,
+      "CI_total_minutes": 55,
+      "automatic_retry": false,
+      "security_gate_relaxed": false,
+      "crash_recovery_complete": false,
+      "configuration_material_installation": false,
+      "target_session_revocation": false,
+      "reboot_acceptance": false,
+      "node_takeover": false,
       "migration_ui": false,
       "migration_ready": false,
       "new_release": false
