@@ -10256,7 +10256,7 @@
     },
     "target_host_preparation": {
       "source_sha": "40c0a62bc201d1e8800b2cec75dac87a42ca7e9c",
-      "state": "first_native_attempt_failed_systemd_empty_list_fixed_on_main_ci_running",
+      "state": "native_target_prepare_and_seal_verified_full_ci_pending_host_environment_retest",
       "entry_actions": [
         "target-plan",
         "target-seal",
@@ -10267,9 +10267,9 @@
       "source_archive_and_canonical_configuration_machine_binding": true,
       "same_source_machine_refused": true,
       "persistent_target_seal_not_source_cancelable": true,
-      "runtime_commands_denied_before_database": "native_test_added_not_yet_reached",
-      "same_plan_retry_and_corruption_refusal": "native_test_added_not_yet_reached",
-      "root_ubuntu22_24_acceptance": "pending_fixed_source",
+      "runtime_commands_denied_before_database": "passed_actual_CLI_and_no_database_connection",
+      "same_plan_retry_and_corruption_refusal": "passed_native22_24",
+      "root_ubuntu22_24_acceptance": "passed_preparation_only_synthetic_encrypted_source_not_SQL_restore",
       "local_full_go_race_vet_linux_build": "passed_SQL_skipped_without_DSN",
       "local_cli_source_binding_red_green": "passed",
       "synthetic_source_fixture_roundtrip": "passed",
@@ -10285,7 +10285,7 @@
       "migration_ready": false,
       "new_release": false,
       "ci": "https://github.com/xiaoqiqixi/betteridcsys-cloud/actions/runs/40577150185",
-      "actual_native_root_result": "0959607_ubuntu22_and_24_failed_readonly_plan_before_seal_or_SQL",
+      "actual_native_root_result": "passed_both_actual_installer_ELF_systemd_query_seal_and_cleanup",
       "first_native_attempt": {
         "source_sha": "0959607035e879467fdf0d586d1240538979f1a8",
         "ci": "https://github.com/xiaoqiqixi/betteridcsys-cloud/actions/runs/40574035578",
@@ -10307,7 +10307,27 @@
         "no_arbitrary_error_treated_as_empty": true,
         "real_empty_pattern_regression_added": true,
         "local_python_package_installer_entry_contracts": "passed_26_19_111_2",
-        "native_result": "pending"
+        "native_result": "passed_real_empty_pattern_positive_control_and_complete_target_seal_test"
+      },
+      "native_cli_jobs": {
+        "ubuntu22": 122446517861,
+        "ubuntu24": 122446517431
+      },
+      "verified_check_groups": 7,
+      "owned_fixture_removed": true,
+      "hosted_opt_original_mode_restored": true,
+      "current_ci_exception": {
+        "job": 122446517693,
+        "scope": "native_libvirt_ubuntu24",
+        "result": "HOST_NETWORK_CHANGED_BEFORE_VM",
+        "host_address_inventory_before": 3,
+        "host_address_inventory_after": 4,
+        "guest_result_seen": false,
+        "qemu_process_verified": false,
+        "report_zip_sha256": "adbde2277b1bc0ab832f6a3e856a8f1a3de3a515e1aa9744bd1e838667e69ac8",
+        "production_or_test_checks_weakened": false,
+        "single_job_rerun_request": "HTTP403_workflow_still_running_no_rerun_started",
+        "next": "wait_same_run_terminal_then_one_exact_failed_job_rerun"
       }
     }
   }
