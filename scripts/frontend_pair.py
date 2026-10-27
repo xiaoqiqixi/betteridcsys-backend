@@ -96,6 +96,7 @@ def verify(pin, metadata_path, backend_source):
         require(git(root, 'rev-parse', '--verify', 'HEAD^{commit}') == expected, 'checkout_source_mismatch')
         require(not git(root, 'diff', '--name-only', 'HEAD', '--'), 'tracked_source_modified')
     require(not git(frontend, 'status', '--porcelain=v1', '--untracked-files=all'), 'frontend_checkout_not_clean')
+    require(not git(frontend, 'ls-files', '*.tsbuildinfo'), 'generated_cache_tracked')
     raw = regular(frontend / 'compatibility.json')
     require(hashlib.sha256(raw).hexdigest() == pin['compatibility_sha256'], 'compatibility_digest_mismatch')
     compatibility = decode(raw)

@@ -163,15 +163,23 @@ class FrontendPairCLI(unittest.TestCase):
                 self.assertEqual(self.call().returncode, 1)
 
     def test_ignored_build_outputs_do_not_turn_into_source_or_release_authentication(self):
-        (self.frontend / '.gitignore').write_text('/dist/\n/node_modules/\n')
+        (self.frontend / '.gitignore').write_text('/dist/\n/node_modules/\n*.tsbuildinfo\n')
         self.commit_new_pair()
         (self.frontend / 'dist').mkdir()
         (self.frontend / 'dist/index.html').write_text('<!doctype html><title>Built fixture</title>')
+        (self.frontend / 'tsconfig.tsbuildinfo').write_text('{"generated":true}')
         result = self.call()
         self.assertEqual(result.returncode, 0, result.stderr)
         value = json.loads(result.stdout)
         self.assertIs(value['authenticated_release'], False)
         self.assertEqual(value['frontend_source_sha'], self.pin['source_sha'])
+
+    def test_tracked_compiler_cache_is_rejected_before_using_the_pair(self):
+        (self.frontend / 'tsconfig.tsbuildinfo').write_text('{"generated":true}')
+        self.commit_new_pair()
+        result = self.call()
+        self.assertEqual(result.returncode, 1)
+        self.assertIn('generated_cache_tracked', result.stderr)
 
 
 if __name__ == '__main__':

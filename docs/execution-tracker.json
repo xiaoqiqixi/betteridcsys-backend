@@ -9895,24 +9895,80 @@
   ],
   "release_state": "partial_delivery",
   "release_components": {
-    "core": {"version": "0.5.10", "tag": "v0.5.10", "release_id": 424987299, "source_sha": "dab0167d58cd99a19fc4a0eafff23bbe7ff95cf0", "prerelease": false, "scope": "完整六资产与22/24生产prepare已复验；不等于用户主机或全系统生产验收"},
-    "cloud": {"version": "0.1.0-rc.1", "tag": "cloud-v0.1.0-rc.1", "release_id": 425041579, "source_sha": "8092c3cc0517c69562e8a5cdd94bc5e389e1bc8e", "prerelease": true, "production_ready": false, "real_kvm_accepted": false, "scope": "九资产匿名完整下载；2020855控制的40454038287在22/24×两角色实际验签/生产plan4/4成功，发行source仍8092c3c；未安装/启动或做KVM验收"}
+    "core": {
+      "version": "0.5.10",
+      "tag": "v0.5.10",
+      "release_id": 424987299,
+      "source_sha": "dab0167d58cd99a19fc4a0eafff23bbe7ff95cf0",
+      "prerelease": false,
+      "scope": "完整六资产与22/24生产prepare已复验；不等于用户主机或全系统生产验收"
+    },
+    "cloud": {
+      "version": "0.1.0-rc.1",
+      "tag": "cloud-v0.1.0-rc.1",
+      "release_id": 425041579,
+      "source_sha": "8092c3cc0517c69562e8a5cdd94bc5e389e1bc8e",
+      "prerelease": true,
+      "production_ready": false,
+      "real_kvm_accepted": false,
+      "scope": "九资产匿名完整下载；2020855控制的40454038287在22/24×两角色实际验签/生产plan4/4成功，发行source仍8092c3c；未安装/启动或做KVM验收"
+    }
   },
   "real_kvm_acceptance": "deferred_by_user",
   "requirements_scope": "原269项逐项保留现状、下一步与验收；1625个末级字段/交互细节在原功能树中，不能把工作包完成等同全部叶子完成。",
   "repository_transition": {
     "prior_release_repository": "xiaoqiqixi/betteridcsys",
     "imported_evidence_scope": "Existing evidence retains its original repository and SHA scope; it is not inherited acceptance of the split repositories.",
-    "new_repositories": ["xiaoqiqixi/betteridcsys-frontend", "xiaoqiqixi/betteridcsys-backend", "xiaoqiqixi/betteridcsys-cloud"],
+    "new_repositories": [
+      "xiaoqiqixi/betteridcsys-frontend",
+      "xiaoqiqixi/betteridcsys-backend",
+      "xiaoqiqixi/betteridcsys-cloud"
+    ],
     "new_release_state": "unreleased",
-    "original_deletion": "blocked_by_unfulfilled_release_and_channel_gates"
+    "original_deletion": "blocked_by_unfulfilled_release_and_channel_gates",
+    "paired_acceptance": {
+      "frontend_source": "aa86bf06eb4de9dd4fc95ff8d902c164de76784f",
+      "frontend_ci": "https://github.com/xiaoqiqixi/betteridcsys-frontend/actions/runs/40481526674",
+      "frontend_ci_state": "success_including_clean_build_guard",
+      "source_pair_contract": "../FRONTEND_PAIR.json",
+      "source_pair_cli_tests": 11,
+      "first_backend_pair_source": "de1d0c716170880e6706be71fb49bbfc9dee2918",
+      "first_backend_pair_ci": "https://github.com/xiaoqiqixi/betteridcsys-backend/actions/runs/40480459176",
+      "first_backend_pair_browser": "rejected_at_postbuild_source_check; no browser acceptance claimed",
+      "cache_fix": "Generated TypeScript build info removed from frontend Git tracking; strict tracked-source checks retained.",
+      "next_backend_pair_acceptance": "required_after_new_frontend_pin; not yet verified",
+      "release_authenticated": false,
+      "financial_logic_changed": false,
+      "first_backend_pair_ubuntu22": "30-minute total runner budget exhausted after slow provisioning; real Go tests were interrupted, not accepted"
+    },
+    "cloud_independent_acceptance": {
+      "source": "37ff075b1f0a863130b1ff9778ee9f5f2d8d4563",
+      "ci": "https://github.com/xiaoqiqixi/betteridcsys-cloud/actions/runs/40477563415",
+      "attempt1": "10/11 passed; browser job stopped during Ubuntu font download before browser execution",
+      "attempt2": "11/11 passed at identical source; native Ubuntu22/24 APT/systemd/libvirt and strict-TLS real-MySQL browser artifacts downloaded with API digests verified; true KVM and physical network acceptance remain deferred",
+      "published_entrypoint_ci": "https://github.com/xiaoqiqixi/betteridcsys-cloud/actions/runs/40477716043",
+      "published_entrypoint_state": "4/4 passed for existing old-repository RC; not a new cloud release",
+      "real_kvm_acceptance": false
+    }
   },
   "builtin_upgrades": {
-    "work_packages": ["W02", "W03", "W13", "W16"],
+    "work_packages": [
+      "W02",
+      "W03",
+      "W13",
+      "W16"
+    ],
     "contract": "development/BUILTIN_UPGRADES.md",
-    "state": "design_and_u01_partial_local",
-    "implemented_scope": "Frontend static bundle build/inspection and CI hook; no authenticated release or upgrade execution yet",
-    "pending": ["U01 authenticated three-repository composition", "U02 protected native upgrade services", "U03 finance API and browser workflow", "U04 controller upgrade and non-root API", "U05 rolling node upgrade", "U06 native regression and product release"]
+    "state": "design_and_u01_partial_ci",
+    "implemented_scope": "Frontend bounded static candidates; independent cloud native/MySQL/browser CI; immutable finance source pairing and paired-browser workflow. Source-pair regression/final CI and authenticated release composition remain incomplete. No built-in upgrade executor/API/UI shipped.",
+    "pending": [
+      "U01 authenticated three-repository composition",
+      "U02 protected native upgrade services",
+      "U03 finance API and browser workflow",
+      "U04 controller upgrade and non-root API",
+      "U05 rolling node upgrade",
+      "U06 native regression and product release"
+    ]
   },
   "active_batch": "20261027-cloud-public-staff-snapshot",
   "batch_record": "EXECUTION-20261027.md"

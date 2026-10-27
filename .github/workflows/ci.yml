@@ -16,7 +16,9 @@ jobs:
       matrix:
         os: [ubuntu-22.04, ubuntu-24.04]
     runs-on: ${{ matrix.os }}
-    timeout-minutes: 30
+    # Distribution provisioning has exceeded 20 minutes on hosted mirrors.
+    # Budget provisioning separately; the real Go suite keeps its 20m timeout.
+    timeout-minutes: 50
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
@@ -79,7 +81,7 @@ jobs:
           set -euo pipefail
           gh api repos/xiaoqiqixi/betteridcsys-frontend --jq '{id,full_name,private,default_branch,owner:{id:.owner.id}}' > "$RUNNER_TEMP/frontend-repository.json"
           python3 -I scripts/frontend_pair.py verify --repository-metadata "$RUNNER_TEMP/frontend-repository.json" \
-            --backend-source-sha "$GITHUB_SHA" > "$RUNNER_TEMP/frontend-source-pair.json"
+            --backend-source-sha "$GITHUB_SHA" > "$RUNNER_TEMP/frontend-source-pair-prebuild.json"
       - name: Build the pinned real frontend and record its bounded static bundle
         working-directory: vps-billing/frontend
         env:
@@ -98,7 +100,8 @@ jobs:
       - name: Require clean source checkouts after the build
         run: |
           python3 -I scripts/frontend_pair.py verify --repository-metadata "$RUNNER_TEMP/frontend-repository.json" \
-            --backend-source-sha "$GITHUB_SHA" > "$RUNNER_TEMP/frontend-source-pair.json"
+            --backend-source-sha "$GITHUB_SHA" > "$RUNNER_TEMP/frontend-source-pair.json.new"
+          mv "$RUNNER_TEMP/frontend-source-pair.json.new" "$RUNNER_TEMP/frontend-source-pair.json"
       - name: Prepare disposable native runner
         run: bash vps-billing/deploy/ci/prepare-native-runner.sh
       - name: Install pinned private Firefox, not host trust
@@ -113,15 +116,25 @@ jobs:
           printf 'PLAYWRIGHT_MODULE_DIR=%s\nPLAYWRIGHT_BROWSERS_PATH=%s\n' "$tools_root/node_modules" "$PLAYWRIGHT_BROWSERS_PATH" >> "$GITHUB_ENV"
       - name: Strict TLS and real MySQL UI, immutable financial history, no demo fallback
         run: RUNNER_TEMP="$ASTER_NATIVE_FIXTURE_ROOT" bash vps-billing/deploy/ci/mysql-native.sh -- bash vps-billing/deploy/ci/browser-mysql.sh --repo-root "$GITHUB_WORKSPACE" --output "$ASTER_NATIVE_FIXTURE_ROOT/financial-browser-mysql"
-      - name: Retain only paired source identities, bounded candidate and synthetic browser evidence
+      - name: Retain only paired source identities and bounded static candidate
         if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        with:
+          name: paired-frontend-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            ${{ runner.temp }}/frontend-source-pair-prebuild.json
+            ${{ runner.temp }}/frontend-source-pair.json
+            ${{ runner.temp }}/paired-frontend/FRONTEND.json
+            ${{ runner.temp }}/paired-frontend/*.tar.gz
+          if-no-files-found: warn
+          retention-days: 7
+          overwrite: false
+      - name: Retain only actual synthetic browser evidence under owned native scratch
+        if: always() && env.ASTER_NATIVE_FIXTURE_ROOT != ''
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
         with:
           name: paired-financial-browser-${{ github.run_id }}-${{ github.run_attempt }}
           path: |
-            ${{ runner.temp }}/frontend-source-pair.json
-            ${{ runner.temp }}/paired-frontend/FRONTEND.json
-            ${{ runner.temp }}/paired-frontend/*.tar.gz
             ${{ env.ASTER_NATIVE_FIXTURE_ROOT }}/financial-browser-mysql/summary.json
             ${{ env.ASTER_NATIVE_FIXTURE_ROOT }}/financial-browser-mysql/report.json
             ${{ env.ASTER_NATIVE_FIXTURE_ROOT }}/financial-browser-mysql/tls.json
