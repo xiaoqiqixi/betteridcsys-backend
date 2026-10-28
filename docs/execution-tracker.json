@@ -10515,7 +10515,7 @@
       "inventory_diagnostic_parser": {
         "source_sha": "5b26bbca1b80c460bfc3cac0e633409f29817f77",
         "ci": "https://github.com/xiaoqiqixi/betteridcsys-cloud/actions/runs/40594690388",
-        "state": "running",
+        "state": "completed_12_passed_2_native_target_failed",
         "changes": [
           "two_boolean_expressions_normalized_to_integer",
           "other_counts_strict_bounded_integers",
@@ -10529,8 +10529,71 @@
           "Python310_actionlint": "passed"
         },
         "production_allowlist_changed": false,
-        "native_provisioning_fixed": false
+        "native_provisioning_fixed": false,
+        "real_SQL": "passed_22_24_actual_inventory_query_and_parser",
+        "native_counts_confirmed_on_both": true,
+        "native_inventory_cause": "one_local_password_authenticated_vendor_maintenance_identity_not_root_socket",
+        "native_failure_artifact_sizes_digests_verified": true,
+        "native_failure_artifacts": [
+          {
+            "id": 12776288089,
+            "ubuntu": "22.04",
+            "bytes": 2198,
+            "sha256": "3d9c3c834f959cc59e88b22a5ee595c9ca48c8b06001ec752143e28b5e1f08dd"
+          },
+          {
+            "id": 12776332237,
+            "ubuntu": "24.04",
+            "bytes": 2200,
+            "sha256": "85748f3376bdca7a86efa7563b8c6eacc194f8a92ffd1125b3619b01f5c0f0d5"
+          }
+        ]
+      },
+      "fresh_maintenance_authentication": {
+        "source_sha": "4065ab6a3945f7f52abaff99d6bb97443b4dcc3f",
+        "ci": "https://github.com/xiaoqiqixi/betteridcsys-cloud/actions/runs/40656242564",
+        "state": "running_same_source_CI_not_yet_native_verified",
+        "scope": "only_operation_owned_fresh_dedicated_APT_MySQL",
+        "immutable_intent_binds_operation_dependencies_server_UUID_auth_and_grants": true,
+        "fixed_password_to_root_socket_transition": true,
+        "same_named_OS_principal_refused": true,
+        "missing_confirmation_resolved_only_from_exact_intended_state": true,
+        "verified_authentication_or_grant_drift_never_repaired": true,
+        "unknown_or_remote_accounts_refused": true,
+        "existing_database_adopted": false,
+        "ordinary_install_database_or_financial_logic_changed": false,
+        "local_checks": {
+          "package": 26,
+          "installer_contract": 111,
+          "native_harness_contract": 56,
+          "installer_unit": 19,
+          "release_verifier": 19,
+          "host_entry": 2,
+          "install_entrypoints": 4,
+          "Python310_actionlint": "passed",
+          "real_SQL": "not_run_locally_no_isolated_DSN"
+        },
+        "native_assertions": [
+          "actual_root_maintenance_socket_login",
+          "explicit_nonroot_MySQL_auth_denial_not_network_failure",
+          "lost_confirmation_readonly_reentry",
+          "mapping_password_grant_drift_refused_without_reset",
+          "remote_same_name_account_and_same_named_OS_user_refused"
+        ],
+        "native_acceptance": false,
+        "full_migration_acceptance": false,
+        "new_release": false
       }
+    },
+    "legacy_release_test_gap": {
+      "path": "aster-cloud/deploy/ci/test_cloud_release.py",
+      "source_sha": "4065ab6a3945f7f52abaff99d6bb97443b4dcc3f",
+      "result": "29_tests_1_failure_2_errors",
+      "cause": "old_monorepo_workflow_names_and_exact_branch_yaml_text_in_split_repository",
+      "current_independent_package_test": "deploy/scripts/test_cloud_package.py_26_passed",
+      "not_in_current_CI": true,
+      "resolved": false,
+      "next": "migrate_independent_release_channel_and_contracts_without_weakening_publisher_or_legacy_asset_verification"
     }
   }
 }
