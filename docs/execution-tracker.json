@@ -410,7 +410,8 @@
       ],
       "state": "in_progress",
       "evidence": [
-        "EXECUTION-20261028.md"
+        "EXECUTION-20261028.md",
+        "EXECUTION-20261029.md"
       ],
       "checklist_ids": [
         "B8.1",
@@ -9291,6 +9292,10 @@
         {
           "path": "EXECUTION-20261028.md",
           "note": "f6e467b CI终态13/14，MySQL22/24与22原生通过，24原生3600秒预算耗尽。37ae3a5新增受原封存/完整SQL后像/明确TLS选择约束的只读配置计划，实库race517项与263项Python契约通过，原生CI待验；正式发布、新登录、接管/回滚和双主机整链仍未完成。"
+        },
+        {
+          "path": "EXECUTION-20261029.md",
+          "note": "5105b82 CI completed 13/18. Native data/sessions22+24 and configuration22 artifacts verified; configuration24 host guard refused, four Go package timeouts. Restricted HTTP component implemented locally; SQL/host verification authority, browser migration, takeover and rollback remain incomplete."
         }
       ]
     },
@@ -10033,8 +10038,8 @@
       "U06 native regression and product release"
     ]
   },
-  "active_batch": "20261028-controller-configuration-publication",
-  "batch_record": "EXECUTION-20261028.md",
+  "active_batch": "20261029-controller-verification-http",
+  "batch_record": "EXECUTION-20261029.md",
   "cloud_install_migration": {
     "contract": "https://github.com/xiaoqiqixi/betteridcsys-cloud/blob/main/docs/development/INSTALL_AND_MIGRATION.md",
     "scope": [
@@ -10054,7 +10059,7 @@
     "pending": [
       "actual in-flight remote task and native OS reboot isolation acceptance",
       "encrypted-export crash recovery",
-      "configuration publication with bound Origin/TLS approval",
+      "two-platform native configuration publication acceptance; Ubuntu22 passed at 5105b82, Ubuntu24 pre-VM guard failed",
       "old-cookie invalidation and new-login browser acceptance",
       "node and billing-connector reconnection",
       "single-active takeover and bounded rollback",
@@ -11074,7 +11079,7 @@
       }
     },
     "configuration_publication": {
-      "state": "pushed_same_source_CI_running_not_native_accepted",
+      "state": "same_source_ci_completed_13_of18_configuration22_verified_configuration24_host_guard_refused",
       "contract": "https://github.com/xiaoqiqixi/betteridcsys-cloud/blob/main/docs/development/CONTROLLER_CONFIGURATION_PUBLICATION.md",
       "actions": [
         "target-configuration-publish",
@@ -11130,7 +11135,148 @@
         "linux_distribution_contracts": "23 stopped at missing dpkg-deb prerequisite on macOS; mandatory Ubuntu CI pending",
         "actionlint": "passed",
         "temporary_database_stopped_private_data_credentials_removed": true
-      }
+      },
+      "current_ci": {
+        "source_sha": "5105b828aea145d8d096a2285fc72a5c97cc1ca5",
+        "run": 40716488187,
+        "state": "completed_failure",
+        "passed_jobs": 13,
+        "failed_jobs": 5,
+        "native_data22_24": "passed_artifact_digests_verified",
+        "native_sessions22_24": "passed_artifact_digests_verified",
+        "native_configuration22": "passed_artifact_digest_verified",
+        "native_configuration24": "HOST_NETWORK_CHANGED_BEFORE_VM; no guest report",
+        "linux_and_independent_mysql22_24": "4 controller-package 10-minute cumulative timeouts",
+        "same_SHA_all_gates_passed": false
+      },
+      "native_artifacts": [
+        {
+          "artifact": 12831376669,
+          "bytes": 2649,
+          "sha256": "498091ea9d9c446d8fe61bfe9cbd15272aaf49263c5c1ec48f8c3cdb7c6ae86b",
+          "download_and_digest_verified": true,
+          "ubuntu": "22.04",
+          "scenario": "controller-restore-configuration",
+          "passed": true,
+          "configuration_published": true,
+          "source_host_metadata_synthetic": true,
+          "session_browser_verified": false,
+          "migration_ready": false
+        },
+        {
+          "artifact": 12830590491,
+          "bytes": 2535,
+          "sha256": "d61f19496b8c8263470125bac6a0bca0caac71deb6eef204377b00314053b7a9",
+          "download_and_digest_verified": true,
+          "ubuntu": "24.04",
+          "scenario": "controller-restore-sessions",
+          "passed": true,
+          "configuration_published": false,
+          "source_host_metadata_synthetic": true,
+          "session_browser_verified": false,
+          "migration_ready": false
+        },
+        {
+          "artifact": 12830367176,
+          "bytes": 2678,
+          "sha256": "6203e7c11fa8d7c3825f1a799765230d39b66e4d9c8e2072d9d77482abd960d6",
+          "download_and_digest_verified": true,
+          "ubuntu": "22.04",
+          "scenario": "controller-restore-data",
+          "passed": true,
+          "configuration_published": false,
+          "source_host_metadata_synthetic": true,
+          "session_browser_verified": false,
+          "migration_ready": false
+        },
+        {
+          "artifact": 12829848856,
+          "bytes": 2516,
+          "sha256": "6766518c45b965ce873a9758f9c6e231237929d9338b2faa51cd8e2c83c255e2",
+          "download_and_digest_verified": true,
+          "ubuntu": "22.04",
+          "scenario": "controller-restore-sessions",
+          "passed": true,
+          "configuration_published": false,
+          "source_host_metadata_synthetic": true,
+          "session_browser_verified": false,
+          "migration_ready": false
+        },
+        {
+          "artifact": 12831183399,
+          "bytes": 2683,
+          "sha256": "85b724f08128143ec5d05e3f2a951833c862ceb0fcf5bb6ef5c1bafce6ada006",
+          "download_and_digest_verified": true,
+          "ubuntu": "24.04",
+          "scenario": "controller-restore-data",
+          "passed": true,
+          "configuration_published": false,
+          "source_host_metadata_synthetic": true,
+          "session_browser_verified": false,
+          "migration_ready": false
+        }
+      ]
+    },
+    "verification_runtime": {
+      "state": "pushed_same_source_CI_running_host_authority_pending",
+      "contract": "https://github.com/xiaoqiqixi/betteridcsys-cloud/blob/main/docs/development/CONTROLLER_VERIFICATION_RUNTIME.md",
+      "implementation": [
+        "separate_explicit_read_only_HTTP_surface",
+        "existing_real_identity_TLS_Origin_CSRF_sessions_and_live_permissions",
+        "deny_business_identity_changes_and_remote_node_queries",
+        "preserve_stored_heartbeat_without_claiming_online",
+        "full_test_database_unchanged_for_reads_and_refusals",
+        "authentication_changes_only_three_runtime_tables_and_preserves_old_audit_prefix"
+      ],
+      "host_startup": false,
+      "dedicated_sql_identity": false,
+      "root_verification_permit": false,
+      "migration_browser_acceptance": false,
+      "migration_ready": false,
+      "financial_logic_changed": false,
+      "source_sha": "9c111a9c199ca71bba8af642a30b3fb9345a87a1",
+      "local_validation": {
+        "exit": 0,
+        "seconds": 574.561,
+        "top_level_pass": 520,
+        "runtime_skips": 0,
+        "explicit_linux_root_exclusions": 5,
+        "package_results": [
+          "ok  \taster/cloud/cmd/aster-controller\t266.748s",
+          "ok  \taster/cloud/cmd/aster-controller\t89.198s",
+          "ok  \taster/cloud/cmd/aster-billing-plugin\t1.083s",
+          "ok  \taster/cloud/cmd/aster-network\t1.081s",
+          "ok  \taster/cloud/cmd/aster-node\t1.093s",
+          "ok  \taster/cloud/internal/control\t215.383s",
+          "ok  \taster/cloud/internal/controllerbackup\t106.874s",
+          "ok  \taster/cloud/internal/diagnostics\t1.047s",
+          "ok  \taster/cloud/internal/fabric\t196.930s",
+          "ok  \taster/cloud/internal/hypervisor\t57.324s",
+          "ok  \taster/cloud/internal/identity\t155.303s",
+          "ok  \taster/cloud/internal/networking\t12.277s",
+          "ok  \taster/cloud/internal/nodeproto\t1.142s",
+          "ok  \taster/cloud/internal/overlayproto\t1.116s",
+          "ok  \taster/cloud/plugins/billingconnector\t1.101s"
+        ],
+        "database": "MySQL8.4.13 macos arm64 private Unix socket",
+        "go_vet": "passed",
+        "linux_amd64_builds": 4,
+        "linux_test_binary": "compiled_not_executed",
+        "runner_contracts_passed": 3,
+        "temporary_database_cleanup": {
+          "mysql": "8.4.13",
+          "private_socket_only": true,
+          "leftover_fixture_databases": 0,
+          "credential_scan": "passed",
+          "process_stopped": true,
+          "private_data_and_credentials_removed": true,
+          "system_services_changed": false,
+          "host_trust_changed": false
+        }
+      },
+      "pushed": true,
+      "ci": "https://github.com/xiaoqiqixi/betteridcsys-cloud/actions/runs/40725448468",
+      "same_SHA_all_gates_passed": false
     }
   }
 }
