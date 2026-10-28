@@ -10033,7 +10033,7 @@
       "U06 native regression and product release"
     ]
   },
-  "active_batch": "20261028-controller-configuration-plan",
+  "active_batch": "20261028-controller-configuration-publication",
   "batch_record": "EXECUTION-20261028.md",
   "cloud_install_migration": {
     "contract": "https://github.com/xiaoqiqixi/betteridcsys-cloud/blob/main/docs/development/INSTALL_AND_MIGRATION.md",
@@ -11023,7 +11023,7 @@
       "ci": "https://github.com/xiaoqiqixi/betteridcsys-cloud/actions/runs/40699082065"
     },
     "configuration_plan": {
-      "state": "pushed_same_source_CI_running",
+      "state": "pushed_same_source_CI_failed_9_of14",
       "source_sha": "37ae3a5be7b6f2cadaaaa0c18dce6301f48f204d",
       "actions": [
         "target-configuration-plan"
@@ -11060,7 +11060,77 @@
       "migration_ready": false,
       "financial_logic_changed": false,
       "ci": "https://github.com/xiaoqiqixi/betteridcsys-cloud/actions/runs/40699082065",
-      "same_SHA_all_gates_passed": false
+      "same_SHA_all_gates_passed": false,
+      "current_ci": {
+        "source_sha": "37ae3a5be7b6f2cadaaaa0c18dce6301f48f204d",
+        "run": 40699082065,
+        "state": "completed_failure",
+        "passed_jobs": 9,
+        "failed_jobs": 5,
+        "native_restore22": "HOST_NETWORK_CHANGED_BEFORE_VM; no guest result",
+        "native_restore24": "GUEST_VM_DEADLINE_EXCEEDED at 3600 seconds; last session phase at 2747 seconds",
+        "go_failures": "Linux24 and MySQL22/24 controller package timeouts; additional MySQL24 backup test did not complete",
+        "same_SHA_all_gates_passed": false
+      }
+    },
+    "configuration_publication": {
+      "state": "pushed_same_source_CI_running_not_native_accepted",
+      "contract": "https://github.com/xiaoqiqixi/betteridcsys-cloud/blob/main/docs/development/CONTROLLER_CONFIGURATION_PUBLICATION.md",
+      "actions": [
+        "target-configuration-publish",
+        "target-configuration-status",
+        "target-configuration-resume"
+      ],
+      "protected_explicit_approval": true,
+      "approval_uses_returned_plan_sha256": true,
+      "original_seal_retained": true,
+      "full_session_postimage_required": true,
+      "atomic_linux_noreplace_publication": true,
+      "ordinary_reentry_readonly": true,
+      "explicit_same_intent_resume": true,
+      "source_sha": "5105b828aea145d8d096a2285fc72a5c97cc1ca5",
+      "pushed": true,
+      "native_acceptance": false,
+      "browser_new_login_verified": false,
+      "node_takeover": false,
+      "migration_ready": false,
+      "financial_logic_changed": false,
+      "required_native_scenarios": {
+        "ubuntu": [
+          "22.04",
+          "24.04"
+        ],
+        "scenarios": [
+          "controller-restore-data",
+          "controller-restore-sessions",
+          "controller-restore-configuration"
+        ],
+        "matrix_size": 6,
+        "all_required_same_source": true,
+        "vm_budget_seconds": 3600,
+        "job_budget_minutes": 85,
+        "coverage_note": "All prior negative call sites retained; each scenario reports only its executed cases; actual native results remain pending."
+      },
+      "ci": "https://github.com/xiaoqiqixi/betteridcsys-cloud/actions/runs/40716488187",
+      "same_SHA_all_gates_passed": false,
+      "local_validation": {
+        "database": "temporary private Unix socket MySQL8.4.13 macos arm64",
+        "top_level_pass": 517,
+        "runtime_skips": 0,
+        "explicit_linux_root_ovs_nat_exclusions": 5,
+        "linux_atomic_publication_positives_run_locally": false,
+        "wall_seconds": 586.152,
+        "controller_seconds": 371.697,
+        "control_seconds": 212.85,
+        "backup_seconds": 113.848,
+        "go_vet": "passed",
+        "linux_amd64_builds": 4,
+        "linux_test_binary": "compiled_not_executed",
+        "portable_python_contracts": 279,
+        "linux_distribution_contracts": "23 stopped at missing dpkg-deb prerequisite on macOS; mandatory Ubuntu CI pending",
+        "actionlint": "passed",
+        "temporary_database_stopped_private_data_credentials_removed": true
+      }
     }
   }
 }
