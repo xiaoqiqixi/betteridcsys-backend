@@ -10033,7 +10033,7 @@
       "U06 native regression and product release"
     ]
   },
-  "active_batch": "20261028-controller-migration-runtime-materials",
+  "active_batch": "20261028-controller-migration-session-transition",
   "batch_record": "EXECUTION-20261028.md",
   "cloud_install_migration": {
     "contract": "https://github.com/xiaoqiqixi/betteridcsys-cloud/blob/main/docs/development/INSTALL_AND_MIGRATION.md",
@@ -10701,6 +10701,63 @@
       "session_revocation": false,
       "node_takeover": false,
       "migration_ready": false
+    },
+    "runtime_material_staging": {
+      "source_sha": "ec98b4af09ec554008af86730832846451f4ca6a",
+      "ci": "https://github.com/xiaoqiqixi/betteridcsys-cloud/actions/runs/40668985905",
+      "state": "native_CI_pending_independent_mysql22_timeout_not_accepted",
+      "implemented": [
+        "private_material_candidate",
+        "exact_source_and_target_DSN_binding",
+        "64_node_material_mapping",
+        "readonly_reentry_and_drift_refusal"
+      ],
+      "configuration_published": false,
+      "sessions_revoked": false,
+      "migration_ready": false,
+      "new_release": false,
+      "guest_deadline_seconds": 3600,
+      "workflow_minutes": 85,
+      "prior_ci": {
+        "run": 40663478295,
+        "passed": 12,
+        "failed_native": 2,
+        "reason": "both_native_VM_1800_second_budget_exhausted_before_import"
+      },
+      "mysql22_failure": {
+        "job": 122750654457,
+        "reason": "controller_test_package_10_minute_timeout_during_TestControllerSourceValidation",
+        "sql_assertion_failure_observed": false,
+        "accepted": false
+      }
+    },
+    "session_transition": {
+      "state": "local_committed_waiting_prior_cloud_CI_terminal",
+      "actions": [
+        "target-revoke-sessions",
+        "target-session-status",
+        "target-session-resume"
+      ],
+      "contract": "https://github.com/xiaoqiqixi/betteridcsys-cloud/blob/main/docs/development/CONTROLLER_SESSION_TRANSITION.md",
+      "source_sha": "2b4eb8fde3a15aa3bf705994c2e1ebd0b919c03e",
+      "immutable_intent_before_transaction": true,
+      "exact_full_before_and_after_image_checks": true,
+      "old_login_and_anonymous_sessions": true,
+      "one_bound_audit_event": true,
+      "explicit_same_intent_counter_recovery": true,
+      "configuration_published": false,
+      "browser_cookie_acceptance": false,
+      "node_takeover": false,
+      "migration_ready": false,
+      "financial_logic_changed": false,
+      "local_validation": {
+        "go_race": "passed_final_full_suite",
+        "vet": "passed",
+        "linux_amd64_builds": 4,
+        "python_contracts_passed": 247,
+        "real_mysql": "skipped_no_local_isolated_DSN",
+        "browser_cookie_acceptance": false
+      }
     }
   }
 }
