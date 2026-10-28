@@ -408,8 +408,10 @@
         "W11",
         "W12"
       ],
-      "state": "planned",
-      "evidence": [],
+      "state": "in_progress",
+      "evidence": [
+        "EXECUTION-20261028.md"
+      ],
       "checklist_ids": [
         "B8.1",
         "B8.2",
@@ -9262,7 +9264,7 @@
       "id": "R06",
       "title": "Cloud一致性备份与灾难恢复",
       "code_observation": "missing",
-      "delivery_state": "planned",
+      "delivery_state": "in_progress",
       "priority": "P0",
       "origin": "user",
       "group": "05 原生安装与正式发行",
@@ -9285,7 +9287,12 @@
           "note": "升级须停写、完整备份"
         }
       ],
-      "current_evidence": []
+      "current_evidence": [
+        {
+          "path": "EXECUTION-20261028.md",
+          "note": "源端导出及目标Ubuntu22原生导入回读已有证据；Ubuntu24本轮宿主网络变化拒绝，完整材料/会话/接管仍未完成。"
+        }
+      ]
     },
     {
       "id": "R07",
@@ -10026,8 +10033,8 @@
       "U06 native regression and product release"
     ]
   },
-  "active_batch": "20261027-cloud-public-staff-snapshot",
-  "batch_record": "EXECUTION-20261027.md",
+  "active_batch": "20261028-controller-migration-runtime-materials",
+  "batch_record": "EXECUTION-20261028.md",
   "cloud_install_migration": {
     "contract": "https://github.com/xiaoqiqixi/betteridcsys-cloud/blob/main/docs/development/INSTALL_AND_MIGRATION.md",
     "scope": [
@@ -10639,6 +10646,61 @@
       "not_in_current_CI": true,
       "resolved": false,
       "next": "migrate_independent_release_channel_and_contracts_without_weakening_publisher_or_legacy_asset_verification"
+    },
+    "latest_native_target_restore": {
+      "source_sha": "047bea43fe00edfbeb69f0490a4aad9768a1399c",
+      "ci": "https://github.com/xiaoqiqixi/betteridcsys-cloud/actions/runs/40659241428",
+      "state": "completed_13_passed_1_native24_host_environment_refused",
+      "ubuntu22": {
+        "job": 122717803664,
+        "result": "passed_native_APT_systemd_mysql_maintenance_auth_import_readonly_reentry",
+        "artifact": 12804083464,
+        "bytes": 2544,
+        "sha256": "8251e0a2afdca06ee7d505e1022cab780fc88ec317e0d78402321c04144fc676"
+      },
+      "ubuntu24": {
+        "job": 122717803767,
+        "result": "HOST_NETWORK_CHANGED_BEFORE_VM",
+        "artifact": 12803261968,
+        "bytes": 1577,
+        "sha256": "8aa2a491ffb127819e0ffc82e3a2d777c14e184965a469f7952ace31864d4bc8",
+        "guest_result_seen": false
+      },
+      "artifact_sizes_digests_verified": true,
+      "native_source_identity": "synthetic_with_real_SQL_snapshot_not_actual_source_host_export",
+      "independent_mysql22_24": "passed",
+      "existing_console_browser": {
+        "passed": true,
+        "artifact": 12802988267,
+        "bytes": 8719545,
+        "sha256": "0c90d388569156a5c0a1a9aa552121fb414c12d4433e18696f6682c1ad63630d",
+        "screenshots": 80,
+        "real_mysql": true,
+        "strict_tls": true,
+        "node_RPC": "simulated",
+        "migration_UI": false
+      },
+      "production_or_environment_guard_weakened": false,
+      "old_run_cancelled": false,
+      "migration_ready": false,
+      "new_release": false
+    },
+    "runtime_material_continuity": {
+      "source_sha": "1f44612a543220fd5b0e16c72e3d57749d51399c",
+      "ci": "https://github.com/xiaoqiqixi/betteridcsys-cloud/actions/runs/40663478295",
+      "state": "local_verified_same_SHA_CI_in_progress",
+      "contract": "https://github.com/xiaoqiqixi/betteridcsys-cloud/blob/main/docs/development/CONTROLLER_RUNTIME_MATERIALS.md",
+      "original_profile_JSON_and_digest_preserved": true,
+      "effective_paths_bound_to_node_profile_and_three_content_hashes": true,
+      "no_old_path_fallback": true,
+      "local_real_mTLS_and_offline_source_CLI": "passed",
+      "local_full_go_race_vet_linux_build": "passed",
+      "local_mysql": "not_available_not_claimed",
+      "source_export_and_reexport_native22_24": "new_fixture_waiting_same_SHA_CI",
+      "target_material_publication": false,
+      "session_revocation": false,
+      "node_takeover": false,
+      "migration_ready": false
     }
   }
 }
