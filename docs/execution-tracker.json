@@ -10053,8 +10053,9 @@
     "migration_implementation": "managed_source_export_and_typed_empty_database_restore_native22_24_verified_host_takeover_pending",
     "pending": [
       "actual in-flight remote task and native OS reboot isolation acceptance",
-      "authenticated full restore and encrypted-export crash recovery",
-      "empty-target identity-preserving import",
+      "encrypted-export crash recovery",
+      "configuration publication with bound Origin/TLS approval",
+      "old-cookie invalidation and new-login browser acceptance",
       "node and billing-connector reconnection",
       "single-active takeover and bounded rollback",
       "admin API/UI and real MySQL/browser lifecycle",
@@ -10648,40 +10649,45 @@
       "next": "migrate_independent_release_channel_and_contracts_without_weakening_publisher_or_legacy_asset_verification"
     },
     "latest_native_target_restore": {
-      "source_sha": "047bea43fe00edfbeb69f0490a4aad9768a1399c",
-      "ci": "https://github.com/xiaoqiqixi/betteridcsys-cloud/actions/runs/40659241428",
-      "state": "completed_13_passed_1_native24_host_environment_refused",
+      "source_sha": "2b4eb8fde3a15aa3bf705994c2e1ebd0b919c03e",
+      "ci": "https://github.com/xiaoqiqixi/betteridcsys-cloud/actions/runs/40676867833",
+      "state": "completed_13_passed_1_independent_mysql22_session_recovery_refused",
       "ubuntu22": {
-        "job": 122717803664,
-        "result": "passed_native_APT_systemd_mysql_maintenance_auth_import_readonly_reentry",
-        "artifact": 12804083464,
-        "bytes": 2544,
-        "sha256": "8251e0a2afdca06ee7d505e1022cab780fc88ec317e0d78402321c04144fc676"
+        "job": 122777398648,
+        "result": "passed_actual_import_materials_sessions_explicit_recovery_and_readonly_verification"
       },
       "ubuntu24": {
-        "job": 122717803767,
-        "result": "HOST_NETWORK_CHANGED_BEFORE_VM",
-        "artifact": 12803261968,
-        "bytes": 1577,
-        "sha256": "8aa2a491ffb127819e0ffc82e3a2d777c14e184965a469f7952ace31864d4bc8",
-        "guest_result_seen": false
+        "job": 122777398552,
+        "result": "passed_actual_import_materials_sessions_explicit_recovery_and_readonly_verification"
       },
+      "artifacts": [
+        {
+          "artifact": 12813373021,
+          "ubuntu": "22",
+          "bytes": 2736,
+          "sha256": "e85ca7714bc8cd644b93a3e94fee9d6c93c57bf7d103f5862e7f7a3896fe2452",
+          "verified": true,
+          "sessions_revoked": true,
+          "session_browser_verified": false,
+          "migration_ready": false
+        },
+        {
+          "artifact": 12813038860,
+          "ubuntu": "24",
+          "bytes": 2733,
+          "sha256": "cef3b597287864309eff6b7e7fb85d2f395b0653f7282ccf7ef9ddbec7303072",
+          "verified": true,
+          "sessions_revoked": true,
+          "session_browser_verified": false,
+          "migration_ready": false
+        }
+      ],
       "artifact_sizes_digests_verified": true,
-      "native_source_identity": "synthetic_with_real_SQL_snapshot_not_actual_source_host_export",
-      "independent_mysql22_24": "passed",
-      "existing_console_browser": {
-        "passed": true,
-        "artifact": 12802988267,
-        "bytes": 8719545,
-        "sha256": "0c90d388569156a5c0a1a9aa552121fb414c12d4433e18696f6682c1ad63630d",
-        "screenshots": 80,
-        "real_mysql": true,
-        "strict_tls": true,
-        "node_RPC": "simulated",
-        "migration_UI": false
-      },
-      "production_or_environment_guard_weakened": false,
-      "old_run_cancelled": false,
+      "native_source_identity": "synthetic_host_metadata_with_real_SQL_snapshot_not_actual_source_host_export",
+      "sessions_revoked": true,
+      "configuration_published": false,
+      "session_browser_verified": false,
+      "node_takeover_verified": false,
       "migration_ready": false,
       "new_release": false
     },
@@ -10705,7 +10711,7 @@
     "runtime_material_staging": {
       "source_sha": "ec98b4af09ec554008af86730832846451f4ca6a",
       "ci": "https://github.com/xiaoqiqixi/betteridcsys-cloud/actions/runs/40668985905",
-      "state": "native_CI_pending_independent_mysql22_timeout_not_accepted",
+      "state": "native22_24_passed_artifact_digests_verified_full_ci13_of14_mysql22_timeout",
       "implemented": [
         "private_material_candidate",
         "exact_source_and_target_DSN_binding",
@@ -10729,10 +10735,24 @@
         "reason": "controller_test_package_10_minute_timeout_during_TestControllerSourceValidation",
         "sql_assertion_failure_observed": false,
         "accepted": false
-      }
+      },
+      "native_artifacts": [
+        {
+          "ubuntu": "22.04",
+          "artifact": 12811455091,
+          "bytes": 2675,
+          "sha256": "83723fecd9237105f33821bb7806ad2aa3e7446a5e2ba6c21a352db597410f52"
+        },
+        {
+          "ubuntu": "24.04",
+          "artifact": 12810422881,
+          "bytes": 2682,
+          "sha256": "883c6ebcb36d5709633de5768f0af9047642f6ccc00a4079ee81488dd9dfaa0e"
+        }
+      ]
     },
     "session_transition": {
-      "state": "local_committed_waiting_prior_cloud_CI_terminal",
+      "state": "native22_24_verified_prior_ci13_of14_lock_fix_f6e467b_pushed_CI_running",
       "actions": [
         "target-revoke-sessions",
         "target-session-status",
@@ -10757,7 +10777,140 @@
         "python_contracts_passed": 247,
         "real_mysql": "skipped_no_local_isolated_DSN",
         "browser_cookie_acceptance": false
+      },
+      "ci": "https://github.com/xiaoqiqixi/betteridcsys-cloud/actions/runs/40676867833",
+      "current_ci": {
+        "source_sha": "2b4eb8fde3a15aa3bf705994c2e1ebd0b919c03e",
+        "run": 40676867833,
+        "state": "completed_failure_13_of14",
+        "mysql22": "failed_at_explicit_resume_not_package_timeout",
+        "mysql24": "passed",
+        "existing_console_browser": "passed",
+        "native_restore22_24": "passed_artifact_digests_verified",
+        "new_migration_browser_acceptance": false
+      },
+      "local_schema_lock_fix": {
+        "state": "pushed_real_SQL_local_verified_same_SHA_CI_running",
+        "mechanism": "single_bounded_schema_lock_wait_before_transaction; operation_lock_stays_nonblocking; no_transaction_retry",
+        "test_seam": "real_SQL_pending_metadata_lock_then_cancel_or_release",
+        "database": "temporary_private_unix_socket_MySQL8.4.13_macos_arm64_not_CI_MySQL8.4.11",
+        "baseline_pass_seconds": 82.65,
+        "old_implementation_lock_regression_failed_seconds": 67.15,
+        "fixed_same_regression_pass_seconds": 67.4,
+        "complete_backup_package_pass_seconds": 84.83,
+        "native_Ubuntu_acceptance": false,
+        "all_local_race": {
+          "top_level_passed": 516,
+          "runtime_skips": 0,
+          "explicit_linux_root_ovs_nat_exclusions": 5,
+          "latest_test_only_cleanup_adjustment": "concurrent_control_and_backup_real_SQL_race_passed",
+          "control_seconds": 133.037,
+          "controllerbackup_seconds": 89.358
+        },
+        "vet": "passed",
+        "linux_amd64_builds": 4,
+        "temporary_database_cleanup": "verified_no_leftover_test_databases_process_stopped_private_data_and_credentials_removed",
+        "source_sha": "f6e467b0108b3cfe83e0be4f5b7b7c3781c1025a",
+        "pushed": true,
+        "ci": "https://github.com/xiaoqiqixi/betteridcsys-cloud/actions/runs/40684247060"
+      },
+      "next_phase_contract": "https://github.com/xiaoqiqixi/betteridcsys-cloud/blob/main/docs/development/CONTROLLER_CONFIGURATION_PUBLICATION.md",
+      "native_artifacts": [
+        {
+          "artifact": 12813373021,
+          "ubuntu": "22",
+          "bytes": 2736,
+          "sha256": "e85ca7714bc8cd644b93a3e94fee9d6c93c57bf7d103f5862e7f7a3896fe2452",
+          "verified": true,
+          "sessions_revoked": true,
+          "session_browser_verified": false,
+          "migration_ready": false
+        },
+        {
+          "artifact": 12813038860,
+          "ubuntu": "24",
+          "bytes": 2733,
+          "sha256": "cef3b597287864309eff6b7e7fb85d2f395b0653f7282ccf7ef9ddbec7303072",
+          "verified": true,
+          "sessions_revoked": true,
+          "session_browser_verified": false,
+          "migration_ready": false
+        }
+      ]
+    },
+    "native_target_restore_history": [
+      {
+        "source_sha": "047bea43fe00edfbeb69f0490a4aad9768a1399c",
+        "ci": "https://github.com/xiaoqiqixi/betteridcsys-cloud/actions/runs/40659241428",
+        "state": "completed_13_passed_1_native24_host_environment_refused",
+        "ubuntu22": {
+          "job": 122717803664,
+          "result": "passed_native_APT_systemd_mysql_maintenance_auth_import_readonly_reentry",
+          "artifact": 12804083464,
+          "bytes": 2544,
+          "sha256": "8251e0a2afdca06ee7d505e1022cab780fc88ec317e0d78402321c04144fc676"
+        },
+        "ubuntu24": {
+          "job": 122717803767,
+          "result": "HOST_NETWORK_CHANGED_BEFORE_VM",
+          "artifact": 12803261968,
+          "bytes": 1577,
+          "sha256": "8aa2a491ffb127819e0ffc82e3a2d777c14e184965a469f7952ace31864d4bc8",
+          "guest_result_seen": false
+        },
+        "artifact_sizes_digests_verified": true,
+        "native_source_identity": "synthetic_with_real_SQL_snapshot_not_actual_source_host_export",
+        "independent_mysql22_24": "passed",
+        "existing_console_browser": {
+          "passed": true,
+          "artifact": 12802988267,
+          "bytes": 8719545,
+          "sha256": "0c90d388569156a5c0a1a9aa552121fb414c12d4433e18696f6682c1ad63630d",
+          "screenshots": 80,
+          "real_mysql": true,
+          "strict_tls": true,
+          "node_RPC": "simulated",
+          "migration_UI": false
+        },
+        "production_or_environment_guard_weakened": false,
+        "old_run_cancelled": false,
+        "migration_ready": false,
+        "new_release": false
+      },
+      {
+        "source_sha": "ec98b4af09ec554008af86730832846451f4ca6a",
+        "ci": "https://github.com/xiaoqiqixi/betteridcsys-cloud/actions/runs/40668985905",
+        "state": "completed_13_passed_1_independent_mysql22_timeout",
+        "ubuntu22": {
+          "job": 122750654606,
+          "result": "passed_actual_APT_systemd_mysql_import_readback_and_runtime_materials"
+        },
+        "ubuntu24": {
+          "job": 122750654219,
+          "result": "passed_actual_APT_systemd_mysql_import_readback_and_runtime_materials"
+        },
+        "artifacts": [
+          {
+            "ubuntu": "22.04",
+            "artifact": 12811455091,
+            "bytes": 2675,
+            "sha256": "83723fecd9237105f33821bb7806ad2aa3e7446a5e2ba6c21a352db597410f52"
+          },
+          {
+            "ubuntu": "24.04",
+            "artifact": 12810422881,
+            "bytes": 2682,
+            "sha256": "883c6ebcb36d5709633de5768f0af9047642f6ccc00a4079ee81488dd9dfaa0e"
+          }
+        ],
+        "artifact_sizes_digests_verified": true,
+        "native_source_identity": "synthetic_host_metadata_with_real_SQL_snapshot_not_actual_source_host_export",
+        "sessions_revoked": false,
+        "configuration_published": false,
+        "node_takeover_verified": false,
+        "migration_ready": false,
+        "new_release": false
       }
-    }
+    ]
   }
 }
