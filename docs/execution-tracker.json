@@ -10552,7 +10552,7 @@
       "fresh_maintenance_authentication": {
         "source_sha": "4065ab6a3945f7f52abaff99d6bb97443b4dcc3f",
         "ci": "https://github.com/xiaoqiqixi/betteridcsys-cloud/actions/runs/40656242564",
-        "state": "running_same_source_CI_not_yet_native_verified",
+        "state": "completed_12_passed_2_failed_at_native_maintenance_test",
         "scope": "only_operation_owned_fresh_dedicated_APT_MySQL",
         "immutable_intent_binds_operation_dependencies_server_UUID_auth_and_grants": true,
         "fixed_password_to_root_socket_transition": true,
@@ -10582,7 +10582,52 @@
         ],
         "native_acceptance": false,
         "full_migration_acceptance": false,
-        "new_release": false
+        "new_release": false,
+        "native_provision_stage_passed_both": true,
+        "failure_phase": "target-maintenance",
+        "failure_code": "TARGET_NATIVE_COMMAND_FAILED",
+        "exact_stderr_observed": false,
+        "native_failure_artifacts": [
+          {
+            "id": 12802926290,
+            "ubuntu": "22.04",
+            "bytes": 2057,
+            "sha256": "748770abb81239fad991b7b2894a81e5139379d4058a63a6631d18072eb019c1"
+          },
+          {
+            "id": 12803261027,
+            "ubuntu": "24.04",
+            "bytes": 2061,
+            "sha256": "8605cb6666cb06923419999bcff535a15b443f38a72e06e4cf22d0856446b263"
+          }
+        ],
+        "native_failure_artifact_sizes_digests_verified": true,
+        "browser": {
+          "artifact": 12802082006,
+          "bytes": 8747888,
+          "sha256": "28cb81b2497393b29e2ed333749b29f3f85cb9d9f32c37fe7035e75a98705129",
+          "size_digest_verified": true,
+          "network_checks": 163,
+          "identity_checks": 29,
+          "screenshots": 80,
+          "real_SQL": true,
+          "strict_TLS": true,
+          "node_RPC": "simulated",
+          "migration_UI": false
+        },
+        "test_client_successor": {
+          "source_sha": "047bea43fe00edfbeb69f0490a4aad9768a1399c",
+          "ci": "https://github.com/xiaoqiqixi/betteridcsys-cloud/actions/runs/40659241428",
+          "state": "in_progress",
+          "change": "MySQL8.0_compatible_no_defaults_with_explicit_absent_login_file_and_shared_empty_client_home",
+          "production_policy_changed": false,
+          "root_positive_and_nonroot_explicit_auth_denial_required": true,
+          "fixed_finer_failure_phases_no_raw_output": true,
+          "harness_contracts": 57,
+          "phase_contract_red_before_green": true,
+          "native_verified": false,
+          "scope": "test_client_compatibility_not_complete_migration"
+        }
       }
     },
     "legacy_release_test_gap": {
