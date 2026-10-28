@@ -9290,7 +9290,7 @@
       "current_evidence": [
         {
           "path": "EXECUTION-20261028.md",
-          "note": "源端导出及目标Ubuntu22原生导入回读已有证据；Ubuntu24本轮宿主网络变化拒绝，完整材料/会话/接管仍未完成。"
+          "note": "2b4eb8f Ubuntu22/24 实际材料/会话恢复已验；f6e467b 锁竞争修复的两平台 MySQL 已过，总CI13/14，22原生恢复已过并验产物摘要，24仍运行。8979889 已本地实现源管理入口加密保存与校验，实库race516项通过，原生CI未跑；配置发布、重新登录、接管/回退、双主机整链仍未完成。"
         }
       ]
     },
@@ -10033,7 +10033,7 @@
       "U06 native regression and product release"
     ]
   },
-  "active_batch": "20261028-controller-migration-session-transition",
+  "active_batch": "20261028-controller-migration-console-entrypoint",
   "batch_record": "EXECUTION-20261028.md",
   "cloud_install_migration": {
     "contract": "https://github.com/xiaoqiqixi/betteridcsys-cloud/blob/main/docs/development/INSTALL_AND_MIGRATION.md",
@@ -10646,7 +10646,9 @@
       "current_independent_package_test": "deploy/scripts/test_cloud_package.py_26_passed",
       "not_in_current_CI": true,
       "resolved": false,
-      "next": "migrate_independent_release_channel_and_contracts_without_weakening_publisher_or_legacy_asset_verification"
+      "next": "migrate_independent_release_channel_and_contracts_without_weakening_publisher_or_legacy_asset_verification",
+      "reconfirmed_at": "897988922976f93b39e3d20f0a49bafe5db78052",
+      "current_findings": "29 tests: 1 failure, 2 errors; separate repo has no authenticated build/publish workflows yet and legacy policy remains bound to old repository. Renaming test paths would not implement U01."
     },
     "latest_native_target_restore": {
       "source_sha": "2b4eb8fde3a15aa3bf705994c2e1ebd0b919c03e",
@@ -10836,7 +10838,32 @@
           "session_browser_verified": false,
           "migration_ready": false
         }
-      ]
+      ],
+      "successor_ci": {
+        "source_sha": "f6e467b0108b3cfe83e0be4f5b7b7c3781c1025a",
+        "run": 40684247060,
+        "state": "in_progress",
+        "passed_jobs": 13,
+        "pending": [
+          "native controller restore Ubuntu24"
+        ],
+        "mysql22": "passed",
+        "mysql24": "passed",
+        "same_SHA_all_gates_passed": false,
+        "native_restore22": {
+          "passed": true,
+          "artifact_id": 12816497061,
+          "bytes": 2734,
+          "sha256": "75bad46b4248d8acadb6b030945c8c3e2364be6d8587b3e01fc5ff7413effd97",
+          "download_and_digest_verified": true,
+          "sessions_revoked": true,
+          "session_transition_exact_readback": true,
+          "session_transition_explicit_recovery": true,
+          "configuration_published": false,
+          "session_browser_verified": false,
+          "source_host_metadata_synthetic": true
+        }
+      }
     },
     "native_target_restore_history": [
       {
@@ -10911,6 +10938,37 @@
         "migration_ready": false,
         "new_release": false
       }
-    ]
+    ],
+    "source_console_entrypoint": {
+      "state": "implemented_local_commit_waiting_prior_CI_before_push",
+      "source_sha": "897988922976f93b39e3d20f0a49bafe5db78052",
+      "contract": "https://github.com/xiaoqiqixi/betteridcsys-cloud/blob/main/docs/development/CONTROLLER_CONFIGURATION_PUBLICATION.md",
+      "archive_file": "source/controller.service",
+      "source_read": "fixed saved unit from same isolation operation; exact plan digest, inode, root ownership and managed installer template",
+      "offline_validation": "original installed version and bundle path, full service template and HTTPS Origin; never install or execute archived service",
+      "legacy_missing": "console_entrypoint=null; unknown is not disabled; no guessed domain",
+      "known_api_only": "enabled=false with verified unit digest",
+      "regression": "real encrypted public CLI red then green; digest/version/path/sandbox/command/Origin/size refusal; plaintext cleanup",
+      "local_validation": {
+        "go_race_real_mysql": {
+          "database": "temporary private Unix socket MySQL8.4.13 macos arm64",
+          "top_level_pass": 516,
+          "runtime_skips": 0,
+          "explicit_linux_root_exclusions": 5,
+          "controller_package_seconds": 379.492
+        },
+        "go_vet": "passed",
+        "linux_amd64_builds": 4,
+        "python_contracts_passed": 150,
+        "temporary_database_stopped_and_credentials_removed": true
+      },
+      "native_installer_export_assertion": "added; pending this source CI",
+      "configuration_published": false,
+      "target_TLS_approved": false,
+      "browser_new_login_verified": false,
+      "node_takeover": false,
+      "migration_ready": false,
+      "financial_logic_changed": false
+    }
   }
 }
