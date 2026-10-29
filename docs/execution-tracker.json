@@ -10042,7 +10042,7 @@
       "U06 native regression and product release"
     ]
   },
-  "active_batch": "20261029-controller-verification-account",
+  "active_batch": "20261029-controller-verification-host",
   "batch_record": "EXECUTION-20261029.md",
   "cloud_install_migration": {
     "contract": "https://github.com/xiaoqiqixi/betteridcsys-cloud/blob/main/docs/development/INSTALL_AND_MIGRATION.md",
@@ -11232,7 +11232,7 @@
       }
     },
     "verification_runtime": {
-      "state": "root_verification_account_local_increment_native_acceptance_pending",
+      "state": "restricted_HTTP_SQL_components_and_host_data_phase_verified_host_service_pending",
       "contract": "https://github.com/xiaoqiqixi/betteridcsys-cloud/blob/main/docs/development/CONTROLLER_VERIFICATION_RUNTIME.md",
       "implementation": [
         "separate_explicit_read_only_HTTP_surface",
@@ -11243,128 +11243,11 @@
         "authentication_changes_only_three_runtime_tables_and_preserves_old_audit_prefix"
       ],
       "host_startup": false,
-      "dedicated_sql_identity": "component_verified_root_prepare_and_status_local_native_pending",
+      "dedicated_sql_identity": "component_and_root_preparation_revocation_native22_24_verified",
       "root_verification_permit": false,
       "migration_browser_acceptance": false,
       "migration_ready": false,
       "financial_logic_changed": false,
-      "source_sha": "9c111a9c199ca71bba8af642a30b3fb9345a87a1",
-      "local_validation": {
-        "exit": 0,
-        "seconds": 574.561,
-        "top_level_pass": 520,
-        "runtime_skips": 0,
-        "explicit_linux_root_exclusions": 5,
-        "package_results": [
-          "ok  \taster/cloud/cmd/aster-controller\t266.748s",
-          "ok  \taster/cloud/cmd/aster-controller\t89.198s",
-          "ok  \taster/cloud/cmd/aster-billing-plugin\t1.083s",
-          "ok  \taster/cloud/cmd/aster-network\t1.081s",
-          "ok  \taster/cloud/cmd/aster-node\t1.093s",
-          "ok  \taster/cloud/internal/control\t215.383s",
-          "ok  \taster/cloud/internal/controllerbackup\t106.874s",
-          "ok  \taster/cloud/internal/diagnostics\t1.047s",
-          "ok  \taster/cloud/internal/fabric\t196.930s",
-          "ok  \taster/cloud/internal/hypervisor\t57.324s",
-          "ok  \taster/cloud/internal/identity\t155.303s",
-          "ok  \taster/cloud/internal/networking\t12.277s",
-          "ok  \taster/cloud/internal/nodeproto\t1.142s",
-          "ok  \taster/cloud/internal/overlayproto\t1.116s",
-          "ok  \taster/cloud/plugins/billingconnector\t1.101s"
-        ],
-        "database": "MySQL8.4.13 macos arm64 private Unix socket",
-        "go_vet": "passed",
-        "linux_amd64_builds": 4,
-        "linux_test_binary": "compiled_not_executed",
-        "runner_contracts_passed": 3,
-        "temporary_database_cleanup": {
-          "mysql": "8.4.13",
-          "private_socket_only": true,
-          "leftover_fixture_databases": 0,
-          "credential_scan": "passed",
-          "process_stopped": true,
-          "private_data_and_credentials_removed": true,
-          "system_services_changed": false,
-          "host_trust_changed": false
-        }
-      },
-      "pushed": true,
-      "ci": "https://github.com/xiaoqiqixi/betteridcsys-cloud/actions/runs/40725448468",
-      "same_SHA_all_gates_passed": false,
-      "current_ci": {
-        "source_sha": "9c111a9c199ca71bba8af642a30b3fb9345a87a1",
-        "run": 40725448468,
-        "state": "completed_failure",
-        "passed_jobs": 16,
-        "failed_jobs": 2,
-        "linux_failure": "root target harness TARGET_DENIAL_NOT_CONFIRMED_malformed-data-before-provision; exact action/code unavailable in old output, fixed-code diagnostics added; not treated as accepted refusal",
-        "mysql22_24": "passed",
-        "browser": "passed_existing_console_not_migration_browser",
-        "native_restore_matrix": "six scenarios passed, downloaded sizes and digests verified",
-        "same_SHA_all_gates_passed": false,
-        "verified_native_artifacts": [
-          {
-            "id": 12834526706,
-            "bytes": 2650,
-            "sha256": "fe20f664253ae36dedb41cd68e8f0e804a7aea631bab2cae46bf154b768dba01",
-            "ubuntu": "22.04",
-            "scenario": "controller-restore-configuration",
-            "passed": true,
-            "source_host_export_verified": false,
-            "node_takeover_verified": false
-          },
-          {
-            "id": 12834621787,
-            "bytes": 2655,
-            "sha256": "6fd55d8f30a5b3400d1785dcaf74c0109a1631930d2d6660020aeba49cb105a7",
-            "ubuntu": "24.04",
-            "scenario": "controller-restore-configuration",
-            "passed": true,
-            "source_host_export_verified": false,
-            "node_takeover_verified": false
-          },
-          {
-            "id": 12834789278,
-            "bytes": 2525,
-            "sha256": "425bd80596dca9ee74dd32a77ad2c4a94f193f573ab750f253f157c45ddf4ae8",
-            "ubuntu": "22.04",
-            "scenario": "controller-restore-sessions",
-            "passed": true,
-            "source_host_export_verified": false,
-            "node_takeover_verified": false
-          },
-          {
-            "id": 12835135839,
-            "bytes": 2682,
-            "sha256": "852fae62a3c6de9301442a2996f1544d0ccee2fc4f5e55bbf45c8b8e0c940521",
-            "ubuntu": "22.04",
-            "scenario": "controller-restore-data",
-            "passed": true,
-            "source_host_export_verified": false,
-            "node_takeover_verified": false
-          },
-          {
-            "id": 12835470449,
-            "bytes": 2542,
-            "sha256": "6e1d9aafb9faee1174f4580bb7a4e5c880112c9777e71e3e01038cbe4a309de3",
-            "ubuntu": "24.04",
-            "scenario": "controller-restore-sessions",
-            "passed": true,
-            "source_host_export_verified": false,
-            "node_takeover_verified": false
-          },
-          {
-            "id": 12836081334,
-            "bytes": 2680,
-            "sha256": "3651d46d656794d345ce41ea70bf1342c71ad97953049312121a17a2ff2b4a20",
-            "ubuntu": "24.04",
-            "scenario": "controller-restore-data",
-            "passed": true,
-            "source_host_export_verified": false,
-            "node_takeover_verified": false
-          }
-        ]
-      },
       "dedicated_sql_component": {
         "state": "prior_same_source_CI_completed_16_of18",
         "actual_grants_verified": true,
@@ -11497,7 +11380,7 @@
         }
       },
       "host_preparation_plan": {
-        "state": "implemented_local_native_acceptance_pending",
+        "state": "implemented_native22_24_verified",
         "action": "target-verification-plan",
         "bound_to": [
           "original_target_seal",
@@ -11509,7 +11392,7 @@
         "read_only": true,
         "account_created": false,
         "service_started": false,
-        "native_new_scenario_executed": false,
+        "native_new_scenario_executed": true,
         "tests": {
           "entry": 6,
           "installer": 111,
@@ -11521,7 +11404,7 @@
         }
       },
       "account_preparation": {
-        "state": "pushed_same_source_CI_in_progress",
+        "state": "native22_24_verified_same_source_18of18",
         "entry_actions": [
           "target-verification-plan",
           "target-verification-prepare",
@@ -11535,7 +11418,7 @@
         "password_reset_or_grant_autorepair": false,
         "completion_ack_recovery": "exact_readback_only_no_SQL_rewrite",
         "partial_create_or_grant_recovery": "not_implemented_preserves_and_refuses",
-        "native_acceptance": "new_scenarios_not_run",
+        "native_acceptance": "verified_in_ebe7e19_CI40821157870",
         "host_startup": false,
         "migration_ready": false,
         "full_local_regression": {
@@ -11585,7 +11468,63 @@
         "go_vet": "passed",
         "linux_amd64_builds": 4,
         "source_sha": "7bd9c98bdb4a67f476cd26288d3a445249d1d4c3",
-        "ci": "https://github.com/xiaoqiqixi/betteridcsys-cloud/actions/runs/40808686030"
+        "ci": "https://github.com/xiaoqiqixi/betteridcsys-cloud/actions/runs/40808686030",
+        "native_evidence": [
+          {
+            "artifact": 12870082281,
+            "ubuntu": "22.04",
+            "size": 2803,
+            "sha256": "7b3063388d925360966cc05b100a112e5cb05822a303654e142282626926e31e",
+            "download_and_digest_verified": true,
+            "guest_preparation_passed": true,
+            "whole_job_passed": false,
+            "source_metadata_synthetic": true,
+            "host_activation": false
+          },
+          {
+            "artifact": 12870945657,
+            "ubuntu": "24.04",
+            "size": 2799,
+            "sha256": "bdbcdea62165630afd6c4bfa0153c377cedf5e17ffe8e6f9fa17ddd9f9c6799a",
+            "download_and_digest_verified": true,
+            "guest_preparation_passed": true,
+            "whole_job_passed": false,
+            "source_metadata_synthetic": true,
+            "host_activation": false
+          }
+        ],
+        "workflow_failure": "exact guest field-set guard omitted seven already-required account proof fields; no guard weakened",
+        "workflow_replay": {
+          "original_7bd_gate": {
+            "exit": 1,
+            "diagnostic": [
+              "AssertionError"
+            ]
+          },
+          "account_fields_only_diagnostic_gate": {
+            "exit": 0,
+            "diagnostic": []
+          },
+          "new_gate_requiring_revocation": {
+            "exit": 1,
+            "diagnostic": [
+              "KeyError: 'verification_revocation_locked'"
+            ]
+          },
+          "native_report_unchanged": true,
+          "new_revocation_acceptance": false
+        },
+        "current_ci_result": {
+          "run": 40808686030,
+          "source_sha": "7bd9c98bdb4a67f476cd26288d3a445249d1d4c3",
+          "passed": 15,
+          "failed": 3,
+          "running": 0,
+          "failures": [
+            "Ubuntu22 sessions refused before VM after host interface change",
+            "Ubuntu22/24 configuration actual guests passed but independent evidence schema omitted seven fields"
+          ]
+        }
       },
       "root_target_failure_diagnosis": {
         "source_sha": "bbb7409f670091b63e849b7d141bf75aaa4642d5",
@@ -11596,8 +11535,663 @@
         "actual_code": "HOST_MIGRATION_UNCONFIRMED",
         "local_fix": "precise_missing_stage_only_when_both_plan_and_directory_absent_and_not_links",
         "partial_or_linked_state": "remains_unconfirmed_no_adoption",
-        "native_fix_result": "not_run"
+        "native_fix_result": "7bd9c98_Linux22_24_actual_root_target_gates_passed"
+      },
+      "account_revocation": {
+        "state": "native22_24_verified_same_source_18of18",
+        "entry_actions": [
+          "target-verification-revoke-plan",
+          "target-verification-revoke",
+          "target-verification-revoke-status"
+        ],
+        "original_completed_identity_bound": true,
+        "explicit_root_approval": true,
+        "lock_before_drain_confirmation": true,
+        "live_or_unknown_sessions": "reject_completion_preserve_intent",
+        "kill_drop_reset_or_unlock": false,
+        "read_only_status": true,
+        "same_operation_confirmation_recovery": true,
+        "real_mysql_probe": "8.4.13 lock preserves old connection; new login3118; unmonitored thread visible; closed session zero",
+        "root_native_acceptance": "passed_in_ebe7e19_CI40821157870",
+        "running_HTTP_stop_acceptance": false,
+        "initial_partial_create_grant_recovery": "pending",
+        "full_regression": {
+          "exit": 0,
+          "seconds": 574.648,
+          "top_level_pass": 526,
+          "runtime_skips": 0,
+          "explicit_linux_root_exclusions": 5,
+          "package_results": [
+            "ok  \taster/cloud/cmd/aster-controller\t268.856s",
+            "ok  \taster/cloud/cmd/aster-controller\t89.609s",
+            "ok  \taster/cloud/cmd/aster-billing-plugin\t1.076s",
+            "ok  \taster/cloud/cmd/aster-network\t1.079s",
+            "ok  \taster/cloud/cmd/aster-node\t1.089s",
+            "ok  \taster/cloud/internal/control\t214.046s",
+            "ok  \taster/cloud/internal/controllerbackup\t101.972s",
+            "ok  \taster/cloud/internal/diagnostics\t1.048s",
+            "ok  \taster/cloud/internal/fabric\t190.018s",
+            "ok  \taster/cloud/internal/hypervisor\t55.807s",
+            "ok  \taster/cloud/internal/identity\t150.642s",
+            "ok  \taster/cloud/internal/networking\t12.067s",
+            "ok  \taster/cloud/internal/nodeproto\t1.131s",
+            "ok  \taster/cloud/internal/overlayproto\t1.111s",
+            "ok  \taster/cloud/plugins/billingconnector\t1.084s"
+          ]
+        },
+        "cleanup": {
+          "mysql": "8.4.13",
+          "private_socket_only": true,
+          "leftover_fixture_databases": 0,
+          "leftover_verification_users_and_roles": 0,
+          "credential_scan": "passed",
+          "process_stopped": true,
+          "private_data_and_credentials_removed": true,
+          "system_services_changed": false,
+          "host_trust_changed": false
+        },
+        "local_tests": {
+          "public_entry": 8,
+          "installer_units": 19,
+          "installer_contracts": 111,
+          "native_and_actual_workflow_contracts": 66,
+          "package": 26,
+          "runner": 3,
+          "go_vet": "passed",
+          "linux_cross_builds": 4,
+          "actionlint": "passed"
+        },
+        "workflow_regression": "actual independent workflow Python executed with synthetic evidence; RED at original line20 then GREEN; missing/false/numeric proof, wrong source/scenario, overclaims and host isolation failures rejected",
+        "source_sha": "ebe7e1921087441f37aaf7386df31661a3f5d54c",
+        "ci": "https://github.com/xiaoqiqixi/betteridcsys-cloud/actions/runs/40821157870"
+      },
+      "ci_stability": {
+        "state": "verified_same_source_18of18",
+        "priority": "fix_current_CI_before_feature_work",
+        "known_current_failure": {
+          "job": 123250737801,
+          "code": "HOST_NETWORK_CHANGED_BEFORE_VM",
+          "guest_executed": false
+        },
+        "repair": "standalone readonly readiness BEFORE existing native baseline; original pre/post full network guard unchanged",
+        "local_tests": {
+          "readiness_contracts": 9,
+          "native_contracts": 66,
+          "package": 26,
+          "actionlint": "passed"
+        },
+        "native_readiness": "passed_Ubuntu22_24",
+        "real_feature_changes_included": false,
+        "latest_run": 40821157870,
+        "latest_source": "ebe7e1921087441f37aaf7386df31661a3f5d54c"
+      },
+      "latest_same_source_acceptance": {
+        "source_sha": "cdfb8210c205c1c768a963b854cf4691721203ee",
+        "run_id": 40836912649,
+        "status": "success",
+        "jobs_passed": 18,
+        "native_artifacts_size_and_digest_verified": [
+          {
+            "id": 12883490777,
+            "name": "cloud-controller-restore-data-ubuntu-24.04-40836912649-1",
+            "bytes": 2676,
+            "sha256": "7738ca4ed808f9b7b8f69178ea851629d3663f9f4cea5df618ae4c8e1349c4e8",
+            "source": "cdfb8210c205c1c768a963b854cf4691721203ee",
+            "scenario": "controller-restore-data",
+            "ubuntu": "24.04",
+            "source_host_export_verified": false,
+            "node_takeover_verified": false
+          },
+          {
+            "id": 12883086371,
+            "name": "cloud-controller-restore-configuration-ubuntu-24.04-40836912649-1",
+            "bytes": 3049,
+            "sha256": "988f2a1b2aba168de120582050991a4815d40be3879eb8069156c89f45bad1d3",
+            "source": "cdfb8210c205c1c768a963b854cf4691721203ee",
+            "scenario": "controller-restore-configuration",
+            "ubuntu": "24.04",
+            "source_host_export_verified": false,
+            "node_takeover_verified": false
+          },
+          {
+            "id": 12883005127,
+            "name": "cloud-controller-restore-data-ubuntu-22.04-40836912649-1",
+            "bytes": 2662,
+            "sha256": "a50275c0d141433058bcc36e639b3bae028f8fc6a599c3deaf301e9ee1563302",
+            "source": "cdfb8210c205c1c768a963b854cf4691721203ee",
+            "scenario": "controller-restore-data",
+            "ubuntu": "22.04",
+            "source_host_export_verified": false,
+            "node_takeover_verified": false
+          },
+          {
+            "id": 12882162172,
+            "name": "cloud-controller-restore-configuration-ubuntu-22.04-40836912649-1",
+            "bytes": 3046,
+            "sha256": "8a66203bc852aa904c335c91a6e1a743551819a428b4f5b27b417b745c5cea45",
+            "source": "cdfb8210c205c1c768a963b854cf4691721203ee",
+            "scenario": "controller-restore-configuration",
+            "ubuntu": "22.04",
+            "source_host_export_verified": false,
+            "node_takeover_verified": false
+          },
+          {
+            "id": 12882153707,
+            "name": "cloud-controller-restore-sessions-ubuntu-24.04-40836912649-1",
+            "bytes": 2535,
+            "sha256": "e2733b31fd5c61a7d20c99fa8bbe08c0a80e08463382de5718649328c4e6c468",
+            "source": "cdfb8210c205c1c768a963b854cf4691721203ee",
+            "scenario": "controller-restore-sessions",
+            "ubuntu": "24.04",
+            "source_host_export_verified": false,
+            "node_takeover_verified": false
+          },
+          {
+            "id": 12881384124,
+            "name": "cloud-controller-restore-sessions-ubuntu-22.04-40836912649-1",
+            "bytes": 2537,
+            "sha256": "0696475bed35fd890977d91a30e17c49aefb127cbca5ce41c2156ed2364fa138",
+            "source": "cdfb8210c205c1c768a963b854cf4691721203ee",
+            "scenario": "controller-restore-sessions",
+            "ubuntu": "22.04",
+            "source_host_export_verified": false,
+            "node_takeover_verified": false
+          }
+        ],
+        "scope": "Sealed-host verification data approval/status and phase-aware account revocation; Ubuntu22/24 actual native synthetic auth SQL. Not HTTP host startup, migration browser, real-source host export, takeover or true KVM."
+      },
+      "verification_data_phase": {
+        "state": "verified_same_source_CI18of18",
+        "source_seam": "authenticated archive and actual SQL public planning/read-only verification",
+        "required": [
+          "all business rows and DDL exact",
+          "historical audit prefix exact including signed IDs",
+          "old cookies cannot reappear",
+          "existing unexpired login bucket may increase without window reset",
+          "only bounded authentication changes",
+          "exact original intent and account/config/session binding",
+          "complete negative real SQL tests",
+          "host integration and migration browser still pending"
+        ],
+        "contract": "https://github.com/xiaoqiqixi/betteridcsys-cloud/blob/main/docs/development/CONTROLLER_VERIFICATION_DATA.md",
+        "targeted_real_mysql": {
+          "exit": 0,
+          "seconds": 88.904,
+          "runtime_skips": 0,
+          "synthetic_authentication_records": true,
+          "real_browser_login": false
+        },
+        "validated_boundaries": [
+          "immutable_phase_binding_and_one_hour_UTC_microsecond_interval",
+          "full_signed_historical_audit_range_and_exact_prefix",
+          "original_cookie_hash_reuse_refused",
+          "disabled_account_and_session_lifetime_refused",
+          "surviving_rate_window_increments_expiry_reset_24h_cleanup",
+          "business_password_permissions_FK_DDL_drift_refused",
+          "actual_foreign_SELECT_only_identity_refused_and_write_denied1142",
+          "rolled_back_audit_highwater_gap_supported"
+        ],
+        "full_regression": {
+          "exit": 0,
+          "seconds": 579.762,
+          "top_level_pass": 526,
+          "runtime_skips": 0,
+          "explicit_linux_root_exclusions": 5,
+          "package_results": [
+            "ok  \taster/cloud/cmd/aster-controller\t270.919s",
+            "ok  \taster/cloud/cmd/aster-controller\t90.959s",
+            "ok  \taster/cloud/cmd/aster-billing-plugin\t1.076s",
+            "ok  \taster/cloud/cmd/aster-network\t1.074s",
+            "ok  \taster/cloud/cmd/aster-node\t1.097s",
+            "ok  \taster/cloud/internal/control\t215.759s",
+            "ok  \taster/cloud/internal/controllerbackup\t112.820s",
+            "ok  \taster/cloud/internal/diagnostics\t1.048s",
+            "ok  \taster/cloud/internal/fabric\t190.108s",
+            "ok  \taster/cloud/internal/hypervisor\t56.201s",
+            "ok  \taster/cloud/internal/identity\t151.068s",
+            "ok  \taster/cloud/internal/networking\t12.241s",
+            "ok  \taster/cloud/internal/nodeproto\t1.134s",
+            "ok  \taster/cloud/internal/overlayproto\t1.117s",
+            "ok  \taster/cloud/plugins/billingconnector\t1.092s"
+          ]
+        },
+        "host_runtime_integrated": false,
+        "production_ready": false,
+        "cleanup": {
+          "mysql": "8.4.13",
+          "private_socket_only": true,
+          "leftover_fixture_databases": 0,
+          "leftover_verification_users_and_roles": 0,
+          "credential_scan": "passed",
+          "process_stopped": true,
+          "private_data_and_credentials_removed": true,
+          "system_services_changed": false,
+          "host_trust_changed": false
+        },
+        "go_vet": "passed",
+        "linux_amd64_cross_builds": 4,
+        "python_contract_counts": {
+          "installer": 19,
+          "installer_contract": 111,
+          "package": 26,
+          "host_entry": 8,
+          "native_workflow": 68,
+          "readiness": 9,
+          "scheduling": 3
+        },
+        "actionlint": "passed",
+        "same_source_CI_for_this_increment": {
+          "run": 40831339778,
+          "status": "success",
+          "passed_jobs": 18,
+          "verified_native_artifacts": 6
+        },
+        "source_sha": "2a76ea4b38f43f6df838ac1e08be1c322ba95edc"
+      },
+      "initial_component_implementation_record": {
+        "source_sha": "9c111a9c199ca71bba8af642a30b3fb9345a87a1",
+        "local_validation": {
+          "exit": 0,
+          "seconds": 574.561,
+          "top_level_pass": 520,
+          "runtime_skips": 0,
+          "explicit_linux_root_exclusions": 5,
+          "package_results": [
+            "ok  \taster/cloud/cmd/aster-controller\t266.748s",
+            "ok  \taster/cloud/cmd/aster-controller\t89.198s",
+            "ok  \taster/cloud/cmd/aster-billing-plugin\t1.083s",
+            "ok  \taster/cloud/cmd/aster-network\t1.081s",
+            "ok  \taster/cloud/cmd/aster-node\t1.093s",
+            "ok  \taster/cloud/internal/control\t215.383s",
+            "ok  \taster/cloud/internal/controllerbackup\t106.874s",
+            "ok  \taster/cloud/internal/diagnostics\t1.047s",
+            "ok  \taster/cloud/internal/fabric\t196.930s",
+            "ok  \taster/cloud/internal/hypervisor\t57.324s",
+            "ok  \taster/cloud/internal/identity\t155.303s",
+            "ok  \taster/cloud/internal/networking\t12.277s",
+            "ok  \taster/cloud/internal/nodeproto\t1.142s",
+            "ok  \taster/cloud/internal/overlayproto\t1.116s",
+            "ok  \taster/cloud/plugins/billingconnector\t1.101s"
+          ],
+          "database": "MySQL8.4.13 macos arm64 private Unix socket",
+          "go_vet": "passed",
+          "linux_amd64_builds": 4,
+          "linux_test_binary": "compiled_not_executed",
+          "runner_contracts_passed": 3,
+          "temporary_database_cleanup": {
+            "mysql": "8.4.13",
+            "private_socket_only": true,
+            "leftover_fixture_databases": 0,
+            "credential_scan": "passed",
+            "process_stopped": true,
+            "private_data_and_credentials_removed": true,
+            "system_services_changed": false,
+            "host_trust_changed": false
+          }
+        },
+        "pushed": true,
+        "ci": "https://github.com/xiaoqiqixi/betteridcsys-cloud/actions/runs/40725448468",
+        "same_SHA_all_gates_passed": false,
+        "current_ci": {
+          "source_sha": "9c111a9c199ca71bba8af642a30b3fb9345a87a1",
+          "run": 40725448468,
+          "state": "completed_failure",
+          "passed_jobs": 16,
+          "failed_jobs": 2,
+          "linux_failure": "root target harness TARGET_DENIAL_NOT_CONFIRMED_malformed-data-before-provision; exact action/code unavailable in old output, fixed-code diagnostics added; not treated as accepted refusal",
+          "mysql22_24": "passed",
+          "browser": "passed_existing_console_not_migration_browser",
+          "native_restore_matrix": "six scenarios passed, downloaded sizes and digests verified",
+          "same_SHA_all_gates_passed": false,
+          "verified_native_artifacts": [
+            {
+              "id": 12834526706,
+              "bytes": 2650,
+              "sha256": "fe20f664253ae36dedb41cd68e8f0e804a7aea631bab2cae46bf154b768dba01",
+              "ubuntu": "22.04",
+              "scenario": "controller-restore-configuration",
+              "passed": true,
+              "source_host_export_verified": false,
+              "node_takeover_verified": false
+            },
+            {
+              "id": 12834621787,
+              "bytes": 2655,
+              "sha256": "6fd55d8f30a5b3400d1785dcaf74c0109a1631930d2d6660020aeba49cb105a7",
+              "ubuntu": "24.04",
+              "scenario": "controller-restore-configuration",
+              "passed": true,
+              "source_host_export_verified": false,
+              "node_takeover_verified": false
+            },
+            {
+              "id": 12834789278,
+              "bytes": 2525,
+              "sha256": "425bd80596dca9ee74dd32a77ad2c4a94f193f573ab750f253f157c45ddf4ae8",
+              "ubuntu": "22.04",
+              "scenario": "controller-restore-sessions",
+              "passed": true,
+              "source_host_export_verified": false,
+              "node_takeover_verified": false
+            },
+            {
+              "id": 12835135839,
+              "bytes": 2682,
+              "sha256": "852fae62a3c6de9301442a2996f1544d0ccee2fc4f5e55bbf45c8b8e0c940521",
+              "ubuntu": "22.04",
+              "scenario": "controller-restore-data",
+              "passed": true,
+              "source_host_export_verified": false,
+              "node_takeover_verified": false
+            },
+            {
+              "id": 12835470449,
+              "bytes": 2542,
+              "sha256": "6e1d9aafb9faee1174f4580bb7a4e5c880112c9777e71e3e01038cbe4a309de3",
+              "ubuntu": "24.04",
+              "scenario": "controller-restore-sessions",
+              "passed": true,
+              "source_host_export_verified": false,
+              "node_takeover_verified": false
+            },
+            {
+              "id": 12836081334,
+              "bytes": 2680,
+              "sha256": "3651d46d656794d345ce41ea70bf1342c71ad97953049312121a17a2ff2b4a20",
+              "ubuntu": "24.04",
+              "scenario": "controller-restore-data",
+              "passed": true,
+              "source_host_export_verified": false,
+              "node_takeover_verified": false
+            }
+          ]
+        }
+      },
+      "host_data_phase": {
+        "state": "same_source_CI18of18_and_six_native_artifacts_verified",
+        "entry": [
+          "target-verification-data-begin",
+          "target-verification-data-status"
+        ],
+        "immutable_approval_and_data_intent": true,
+        "original_zero_session_flow_unchanged": true,
+        "phase_aware_account_revocation": "native_verified_Ubuntu22_and_24",
+        "new_native_proof_fields": 5,
+        "service_started": false,
+        "full_local_regression": {
+          "exit": 0,
+          "seconds": 599.397,
+          "top_level_pass": 526,
+          "runtime_skips": 0,
+          "explicit_linux_root_exclusions": 5,
+          "package_results": [
+            "ok  \taster/cloud/cmd/aster-controller\t274.704s",
+            "ok  \taster/cloud/cmd/aster-controller\t91.956s",
+            "ok  \taster/cloud/cmd/aster-billing-plugin\t1.081s",
+            "ok  \taster/cloud/cmd/aster-network\t1.079s",
+            "ok  \taster/cloud/cmd/aster-node\t1.092s",
+            "ok  \taster/cloud/internal/control\t230.005s",
+            "ok  \taster/cloud/internal/controllerbackup\t117.792s",
+            "ok  \taster/cloud/internal/diagnostics\t1.046s",
+            "ok  \taster/cloud/internal/fabric\t198.400s",
+            "ok  \taster/cloud/internal/hypervisor\t58.162s",
+            "ok  \taster/cloud/internal/identity\t162.472s",
+            "ok  \taster/cloud/internal/networking\t12.819s",
+            "ok  \taster/cloud/internal/nodeproto\t1.144s",
+            "ok  \taster/cloud/internal/overlayproto\t1.120s",
+            "ok  \taster/cloud/plugins/billingconnector\t1.093s"
+          ]
+        },
+        "native_acceptance": true,
+        "migration_ready": false,
+        "cleanup": {
+          "mysql": "8.4.13",
+          "private_socket_only": true,
+          "leftover_fixture_databases": 0,
+          "leftover_verification_users_and_roles": 0,
+          "credential_scan": "passed",
+          "process_stopped": true,
+          "private_data_and_credentials_removed": true,
+          "system_services_changed": false,
+          "host_trust_changed": false
+        },
+        "entry_contract_tests": 9,
+        "native_workflow_contract_tests": 68,
+        "go_vet": "passed",
+        "linux_cross_builds": 4,
+        "actionlint": "passed",
+        "source_sha": "cdfb8210c205c1c768a963b854cf4691721203ee",
+        "pushed": true,
+        "ci": {
+          "run_id": 40836912649,
+          "source_sha": "cdfb8210c205c1c768a963b854cf4691721203ee",
+          "status": "success",
+          "jobs_passed": 18
+        },
+        "native_artifacts": [
+          {
+            "id": 12883490777,
+            "name": "cloud-controller-restore-data-ubuntu-24.04-40836912649-1",
+            "bytes": 2676,
+            "sha256": "7738ca4ed808f9b7b8f69178ea851629d3663f9f4cea5df618ae4c8e1349c4e8",
+            "source": "cdfb8210c205c1c768a963b854cf4691721203ee",
+            "scenario": "controller-restore-data",
+            "ubuntu": "24.04",
+            "source_host_export_verified": false,
+            "node_takeover_verified": false
+          },
+          {
+            "id": 12883086371,
+            "name": "cloud-controller-restore-configuration-ubuntu-24.04-40836912649-1",
+            "bytes": 3049,
+            "sha256": "988f2a1b2aba168de120582050991a4815d40be3879eb8069156c89f45bad1d3",
+            "source": "cdfb8210c205c1c768a963b854cf4691721203ee",
+            "scenario": "controller-restore-configuration",
+            "ubuntu": "24.04",
+            "source_host_export_verified": false,
+            "node_takeover_verified": false
+          },
+          {
+            "id": 12883005127,
+            "name": "cloud-controller-restore-data-ubuntu-22.04-40836912649-1",
+            "bytes": 2662,
+            "sha256": "a50275c0d141433058bcc36e639b3bae028f8fc6a599c3deaf301e9ee1563302",
+            "source": "cdfb8210c205c1c768a963b854cf4691721203ee",
+            "scenario": "controller-restore-data",
+            "ubuntu": "22.04",
+            "source_host_export_verified": false,
+            "node_takeover_verified": false
+          },
+          {
+            "id": 12882162172,
+            "name": "cloud-controller-restore-configuration-ubuntu-22.04-40836912649-1",
+            "bytes": 3046,
+            "sha256": "8a66203bc852aa904c335c91a6e1a743551819a428b4f5b27b417b745c5cea45",
+            "source": "cdfb8210c205c1c768a963b854cf4691721203ee",
+            "scenario": "controller-restore-configuration",
+            "ubuntu": "22.04",
+            "source_host_export_verified": false,
+            "node_takeover_verified": false
+          },
+          {
+            "id": 12882153707,
+            "name": "cloud-controller-restore-sessions-ubuntu-24.04-40836912649-1",
+            "bytes": 2535,
+            "sha256": "e2733b31fd5c61a7d20c99fa8bbe08c0a80e08463382de5718649328c4e6c468",
+            "source": "cdfb8210c205c1c768a963b854cf4691721203ee",
+            "scenario": "controller-restore-sessions",
+            "ubuntu": "24.04",
+            "source_host_export_verified": false,
+            "node_takeover_verified": false
+          },
+          {
+            "id": 12881384124,
+            "name": "cloud-controller-restore-sessions-ubuntu-22.04-40836912649-1",
+            "bytes": 2537,
+            "sha256": "0696475bed35fd890977d91a30e17c49aefb127cbca5ce41c2156ed2364fa138",
+            "source": "cdfb8210c205c1c768a963b854cf4691721203ee",
+            "scenario": "controller-restore-sessions",
+            "ubuntu": "22.04",
+            "source_host_export_verified": false,
+            "node_takeover_verified": false
+          }
+        ]
+      },
+      "verified_acceptance_history": [
+        {
+          "source_sha": "2a76ea4b38f43f6df838ac1e08be1c322ba95edc",
+          "run_id": 40831339778,
+          "status": "success",
+          "jobs_passed": 18,
+          "native_artifacts_size_and_digest_verified": [
+            {
+              "id": 12880886976,
+              "name": "cloud-controller-restore-data-ubuntu-24.04-40831339778-1",
+              "bytes": 2678,
+              "sha256": "1c9f2ed52d08c92477d0432b10511795b76a4177f34ef513fbab61b9fde563d2",
+              "source": "2a76ea4b38f43f6df838ac1e08be1c322ba95edc",
+              "scenario": "controller-restore-data",
+              "ubuntu": "24.04",
+              "source_host_export_verified": false,
+              "node_takeover_verified": false
+            },
+            {
+              "id": 12880696005,
+              "name": "cloud-controller-restore-sessions-ubuntu-22.04-40831339778-1",
+              "bytes": 2529,
+              "sha256": "846af74a1b04d1818811adf6119cceee159e8ae71d10782ece2e95876038bab1",
+              "source": "2a76ea4b38f43f6df838ac1e08be1c322ba95edc",
+              "scenario": "controller-restore-sessions",
+              "ubuntu": "22.04",
+              "source_host_export_verified": false,
+              "node_takeover_verified": false
+            },
+            {
+              "id": 12880652845,
+              "name": "cloud-controller-restore-data-ubuntu-22.04-40831339778-1",
+              "bytes": 2674,
+              "sha256": "c01c0a47ad0427db3f73494cfa06ec3b0e959914c1e21018e60c26aa34ed0efa",
+              "source": "2a76ea4b38f43f6df838ac1e08be1c322ba95edc",
+              "scenario": "controller-restore-data",
+              "ubuntu": "22.04",
+              "source_host_export_verified": false,
+              "node_takeover_verified": false
+            },
+            {
+              "id": 12880190525,
+              "name": "cloud-controller-restore-sessions-ubuntu-24.04-40831339778-1",
+              "bytes": 2518,
+              "sha256": "690b607f08560690621884fda6a937a49401e46392c8c9e1dbb898361dee9edb",
+              "source": "2a76ea4b38f43f6df838ac1e08be1c322ba95edc",
+              "scenario": "controller-restore-sessions",
+              "ubuntu": "24.04",
+              "source_host_export_verified": false,
+              "node_takeover_verified": false
+            },
+            {
+              "id": 12879588002,
+              "name": "cloud-controller-restore-configuration-ubuntu-22.04-40831339778-1",
+              "bytes": 2943,
+              "sha256": "bbb489ae9aa306d3c439624b3c05cfb117caa4940784f2beff51a759e53e49e0",
+              "source": "2a76ea4b38f43f6df838ac1e08be1c322ba95edc",
+              "scenario": "controller-restore-configuration",
+              "ubuntu": "22.04",
+              "source_host_export_verified": false,
+              "node_takeover_verified": false
+            },
+            {
+              "id": 12879214846,
+              "name": "cloud-controller-restore-configuration-ubuntu-24.04-40831339778-1",
+              "bytes": 2941,
+              "sha256": "2d23a3c60274f1a06d998335357e7558b7bcd3d98fa35ee27aa636ef2fe74ee4",
+              "source": "2a76ea4b38f43f6df838ac1e08be1c322ba95edc",
+              "scenario": "controller-restore-configuration",
+              "ubuntu": "24.04",
+              "source_host_export_verified": false,
+              "node_takeover_verified": false
+            }
+          ],
+          "scope": "data library plus existing account-stage and installed native regression; not cdfb821 host data commands, not HTTP runtime or takeover"
+        }
+      ]
+    }
+  },
+  "ci_repair_priority": {
+    "source": "ebe7e1921087441f37aaf7386df31661a3f5d54c",
+    "run_id": 40821157870,
+    "state": "same_source_CI_passed",
+    "previous_run_id": 40817446210,
+    "previous_successful_jobs": 16,
+    "previous_failed_jobs": 2,
+    "changes": [
+      "read_only_pre_baseline_network_readiness_without_guard_changes",
+      "fixed_failure_phases_and_refusal_diagnostics_without_private_output"
+    ],
+    "local_contracts": {
+      "native_workflow": 68,
+      "network_readiness": 9,
+      "actionlint": "passed"
+    },
+    "feature_WIP_excluded": true,
+    "full_scope_unchanged": true,
+    "root_cause": "GTID internal foreground thread falsely counted as pending authentication",
+    "real_sql_classification_cases": 12,
+    "real_authenticated_and_pending_client_probe": "passed",
+    "private_mysql_cleaned": true,
+    "successful_jobs": 18,
+    "failed_jobs": 0,
+    "required_native_artifacts_verified": [
+      {
+        "id": 12876557390,
+        "name": "cloud-controller-restore-data-ubuntu-22.04-40821157870-1",
+        "size": 2682,
+        "digest": "sha256:c3464aaa9c9ef06ff470c94f7e573f297d9e311fd95e61d5441753a8cb4cd085"
+      },
+      {
+        "id": 12876228539,
+        "name": "cloud-controller-restore-data-ubuntu-24.04-40821157870-1",
+        "size": 2682,
+        "digest": "sha256:c62fece76cc6fd878a8f5fd1ea17301521f75fd154e17360914e517baaaf003e"
+      },
+      {
+        "id": 12876011159,
+        "name": "cloud-controller-restore-sessions-ubuntu-24.04-40821157870-1",
+        "size": 2539,
+        "digest": "sha256:64adfd2a9285c621369cafce9dd4f8bacddc9ee06dd52c3b41316cb50bb8176a"
+      },
+      {
+        "id": 12875658380,
+        "name": "cloud-controller-restore-configuration-ubuntu-22.04-40821157870-1",
+        "size": 2941,
+        "digest": "sha256:6b6841c136e33135ef981d179faf4be820ac87021eb475fbe64f29a6bbead87e"
+      },
+      {
+        "id": 12875292320,
+        "name": "cloud-controller-restore-sessions-ubuntu-22.04-40821157870-1",
+        "size": 2545,
+        "digest": "sha256:985eef8158e0cfbddb5a1a709ba21ae1b992fea4ff5cdf3f34c46f07e29fb008"
+      },
+      {
+        "id": 12875149031,
+        "name": "cloud-controller-restore-configuration-ubuntu-24.04-40821157870-1",
+        "size": 2937,
+        "digest": "sha256:ec1be8a2138180c86b2541ea1ae70d6c7aaf0654e21318a7312d89390f69714e"
       }
+    ],
+    "new_feature_WIP_committed": false,
+    "release_created": false,
+    "full_goal_complete": false,
+    "latest_followup_acceptance": {
+      "source_sha": "cdfb8210c205c1c768a963b854cf4691721203ee",
+      "run_id": 40836912649,
+      "jobs_passed": 18,
+      "consecutive_complete_successful_runs": [
+        40821157870,
+        40831339778,
+        40836912649
+      ],
+      "release_created": false,
+      "full_goal_complete": false
     }
   }
 }
