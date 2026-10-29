@@ -10042,7 +10042,7 @@
       "U06 native regression and product release"
     ]
   },
-  "active_batch": "20261029-controller-verification-sql",
+  "active_batch": "20261029-controller-verification-account",
   "batch_record": "EXECUTION-20261029.md",
   "cloud_install_migration": {
     "contract": "https://github.com/xiaoqiqixi/betteridcsys-cloud/blob/main/docs/development/INSTALL_AND_MIGRATION.md",
@@ -11232,7 +11232,7 @@
       }
     },
     "verification_runtime": {
-      "state": "SQL_component_pushed_CI_queued_host_authority_pending",
+      "state": "root_verification_account_local_increment_native_acceptance_pending",
       "contract": "https://github.com/xiaoqiqixi/betteridcsys-cloud/blob/main/docs/development/CONTROLLER_VERIFICATION_RUNTIME.md",
       "implementation": [
         "separate_explicit_read_only_HTTP_surface",
@@ -11243,7 +11243,7 @@
         "authentication_changes_only_three_runtime_tables_and_preserves_old_audit_prefix"
       ],
       "host_startup": false,
-      "dedicated_sql_identity": "validated_component_only_root_provision_pending",
+      "dedicated_sql_identity": "component_verified_root_prepare_and_status_local_native_pending",
       "root_verification_permit": false,
       "migration_browser_acceptance": false,
       "migration_ready": false,
@@ -11366,7 +11366,7 @@
         ]
       },
       "dedicated_sql_component": {
-        "state": "pushed_same_source_CI_queued",
+        "state": "prior_same_source_CI_completed_16_of18",
         "actual_grants_verified": true,
         "normal_identity_exclusive_lock_preserved": true,
         "verification_shared_lock_and_database_named_mutex": true,
@@ -11420,7 +11420,183 @@
           "host_entry": 5,
           "go_scheduling": 3
         },
-        "real_kvm": "deferred_not_verified"
+        "real_kvm": "deferred_not_verified",
+        "latest_ci_observation": {
+          "run": 40803360408,
+          "passed": 9,
+          "failed": 2,
+          "running": 7,
+          "linux24_root_diagnostic": "target-configuration-publish HOST_MIGRATION_UNCONFIRMED before database preparation",
+          "linux22": "failed; log download network failure; exact code not inferred",
+          "local_fix": "explicit missing database stage; partial state not accepted; native rerun pending"
+        },
+        "ci_result": {
+          "run": 40803360408,
+          "source_sha": "bbb7409f670091b63e849b7d141bf75aaa4642d5",
+          "status": "completed_failure",
+          "passed_jobs": 16,
+          "failed_jobs": 2,
+          "failure": "both Linux root target fixture: target-configuration-publish before database provisioning returned HOST_MIGRATION_UNCONFIRMED",
+          "new_root_account_scenarios_in_this_source": false,
+          "verified_native_artifacts": [
+            {
+              "id": 12867789785,
+              "bytes": 2547,
+              "sha256": "66aadb794e46a1dbc711dd08a36350e27e781e60f6dfeb98ed3ba745db5e2053",
+              "ubuntu": "24.04",
+              "scenario": "controller-restore-sessions",
+              "source_host_export_verified": false,
+              "node_takeover_verified": false
+            },
+            {
+              "id": 12867886929,
+              "bytes": 2649,
+              "sha256": "54e3df96de47da6bdeae18aac9aefb9ec633ef5d2db0a5fc8ce025af7dc91f35",
+              "ubuntu": "22.04",
+              "scenario": "controller-restore-configuration",
+              "source_host_export_verified": false,
+              "node_takeover_verified": false
+            },
+            {
+              "id": 12867888869,
+              "bytes": 2654,
+              "sha256": "a2a76f900d65b42b33dce7c18102d5186dd81b9ce3a4c33d21fee7ebd339a35d",
+              "ubuntu": "24.04",
+              "scenario": "controller-restore-configuration",
+              "source_host_export_verified": false,
+              "node_takeover_verified": false
+            },
+            {
+              "id": 12868985298,
+              "bytes": 2541,
+              "sha256": "00f1386bba665b308627034db12f872fe295f1c365e971ec8b071e0285bb0b1b",
+              "ubuntu": "22.04",
+              "scenario": "controller-restore-sessions",
+              "source_host_export_verified": false,
+              "node_takeover_verified": false
+            },
+            {
+              "id": 12869027855,
+              "bytes": 2679,
+              "sha256": "1aa005ecb9aaccf93f1d7fd17a8b05002f5b5ef29a7caedcd6709c9072ec3059",
+              "ubuntu": "22.04",
+              "scenario": "controller-restore-data",
+              "source_host_export_verified": false,
+              "node_takeover_verified": false
+            },
+            {
+              "id": 12869276344,
+              "bytes": 2681,
+              "sha256": "f455453dc683788b3e3b739cc081783886572da8b3b35e9d3b103866c31780a2",
+              "ubuntu": "24.04",
+              "scenario": "controller-restore-data",
+              "source_host_export_verified": false,
+              "node_takeover_verified": false
+            }
+          ]
+        }
+      },
+      "host_preparation_plan": {
+        "state": "implemented_local_native_acceptance_pending",
+        "action": "target-verification-plan",
+        "bound_to": [
+          "original_target_seal",
+          "full_revoked_database_postimage",
+          "published_configuration_and_TLS",
+          "configuration_and_session_intents",
+          "fixed_least_privilege_SQL_policy"
+        ],
+        "read_only": true,
+        "account_created": false,
+        "service_started": false,
+        "native_new_scenario_executed": false,
+        "tests": {
+          "entry": 6,
+          "installer": 111,
+          "package": 26,
+          "native_harness_contract": 61,
+          "CLI_privacy": "passed",
+          "vet": "passed",
+          "linux_controller_cross_build": "passed_not_executed"
+        }
+      },
+      "account_preparation": {
+        "state": "pushed_same_source_CI_in_progress",
+        "entry_actions": [
+          "target-verification-plan",
+          "target-verification-prepare",
+          "target-verification-status"
+        ],
+        "fixed_root_approval": true,
+        "original_two_account_restore_inventory_unchanged": true,
+        "dedicated_three_account_inventory_requires_immutable_binding": true,
+        "real_credential_authentication_before_completion": true,
+        "foreign_account_adoption": false,
+        "password_reset_or_grant_autorepair": false,
+        "completion_ack_recovery": "exact_readback_only_no_SQL_rewrite",
+        "partial_create_or_grant_recovery": "not_implemented_preserves_and_refuses",
+        "native_acceptance": "new_scenarios_not_run",
+        "host_startup": false,
+        "migration_ready": false,
+        "full_local_regression": {
+          "exit": 0,
+          "seconds": 577.803,
+          "top_level_pass": 526,
+          "runtime_skips": 0,
+          "explicit_linux_root_exclusions": 5,
+          "package_results": [
+            "ok  \taster/cloud/cmd/aster-controller\t269.746s",
+            "ok  \taster/cloud/cmd/aster-controller\t89.095s",
+            "ok  \taster/cloud/cmd/aster-billing-plugin\t1.075s",
+            "ok  \taster/cloud/cmd/aster-network\t1.072s",
+            "ok  \taster/cloud/cmd/aster-node\t1.089s",
+            "ok  \taster/cloud/internal/control\t215.105s",
+            "ok  \taster/cloud/internal/controllerbackup\t105.661s",
+            "ok  \taster/cloud/internal/diagnostics\t1.066s",
+            "ok  \taster/cloud/internal/fabric\t189.504s",
+            "ok  \taster/cloud/internal/hypervisor\t55.678s",
+            "ok  \taster/cloud/internal/identity\t152.307s",
+            "ok  \taster/cloud/internal/networking\t11.909s",
+            "ok  \taster/cloud/internal/nodeproto\t1.151s",
+            "ok  \taster/cloud/internal/overlayproto\t1.139s",
+            "ok  \taster/cloud/plugins/billingconnector\t1.115s"
+          ]
+        },
+        "temporary_database_cleanup": {
+          "mysql": "8.4.13",
+          "private_socket_only": true,
+          "leftover_fixture_databases": 0,
+          "leftover_verification_users_and_roles": 0,
+          "credential_scan": "passed",
+          "process_stopped": true,
+          "private_data_and_credentials_removed": true,
+          "system_services_changed": false,
+          "host_trust_changed": false
+        },
+        "mysql_metadata_probe": "passed_actual_8.4.13_not_root_native_entry",
+        "local_contracts_passed": {
+          "public_entry": 7,
+          "installer_units": 19,
+          "installer_contracts": 111,
+          "native_contracts": 61,
+          "package": 26,
+          "go_runner": 3
+        },
+        "go_vet": "passed",
+        "linux_amd64_builds": 4,
+        "source_sha": "7bd9c98bdb4a67f476cd26288d3a445249d1d4c3",
+        "ci": "https://github.com/xiaoqiqixi/betteridcsys-cloud/actions/runs/40808686030"
+      },
+      "root_target_failure_diagnosis": {
+        "source_sha": "bbb7409f670091b63e849b7d141bf75aaa4642d5",
+        "ubuntu22_job": 123216420683,
+        "ubuntu24_job": 123216420569,
+        "actual_phase": "malformed-data-before-provision",
+        "actual_action": "target-configuration-publish",
+        "actual_code": "HOST_MIGRATION_UNCONFIRMED",
+        "local_fix": "precise_missing_stage_only_when_both_plan_and_directory_absent_and_not_links",
+        "partial_or_linked_state": "remains_unconfirmed_no_adoption",
+        "native_fix_result": "not_run"
       }
     }
   }

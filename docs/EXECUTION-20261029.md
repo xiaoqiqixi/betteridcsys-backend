@@ -69,3 +69,26 @@ Linux交叉编译不等于实际运行，新调度仍须新SHA的Ubuntu CI证明
 
 完整回归已结束：526个顶级PASS、0运行时SKIP、582.428秒；另5个Linux/root专属项不在本机执行。go vet、4个Linux amd64交叉构建、安装单测19/合同111/包26/宿主入口5/调度3项通过。专用库、验证账号与角色无残留，凭据日志扫描通过，私有MySQL正常停止并移除专用数据，未变更系统服务和信任。
 原仓库221个非Finder用户文件再次逐项核对原摘要不变。云main已普通快进推送 `bbb7409f670091b63e849b7d141bf75aaa4642d5`，新同SHA [CI40803360408](https://github.com/xiaoqiqixi/betteridcsys-cloud/actions/runs/40803360408)已创建排队，未计通过。未新建Release、覆盖标签或删除旧仓库。
+
+## Verification preparation plan: local increment, not host activation
+
+The fixed root target-verification-plan entry now binds the original target seal, full revoked SQL image, published configuration/TLS, configuration/session intents and the exact minimum SQL grants. Root inventory remains the original two accounts. This action creates no account, starts no service and writes no configuration. SQL identity preparation, service startup and migration readiness remain false.
+Public entry RED then GREEN: 6 parsing/capability checks; installer contracts111, package26 and native harness contracts61 passed. CLI privacy regression, vet and Linux controller cross-build passed. The added Ubuntu22/24 super_read_only and configuration-drift scenarios have NOT run. Prior six native results are not inherited.
+Cloud bbb7409 CI40803360408 is still running. This increment remains in the worktree; no successor is pushed to cancel it. Account provisioning/revocation, independent verification data phase, host permission, browser migration, takeover/rollback and all18 work packages remain required.
+
+Root target failure diagnosis: bbb7409 Ubuntu24 job123216420569 reached a terminal failure. Its fixed diagnostic identified target-configuration-publish returning HOST_MIGRATION_UNCONFIRMED before database provisioning. The local fix returns TARGET_DATABASE_STAGE_REQUIRED only when both plan and directory are absent and neither is a link. Partial/linked state is still unconfirmed; the native harness now checks that distinction without widening generic-error acceptance. The new native execution is pending; the current CI is not cancelled.
+
+## 验证账号准备与状态：本地接入
+
+固定 root prepare/status 入口已接入，绑定原恢复操作、已发布配置、完整后像和不可变管理员批准。仅干净的原两账号阶段可创建专用账号；原恢复库存检查没有放宽。验证专用三账号检查要求原意图、准确属性/权限和实际密码登录，之后才写完成回执；重复核验不重置密码、不修复授权。丢完成回执可在完整状态重新核验后补回，部分 CREATE/GRANT 中断仍保留并拒绝，尚未提供该部分状态的显式恢复/撤销。
+
+公开入口7项、原生夹具合同61项、安装合同111项、安装单测19项、包合同26项和调度3项通过；这些不是新增 root 原生验收。完整当前工作树实库回归正在运行。Ubuntu22/24实际账号准备负例已加入原生场景，新增证明字段为必需，结果待执行。
+已取回 Ubuntu22 失败 job123216420683 日志，确认与24相同：malformed-data-before-provision / target-configuration-publish / HOST_MIGRATION_UNCONFIRMED。修复只对计划和目录均缺失且非链接的情形给精确前置拒绝，部分状态仍不收编。修复原生待跑。
+没有启动验证服务、解除封存、完成迁移页面或接管；18工作包、内置升级、三仓库首版发行均继续保留，旧仓库不删。
+
+本轮完整回归已结束：526顶级PASS、0运行时SKIP、577.803秒；5项Linux/root专属测试仍由原生门禁承担。vet和4程序交叉构建通过。实际8.4.13探针确认随机密码ACK/metadata/列级授权及登录，非root原生验收。专用MySQL已正常停止，测试库/验证账号/角色无残留，日志凭据扫描通过，专用数据和密码已移除；未改变本机服务或证书信任。
+bbb7409的CI40803360408现已结束16/18，不再有运行任务。后继增量不取消上一轮；仍须自己的root目标修复和新增验证账号原生场景通过。
+
+上一版bbb7409的六个原生恢复ZIP已全部下载并核对GitHub大小/SHA256，实际报告均保持源主机导出/节点接管/迁移就绪为false；不能替代新账号准备场景。云本地main提交7bd9c98bdb4a67f476cd26288d3a445249d1d4c3包含本轮增量，推送确认与新CI另记。
+
+云7bd9c98已普通快进推送main；[同源码CI40808686030](https://github.com/xiaoqiqixi/betteridcsys-cloud/actions/runs/40808686030)已实际进入运行。其运行期间不推后继云提交取消它。新增root场景尚未计通过，未发布或删除旧仓库。
