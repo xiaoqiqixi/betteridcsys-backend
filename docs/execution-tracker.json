@@ -9296,6 +9296,10 @@
         {
           "path": "EXECUTION-20261029.md",
           "note": "5105b82 CI completed 13/18. Native data/sessions22+24 and configuration22 artifacts verified; configuration24 host guard refused, four Go package timeouts. Restricted HTTP component implemented locally; SQL/host verification authority, browser migration, takeover and rollback remain incomplete."
+        },
+        {
+          "path": "EXECUTION-20261029.md",
+          "note": "9c111a9 CI16/18; six native restore artifacts verified. bbb7409 enforces exact minimal SQL identity and bounded authentication locks; full local real-MySQL race526/0runtimeSKIP. New CI queued. Root verification startup, full migration browser, takeover and rollback remain pending."
         }
       ]
     },
@@ -10038,7 +10042,7 @@
       "U06 native regression and product release"
     ]
   },
-  "active_batch": "20261029-controller-verification-http",
+  "active_batch": "20261029-controller-verification-sql",
   "batch_record": "EXECUTION-20261029.md",
   "cloud_install_migration": {
     "contract": "https://github.com/xiaoqiqixi/betteridcsys-cloud/blob/main/docs/development/INSTALL_AND_MIGRATION.md",
@@ -11215,10 +11219,20 @@
           "session_browser_verified": false,
           "migration_ready": false
         }
-      ]
+      ],
+      "latest_native_acceptance": {
+        "source_sha": "9c111a9c199ca71bba8af642a30b3fb9345a87a1",
+        "run": 40725448468,
+        "matrix_passed": 6,
+        "artifacts_verified": true,
+        "configuration22_24": true,
+        "full_CI_passed": false,
+        "source_host_metadata_synthetic": true,
+        "migration_ready": false
+      }
     },
     "verification_runtime": {
-      "state": "pushed_same_source_CI_running_host_authority_pending",
+      "state": "SQL_component_pushed_CI_queued_host_authority_pending",
       "contract": "https://github.com/xiaoqiqixi/betteridcsys-cloud/blob/main/docs/development/CONTROLLER_VERIFICATION_RUNTIME.md",
       "implementation": [
         "separate_explicit_read_only_HTTP_surface",
@@ -11229,7 +11243,7 @@
         "authentication_changes_only_three_runtime_tables_and_preserves_old_audit_prefix"
       ],
       "host_startup": false,
-      "dedicated_sql_identity": false,
+      "dedicated_sql_identity": "validated_component_only_root_provision_pending",
       "root_verification_permit": false,
       "migration_browser_acceptance": false,
       "migration_ready": false,
@@ -11276,7 +11290,138 @@
       },
       "pushed": true,
       "ci": "https://github.com/xiaoqiqixi/betteridcsys-cloud/actions/runs/40725448468",
-      "same_SHA_all_gates_passed": false
+      "same_SHA_all_gates_passed": false,
+      "current_ci": {
+        "source_sha": "9c111a9c199ca71bba8af642a30b3fb9345a87a1",
+        "run": 40725448468,
+        "state": "completed_failure",
+        "passed_jobs": 16,
+        "failed_jobs": 2,
+        "linux_failure": "root target harness TARGET_DENIAL_NOT_CONFIRMED_malformed-data-before-provision; exact action/code unavailable in old output, fixed-code diagnostics added; not treated as accepted refusal",
+        "mysql22_24": "passed",
+        "browser": "passed_existing_console_not_migration_browser",
+        "native_restore_matrix": "six scenarios passed, downloaded sizes and digests verified",
+        "same_SHA_all_gates_passed": false,
+        "verified_native_artifacts": [
+          {
+            "id": 12834526706,
+            "bytes": 2650,
+            "sha256": "fe20f664253ae36dedb41cd68e8f0e804a7aea631bab2cae46bf154b768dba01",
+            "ubuntu": "22.04",
+            "scenario": "controller-restore-configuration",
+            "passed": true,
+            "source_host_export_verified": false,
+            "node_takeover_verified": false
+          },
+          {
+            "id": 12834621787,
+            "bytes": 2655,
+            "sha256": "6fd55d8f30a5b3400d1785dcaf74c0109a1631930d2d6660020aeba49cb105a7",
+            "ubuntu": "24.04",
+            "scenario": "controller-restore-configuration",
+            "passed": true,
+            "source_host_export_verified": false,
+            "node_takeover_verified": false
+          },
+          {
+            "id": 12834789278,
+            "bytes": 2525,
+            "sha256": "425bd80596dca9ee74dd32a77ad2c4a94f193f573ab750f253f157c45ddf4ae8",
+            "ubuntu": "22.04",
+            "scenario": "controller-restore-sessions",
+            "passed": true,
+            "source_host_export_verified": false,
+            "node_takeover_verified": false
+          },
+          {
+            "id": 12835135839,
+            "bytes": 2682,
+            "sha256": "852fae62a3c6de9301442a2996f1544d0ccee2fc4f5e55bbf45c8b8e0c940521",
+            "ubuntu": "22.04",
+            "scenario": "controller-restore-data",
+            "passed": true,
+            "source_host_export_verified": false,
+            "node_takeover_verified": false
+          },
+          {
+            "id": 12835470449,
+            "bytes": 2542,
+            "sha256": "6e1d9aafb9faee1174f4580bb7a4e5c880112c9777e71e3e01038cbe4a309de3",
+            "ubuntu": "24.04",
+            "scenario": "controller-restore-sessions",
+            "passed": true,
+            "source_host_export_verified": false,
+            "node_takeover_verified": false
+          },
+          {
+            "id": 12836081334,
+            "bytes": 2680,
+            "sha256": "3651d46d656794d345ce41ea70bf1342c71ad97953049312121a17a2ff2b4a20",
+            "ubuntu": "24.04",
+            "scenario": "controller-restore-data",
+            "passed": true,
+            "source_host_export_verified": false,
+            "node_takeover_verified": false
+          }
+        ]
+      },
+      "dedicated_sql_component": {
+        "state": "pushed_same_source_CI_queued",
+        "actual_grants_verified": true,
+        "normal_identity_exclusive_lock_preserved": true,
+        "verification_shared_lock_and_database_named_mutex": true,
+        "cancelled_query_server_wait_seconds": 2,
+        "root_account_provisioning": false,
+        "host_startup": false,
+        "migration_browser": false,
+        "source_sha": "bbb7409f670091b63e849b7d141bf75aaa4642d5",
+        "ci": "https://github.com/xiaoqiqixi/betteridcsys-cloud/actions/runs/40803360408",
+        "full_local_validation": {
+          "exit": 0,
+          "seconds": 582.428,
+          "top_level_pass": 526,
+          "runtime_skips": 0,
+          "explicit_linux_root_exclusions": 5,
+          "package_results": [
+            "ok  \taster/cloud/cmd/aster-controller\t269.256s",
+            "ok  \taster/cloud/cmd/aster-controller\t89.497s",
+            "ok  \taster/cloud/cmd/aster-billing-plugin\t1.080s",
+            "ok  \taster/cloud/cmd/aster-network\t1.078s",
+            "ok  \taster/cloud/cmd/aster-node\t1.100s",
+            "ok  \taster/cloud/internal/control\t220.005s",
+            "ok  \taster/cloud/internal/controllerbackup\t108.311s",
+            "ok  \taster/cloud/internal/diagnostics\t1.044s",
+            "ok  \taster/cloud/internal/fabric\t193.112s",
+            "ok  \taster/cloud/internal/hypervisor\t57.182s",
+            "ok  \taster/cloud/internal/identity\t156.663s",
+            "ok  \taster/cloud/internal/networking\t12.433s",
+            "ok  \taster/cloud/internal/nodeproto\t1.151s",
+            "ok  \taster/cloud/internal/overlayproto\t1.133s",
+            "ok  \taster/cloud/plugins/billingconnector\t1.105s"
+          ]
+        },
+        "cleanup": {
+          "mysql": "8.4.13",
+          "private_socket_only": true,
+          "leftover_fixture_databases": 0,
+          "leftover_verification_users_and_roles": 0,
+          "credential_scan": "passed",
+          "process_stopped": true,
+          "private_data_and_credentials_removed": true,
+          "system_services_changed": false,
+          "host_trust_changed": false
+        },
+        "vet": "passed",
+        "linux_cross_builds": 4,
+        "python_tests": {
+          "installer_units": 19,
+          "installer_contract": 111,
+          "package": 26,
+          "host_entry": 5,
+          "go_scheduling": 3
+        },
+        "real_kvm": "deferred_not_verified"
+      }
     }
   }
 }
