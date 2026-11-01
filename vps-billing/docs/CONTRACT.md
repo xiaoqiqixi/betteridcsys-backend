@@ -148,3 +148,5 @@ Core 0.5.3 提供 `aster.payment/1`，按已批准的版本、程序及 manifest
 Core 在外部调用前保存唯一支付尝试，固定客户、订单、账单、金额、币种精度、provider 和商户预期。回调进入结算事务后，Core 从保存的尝试取得预期值，重新锁定并核对权威订单和账单；`(provider_id,event_id)`、`(provider_id,transaction_id)` 分别唯一。合法重放不重复入账，冲突拒绝；账单和订单变为 `paid`、结算记录、审计及 outbox 同事务提交，不自动开通 VPS。超时或会话过期不释放原尝试。
 
 默认支付关闭，没有内置真实渠道。当前提供创建会话和验证已结算通知，不提供渠道交易查询、撤销、退款、订阅、对账或特定渠道要求的回调应答（ACK）。成功通知使用通用 JSON 应答，需特定格式的渠道须先扩展并审查协议。会话复用、错误码、去重及不确定结果处理以 [PAYMENT_PLUGINS.md](PAYMENT_PLUGINS.md) 为准。
+
+客户审计视图（`/audit`、`/audit-events`、订单详情的 `audit`）中，员工操作仅显示 `actor_type: "staff"`，不输出员工邮箱、ID 或自由文本 `detail`。客户本人发起的订单操作可显示本人的身份与原因；支付系统事件显示 `actor_type: "system"`。客户不能通过 `actor_email` 筛选探测员工身份。管理员视图保留完整审计记录。
