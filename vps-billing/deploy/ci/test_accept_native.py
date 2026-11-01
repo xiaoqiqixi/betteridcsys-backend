@@ -472,7 +472,7 @@ class LateSchemaFaultGuardTests(unittest.TestCase):
 class CorePaymentSchemaMigrationTests(unittest.TestCase):
     """Scenario guards with fake native/SQL calls, never deployment evidence."""
 
-    def scenario(self, *, old_accepts_new=False, changed_business=False, invented_payment=False, invented_product_configuration=False):
+    def scenario(self, *, old_accepts_new=False, changed_business=False, invented_payment=False, invented_product_configuration=False, flagged_invoice=False, missing_owner=False):
         state = {"schema": 6}
         calls = []
         candidate = str(SCRIPT.parents[2] / "backend")
@@ -505,13 +505,17 @@ class CorePaymentSchemaMigrationTests(unittest.TestCase):
 
         def sql(query, *, database=None):
             if query.startswith("SELECT COUNT(*) FROM information_schema.TABLES"):
-                return str({6: 13, 7: 14, CORE.CANDIDATE_SCHEMA: 23}[state["schema"]])
+                return str({6: 13, 7: 14, CORE.CANDIDATE_SCHEMA: 25}[state["schema"]])
             if query.startswith("SELECT SUM(amount_minor)"):
                 return "1500"
             if query.startswith("SELECT TABLE_NAME"):
                 return "\n".join("table_" + letter for letter in "abcdefghijklm")
             if query.startswith("SELECT COUNT(*) FROM users WHERE disabled"):
                 return "0"
+            if query.startswith("SELECT COUNT(*) FROM invoices WHERE settlement_review"):
+                return str(int(flagged_invoice))
+            if query.startswith("SELECT COUNT(*) FROM users u LEFT JOIN staff_members"):
+                return str(int(missing_owner))
             if query.startswith("SELECT COUNT(*) FROM plans p LEFT JOIN catalog_regions"):
                 return "0"
             if query.startswith("SELECT (SELECT COUNT(*) FROM payment_attempts)"):
@@ -537,21 +541,23 @@ class CorePaymentSchemaMigrationTests(unittest.TestCase):
         queries, dumps = [], []
         def sql(query, *, database=None):
             queries.append(query)
-            return "original-plan-bytes" if "FROM plans" in query else "original-user-bytes"
+            return "original-plan-bytes" if "FROM plans" in query else "original-invoice-bytes" if "FROM invoices" in query else "original-user-bytes"
         fixture = SimpleNamespace(resources=SimpleNamespace(sql=sql), full_data_hash=lambda database, tables: dumps.append(list(tables)) or "original-other-bytes")
-        result = CORE.Fixture.legacy_business_hash(fixture, "owned", ["users", "plans", "orders", "plan_prices"])
+        result = CORE.Fixture.legacy_business_hash(fixture, "owned", ["users", "plans", "invoices", "orders", "plan_prices"])
         self.assertEqual(dumps, [["orders", "plan_prices"]])
-        self.assertEqual(result, CORE.sha256(b"original-other-bytes\noriginal-user-bytes\noriginal-plan-bytes"))
+        self.assertEqual(result, CORE.sha256(b"original-other-bytes\noriginal-user-bytes\noriginal-plan-bytes\noriginal-invoice-bytes"))
         self.assertIn("SELECT HEX(id),HEX(name),HEX(description),cpu,memory_gb,disk_gb,transfer_tb,HEX(region),price_minor,HEX(currency),available FROM plans ORDER BY BINARY id;", queries)
         self.assertFalse(any("type_id" in query or "region_id" in query or "SELECT *" in query for query in queries))
         self.assertTrue(any("HEX(password_hash)" in query and "created_at" in query for query in queries))
+        self.assertIn("SELECT HEX(id),HEX(number),HEX(user_id),HEX(order_id),HEX(status),amount_minor,HEX(currency),DATE_FORMAT(issued_at,'%Y-%m-%d %H:%i:%s.%f'),DATE_FORMAT(due_at,'%Y-%m-%d %H:%i:%s.%f'),DATE_FORMAT(paid_at,'%Y-%m-%d %H:%i:%s.%f'),HEX(issuer_snapshot),HEX(currency_snapshot) FROM invoices ORDER BY id;", queries)
+        self.assertFalse(any('settlement_review' in query for query in queries))
 
     def test_historical_prefix_uses_actual_published_then_candidate_migration_order(self):
         report, calls, candidate, published = self.scenario()
         self.assertEqual([call for call in calls if call[1] == "-migrate"],
             [(published, "-migrate"), (candidate, "-migrate"), (candidate, "-migrate")])
         self.assertEqual((report["schema_before"], report["published_schema"], report["schema_after"]), (6, 7, CORE.CANDIDATE_SCHEMA))
-        self.assertEqual((report["tables_before"], report["tables_published"], report["tables_after"]), (13, 14, 23))
+        self.assertEqual((report["tables_before"], report["tables_published"], report["tables_after"]), (13, 14, 25))
         self.assertEqual(report["published_baseline_preflight_after_payment_migration"], "incompatible")
         self.assertTrue(report["additive_payment_migration_preserved_existing_data"])
         self.assertTrue(report["new_payment_tables_empty"])
@@ -571,6 +577,20 @@ class CorePaymentSchemaMigrationTests(unittest.TestCase):
     def test_additive_migration_cannot_backfill_product_configuration_or_provisioning_jobs(self):
         with self.assertRaisesRegex(CORE.AcceptanceFailure, "Migration invented product configuration"):
             self.scenario(invented_product_configuration=True)
+
+    def test_current_migrations_cannot_flag_old_invoices_or_remove_admin_ownership(self):
+        for mutation in ({'flagged_invoice': True}, {'missing_owner': True}):
+            with self.subTest(mutation=mutation), self.assertRaises(CORE.AcceptanceFailure):
+                self.scenario(**mutation)
+
+    def test_native_expectations_match_the_reviewed_source_migration_inventory(self):
+        migrations = sorted((SCRIPT.parents[2] / 'backend/migrations').glob('*.sql'))
+        self.assertEqual(len(migrations), CORE.CANDIDATE_SCHEMA)
+        self.assertEqual(migrations[-1].name, '015_staff_roles.sql')
+        tables = set(re.findall(r'CREATE TABLE IF NOT EXISTS ([a-z_]+)', '\n'.join(path.read_text() for path in migrations)))
+        self.assertEqual(len(tables) + 1, 25)  # schema_migrations is maintained by Go.
+        self.assertIn('[[ $migration_count == 15 ]]', SCRIPT.read_text())
+        self.assertIn('[[ $source_tables == 25 ]]', SCRIPT.read_text())
 
 
 class CoreExecutorEvidenceSafetyTests(unittest.TestCase):

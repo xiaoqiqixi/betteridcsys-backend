@@ -36,7 +36,7 @@ class AcceptanceFailure(RuntimeError):
 
 
 PUBLISHED_VERSION = "0.5.2"
-CANDIDATE_SCHEMA = 13
+CANDIDATE_SCHEMA = 15
 PUBLISHED_SOURCE = "9ed610a283020f50e2cfc529f8b5145b4a9c8fc3"
 PUBLISHED_RELEASE_ID = 413559379
 PUBLISHED_BUILD_RUN_ID = 38702170922
@@ -892,14 +892,15 @@ class Fixture:
         return sha256(raw)
 
     def legacy_business_hash(self, database, tables):
-        # Migrations10/11 append users state and plan classification columns.
+        # Migrations10/11/14 append user, plan and invoice state columns.
         # Compare every prior business byte using explicit original projections,
         # never SELECT * across different physical column inventories.
-        require("users" in tables and "plans" in tables and len(tables) > 2, "Historical user/plan inventory is missing")
-        other = self.full_data_hash(database, [table for table in tables if table not in {"users", "plans"}])
+        require({"users", "plans", "invoices"}.issubset(tables) and len(tables) > 3, "Historical user/plan/invoice inventory is missing")
+        other = self.full_data_hash(database, [table for table in tables if table not in {"users", "plans", "invoices"}])
         users = self.resources.sql("SELECT HEX(id),HEX(email),HEX(name),HEX(role),HEX(password_hash),DATE_FORMAT(created_at,'%Y-%m-%d %H:%i:%s.%f') FROM users ORDER BY id;", database=database)
         plans = self.resources.sql("SELECT HEX(id),HEX(name),HEX(description),cpu,memory_gb,disk_gb,transfer_tb,HEX(region),price_minor,HEX(currency),available FROM plans ORDER BY BINARY id;", database=database)
-        return sha256((other + "\n" + users + "\n" + plans).encode())
+        invoices = self.resources.sql("SELECT HEX(id),HEX(number),HEX(user_id),HEX(order_id),HEX(status),amount_minor,HEX(currency),DATE_FORMAT(issued_at,'%Y-%m-%d %H:%i:%s.%f'),DATE_FORMAT(due_at,'%Y-%m-%d %H:%i:%s.%f'),DATE_FORMAT(paid_at,'%Y-%m-%d %H:%i:%s.%f'),HEX(issuer_snapshot),HEX(currency_snapshot) FROM invoices ORDER BY id;", database=database)
+        return sha256((other + "\n" + users + "\n" + plans + "\n" + invoices).encode())
 
     def restore(self):
         with observe_restore_protected_open(self.executor, self):
@@ -1108,11 +1109,15 @@ def legacy_schema_migration(resources, executor, fresh, baseline):
             old["exit_code"] != 0 and old["database"]["status"] == "incompatible",
             "Payment schema migration must be current for the candidate and rejected by the published old program")
     count_after = resources.sql("SELECT COUNT(*) FROM information_schema.TABLES WHERE TABLE_SCHEMA=DATABASE();", database=database)
-    require(count_before == "13" and count_prefix7 == "14" and count_after == "23", "Actual migrations did not add the currency, payment, catalog taxonomy and product configuration tables")
+    require(count_before == "13" and count_prefix7 == "14" and count_after == "25", "Actual migrations did not add the currency, payment, catalog, product configuration and staff tables")
     require(fresh.legacy_business_hash(database, historical_tables) == historical_hash,
             "Additive payment migration changed existing business records")
     require(resources.sql("SELECT COUNT(*) FROM users WHERE disabled<>0 OR revision<>1;", database=database) == "0",
             "Account migration did not initialize historic users to enabled revision1")
+    require(resources.sql("SELECT COUNT(*) FROM invoices WHERE settlement_review<>0;", database=database) == "0",
+            "Payment resolution migration flagged historical invoices for review")
+    require(resources.sql("SELECT COUNT(*) FROM users u LEFT JOIN staff_members s ON s.user_id=u.id WHERE u.role='admin' AND (s.user_id IS NULL OR s.role_id<>'owner');", database=database) == "0",
+            "Staff migration did not preserve historical administrator ownership")
     require(resources.sql("SELECT COUNT(*) FROM plans p LEFT JOIN catalog_regions r ON r.id=p.region_id LEFT JOIN catalog_types t ON t.id=p.type_id LEFT JOIN catalog_nodes n ON n.id=p.node_id WHERE p.type_id<>'generic' OR r.id IS NULL OR t.id IS NULL OR r.type_id<>p.type_id OR BINARY r.name<>BINARY p.region OR n.id IS NULL OR n.region_id<>p.region_id OR BINARY n.name<>BINARY '默认节点' OR n.id<>CONCAT('n-',LEFT(SHA2(BINARY p.region_id,256),60));", database=database) == "0",
             "Taxonomy migration did not preserve exact legacy regions, generic type and default-node relationships")
     require(resources.sql("SELECT (SELECT COUNT(*) FROM payment_attempts)+(SELECT COUNT(*) FROM payment_settlements);", database=database) == "0",
@@ -1125,7 +1130,7 @@ def legacy_schema_migration(resources, executor, fresh, baseline):
     stage("legacy-repeat-migration")
     native.api(fresh.candidate, environment, "-migrate")
     require(fresh.full_data_hash(database) == digest_before, "Repeated migration changed actual database data")
-    return {"schema_before": 6, "published_schema": 7, "schema_after": CANDIDATE_SCHEMA, "tables_before": 13, "tables_published": 14, "tables_after": 23,
+    return {"schema_before": 6, "published_schema": 7, "schema_after": CANDIDATE_SCHEMA, "tables_before": 13, "tables_published": 14, "tables_after": 25,
             "actual_candidate_binary_migrate": True, "unchanged_selected_sql_prefix": True,
             "actual_published_binary_migrate_6_to_7": True, "actual_candidate_binary_migrate_7_to_current": True,
             "audit_query_indexes_added": CANDIDATE_SCHEMA >= 9,
