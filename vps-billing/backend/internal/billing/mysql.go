@@ -84,7 +84,7 @@ func OpenMySQL(ctx context.Context, dsn string, allowInsecure bool) (*MySQL, err
 	return &MySQL{DB: db, transport: transport, database: cfg.DBName}, nil
 }
 
-var schemaVersions = []string{migrations.Initial, migrations.SiteSettings, migrations.Currencies, migrations.BillingSnapshots, migrations.ExactCurrencyCodes, migrations.EmailSettings, migrations.CurrencyRegistry, migrations.PaymentRuntime, migrations.AuditQueryIndexes, migrations.CustomerAccounts, migrations.CatalogTaxonomy, migrations.CatalogNodes, migrations.ProductConfigurations, migrations.PaymentResolution, migrations.StaffRoles, migrations.CommerceCatalog}
+var schemaVersions = []string{migrations.Initial, migrations.SiteSettings, migrations.Currencies, migrations.BillingSnapshots, migrations.ExactCurrencyCodes, migrations.EmailSettings, migrations.CurrencyRegistry, migrations.PaymentRuntime, migrations.AuditQueryIndexes, migrations.CustomerAccounts, migrations.CatalogTaxonomy, migrations.CatalogNodes, migrations.ProductConfigurations, migrations.PaymentResolution, migrations.StaffRoles, migrations.CommerceCatalog, migrations.AccountSecurity}
 
 func (m *MySQL) Ping(ctx context.Context) error {
 	rows, err := m.DB.QueryContext(ctx, "SELECT version,checksum FROM schema_migrations ORDER BY version")
@@ -142,6 +142,15 @@ func (m *MySQL) Migrate(ctx context.Context) error {
 		}
 		if !errors.Is(err, sql.ErrNoRows) {
 			return err
+		}
+		if source == migrations.AccountSecurity {
+			for _, q := range strings.Split(source, ";") {
+				if q = strings.TrimSpace(q); q != "" {
+					if _, _, err = prepareAccountMigration(ctx, conn, version, q); err != nil {
+						return err
+					}
+				}
+			}
 		}
 		if source == migrations.StaffRoles {
 			for _, q := range strings.Split(source, ";") {
@@ -370,6 +379,9 @@ func (m *MySQL) PutSession(c context.Context, s Session) error {
 	if _, err = tx.ExecContext(c, "INSERT INTO sessions(token_hash,user_id,expires_at) VALUES(?,?,?)", s.Hash, s.UserID, s.Expires); err != nil {
 		return err
 	}
+	if _, err = tx.ExecContext(c, "INSERT INTO account_sessions(id,token_hash,ip,user_agent,created_at,last_seen_at) VALUES(?,?,?,?,UTC_TIMESTAMP(6),UTC_TIMESTAMP(6))", ID(), s.Hash, s.IP, s.UserAgent); err != nil {
+		return err
+	}
 	return tx.Commit()
 }
 func (m *MySQL) Session(c context.Context, k string) (Session, error) {
@@ -377,6 +389,9 @@ func (m *MySQL) Session(c context.Context, k string) (Session, error) {
 	e := m.DB.QueryRowContext(c, "SELECT token_hash,user_id,expires_at FROM sessions WHERE token_hash=? AND expires_at>UTC_TIMESTAMP(6)", k).Scan(&s.Hash, &s.UserID, &s.Expires)
 	if errors.Is(e, sql.ErrNoRows) {
 		e = ErrNotFound
+	}
+	if e == nil {
+		_, e = m.DB.ExecContext(c, "UPDATE account_sessions SET last_seen_at=UTC_TIMESTAMP(6) WHERE token_hash=?", k)
 	}
 	return s, e
 }

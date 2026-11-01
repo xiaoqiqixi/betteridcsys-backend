@@ -49,3 +49,6 @@ var StaffRoles string
 
 //go:embed 016_commerce_catalog.sql
 var CommerceCatalog string
+
+//go:embed 017_account_security.sql
+var AccountSecurity string

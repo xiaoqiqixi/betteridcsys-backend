@@ -134,6 +134,8 @@ func (a Audit) MarshalJSON() ([]byte, error) {
 }
 
 type Session struct {
+	IP        string
+	UserAgent string
 	// Revision binds an in-flight password check to the account state it read.
 	Revision int64
 	Hash     string

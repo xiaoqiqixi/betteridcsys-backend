@@ -72,6 +72,7 @@ func preflightColumns(version int) map[string]map[string]string {
 	}
 	staffSchemaColumns(version, specs)
 	commerceSchemaColumns(version, specs)
+	accountSchemaColumns(version, specs)
 	result := make(map[string]map[string]string, len(specs))
 	for table, spec := range specs {
 		result[table] = map[string]string{}
@@ -161,10 +162,14 @@ func preflightChecks(version int) map[string]map[string]string {
 		checks["staff_roles"] = map[string]string{"staff_role_revision": "revision >= 1 AND revision <= 9007199254740991", "staff_role_builtin": "builtin IN (0,1)"}
 	}
 	commerceSchemaChecks(version, checks)
+	if schemaIncludes(version, migrations.AccountSecurity) {
+		checks["users"]["users_currency_locked"] = "currency_locked IN (0,1)"
+	}
 	return checks
 }
 
 var preflightDefaults = map[string]string{
+	"users.currency": "CNY", "users.currency_locked": "0",
 	"invoices.settlement_review": "0", "payment_settlements.disposition": "settled",
 	"provisioning_jobs.attempts": "0",
 	"users.disabled":             "0", "users.revision": "1",
@@ -231,7 +236,7 @@ func validatePreflightTableShape(ctx context.Context, conn *sql.Conn, version in
 			return errors.New("schema requires the expected InnoDB base tables")
 		}
 	}
-	rows, err := conn.QueryContext(ctx, "SELECT TABLE_NAME,COLUMN_NAME,COLUMN_TYPE,IS_NULLABLE,EXTRA,GENERATION_EXPRESSION,COLUMN_DEFAULT,CHARACTER_SET_NAME,COLLATION_NAME FROM information_schema.COLUMNS WHERE TABLE_SCHEMA=DATABASE() ORDER BY TABLE_NAME,ORDINAL_POSITION LIMIT 1025")
+	rows, err := conn.QueryContext(ctx, "SELECT TABLE_NAME,COLUMN_NAME,COLUMN_TYPE,IS_NULLABLE,EXTRA,GENERATION_EXPRESSION,COLUMN_DEFAULT,CHARACTER_SET_NAME,COLLATION_NAME FROM information_schema.COLUMNS WHERE TABLE_SCHEMA=DATABASE() ORDER BY TABLE_NAME,ORDINAL_POSITION LIMIT 2049")
 	if err != nil {
 		return err
 	}
@@ -247,7 +252,7 @@ func validatePreflightTableShape(ctx context.Context, conn *sql.Conn, version in
 			continue
 		}
 		spec := want[table][name]
-		if seen >= 1024 || spec == "" || !preflightColumnMatches(table, name, spec, kind, nullable, extra, generated, def, charset, collation, databaseCollation) {
+		if seen >= 2048 || spec == "" || !preflightColumnMatches(table, name, spec, kind, nullable, extra, generated, def, charset, collation, databaseCollation) {
 			rows.Close()
 			return errors.New("schema columns differ from applied migrations")
 		}
@@ -283,7 +288,7 @@ func validatePreflightTableShape(ctx context.Context, conn *sql.Conn, version in
 			}
 		}
 	}
-	rows, err = conn.QueryContext(ctx, "SELECT tc.TABLE_NAME,tc.CONSTRAINT_NAME,tc.ENFORCED,cc.CHECK_CLAUSE FROM information_schema.TABLE_CONSTRAINTS tc JOIN information_schema.CHECK_CONSTRAINTS cc ON tc.CONSTRAINT_SCHEMA=cc.CONSTRAINT_SCHEMA AND tc.CONSTRAINT_NAME=cc.CONSTRAINT_NAME WHERE tc.TABLE_SCHEMA=DATABASE() AND tc.CONSTRAINT_TYPE='CHECK' ORDER BY tc.TABLE_NAME,tc.CONSTRAINT_NAME LIMIT 1025")
+	rows, err = conn.QueryContext(ctx, "SELECT tc.TABLE_NAME,tc.CONSTRAINT_NAME,tc.ENFORCED,cc.CHECK_CLAUSE FROM information_schema.TABLE_CONSTRAINTS tc JOIN information_schema.CHECK_CONSTRAINTS cc ON tc.CONSTRAINT_SCHEMA=cc.CONSTRAINT_SCHEMA AND tc.CONSTRAINT_NAME=cc.CONSTRAINT_NAME WHERE tc.TABLE_SCHEMA=DATABASE() AND tc.CONSTRAINT_TYPE='CHECK' ORDER BY tc.TABLE_NAME,tc.CONSTRAINT_NAME LIMIT 2049")
 	if err != nil {
 		return err
 	}
@@ -294,7 +299,7 @@ func validatePreflightTableShape(ctx context.Context, conn *sql.Conn, version in
 			rows.Close()
 			return err
 		}
-		if seen >= 1024 {
+		if seen >= 2048 {
 			rows.Close()
 			return errors.New("too many schema checks")
 		}
@@ -407,6 +412,12 @@ func validatePreflightTableKeys(ctx context.Context, conn *sql.Conn, version int
 			required[key] = true
 		}
 	}
+	if schemaIncludes(version, migrations.AccountSecurity) {
+		for _, k := range []string{"affiliates:user_id", "affiliates:code", "affiliate_referrals:client_id", "account_profiles:user_id", "account_sessions:id", "account_sessions:token_hash", "email_tokens:token_hash", "login_events:id", "notification_prefs:user_id", "account_settings:name", "account_requests:principal,operation,request_key", "email_templates:template_key", "email_outbox:id"} {
+			required[k] = true
+		}
+	}
+
 	if partial {
 		for key := range required {
 			table, _, _ := strings.Cut(key, ":")
@@ -526,6 +537,12 @@ func validatePreflightTableKeys(ctx context.Context, conn *sql.Conn, version int
 			fks[key] = true
 		}
 	}
+	if schemaIncludes(version, migrations.AccountSecurity) {
+		for _, k := range []string{"affiliates:user_id:users:id:CASCADE", "affiliate_referrals:client_id:users:id:CASCADE", "affiliate_referrals:affiliate_id:affiliates:user_id:RESTRICT", "account_profiles:user_id:users:id:CASCADE", "account_profiles:referrer_id:users:id:RESTRICT", "account_sessions:token_hash:sessions:token_hash:CASCADE", "email_tokens:user_id:users:id:CASCADE", "login_events:user_id:users:id:CASCADE", "notification_prefs:user_id:users:id:CASCADE", "email_outbox:user_id:users:id:CASCADE"} {
+			fks[k] = true
+		}
+	}
+
 	if partial {
 		for key := range fks {
 			table, _, _ := strings.Cut(key, ":")
