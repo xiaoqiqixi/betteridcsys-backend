@@ -19,14 +19,15 @@ func main() {
 	root := flag.String("root", "", "Protected installed plugin directory")
 	policy := flag.String("policy", "", "Root-owned explicit plugin policy")
 	kind := flag.String("kind", "smtp", "Approved plugin slot: smtp, payment or resource")
+	slot := flag.String("slot", "", "Payment gateway id")
 	flag.Parse()
-	if flag.NArg() != 0 || os.Geteuid() == 0 || *kind != "smtp" && *kind != "payment" && *kind != "resource" {
+	if (*slot != "" && (*kind != "payment" || !pluginapi.ValidGatewayID(*slot))) || flag.NArg() != 0 || os.Geteuid() == 0 || *kind != "smtp" && *kind != "payment" && *kind != "resource" {
 		stop()
 	}
 	var approved *runtimeplugins.Approval
 	var err error
 	if *kind == "payment" {
-		approved, err = runtimeplugins.OpenApprovedPayment(*root, *policy)
+		approved, err = runtimeplugins.OpenApprovedPayment(*root, *policy, *slot)
 	} else if *kind == "resource" {
 		approved, err = runtimeplugins.OpenApprovedResource(*root, *policy)
 	} else {
@@ -74,6 +75,9 @@ func main() {
 	}
 	if *kind == "payment" {
 		args = append(args, "--merchant-id", approved.Selection.MerchantID)
+		if *slot != "" {
+			args = append(args, "--gateway-id", *slot)
+		}
 		if approved.Manifest.Protocol != pluginapi.PaymentProtocol {
 			stop()
 		}

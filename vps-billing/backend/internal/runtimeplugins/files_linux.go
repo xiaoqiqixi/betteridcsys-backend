@@ -112,6 +112,14 @@ func (a *Approval) Close() {
 }
 
 func selectionFor(policy pluginapi.Policy, kind string) *pluginapi.Selection {
+	if strings.HasPrefix(kind, "payment:") {
+		for i := range policy.Payments {
+			if policy.Payments[i].Slot == strings.TrimPrefix(kind, "payment:") {
+				return &policy.Payments[i]
+			}
+		}
+		return nil
+	}
 	if kind == "payment" {
 		return policy.Payment
 	}
@@ -131,7 +139,7 @@ func validateSelection(s *pluginapi.Selection, kind string, rules trust) error {
 	if kind == "resource" {
 		prefix = "resource."
 	}
-	if !pluginapi.ValidID(s.ID) || !strings.HasPrefix(s.ID, prefix) || !pluginapi.ValidVersion(s.Version) || !pluginapi.ValidDigest(s.ManifestSHA256) || !cleanAbsolute(s.Socket) || len(s.Socket) > 100 || s.WorkerUID == 0 || kind != "resource" && s.ClientUID == 0 || (!rules.allowSameUID && s.WorkerUID == s.ClientUID) || len(s.AllowedTargets) > 8 || s.Enabled && len(s.AllowedTargets) == 0 {
+	if !pluginapi.ValidID(s.ID) || !strings.HasPrefix(s.ID, prefix) || !pluginapi.ValidVersion(s.Version) || !pluginapi.ValidDigest(s.ManifestSHA256) || !cleanAbsolute(s.Socket) || len(s.Socket) > 100 || s.WorkerUID == 0 || kind != "resource" && s.ClientUID == 0 || (!rules.allowSameUID && s.WorkerUID == s.ClientUID) || len(s.AllowedTargets) > 8 || kind != "payment" && s.Enabled && len(s.AllowedTargets) == 0 {
 		return ErrUnavailable
 	}
 	if kind == "resource" {
@@ -154,18 +162,35 @@ func validateSelection(s *pluginapi.Selection, kind string, rules trust) error {
 	return nil
 }
 func validatePolicyKind(policy pluginapi.Policy, kind string, rules trust) error {
-	if policy.Schema != 1 || policy.Revision == 0 || kind != "smtp" && kind != "payment" && kind != "resource" {
+	if policy.Schema != 1 || policy.Revision == 0 || kind != "smtp" && kind != "payment" && kind != "resource" && !(strings.HasPrefix(kind, "payment:") && pluginapi.ValidGatewayID(strings.TrimPrefix(kind, "payment:"))) {
 		return ErrUnavailable
 	}
 	if validateSelection(policy.SMTP, "smtp", rules) != nil || validateSelection(policy.Payment, "payment", rules) != nil || validateSelection(policy.Resource, "resource", rules) != nil {
 		return ErrUnavailable
 	}
-	if a, b := policy.SMTP, policy.Payment; a != nil && b != nil && (a.Socket == b.Socket || !rules.allowSameUID && (a.WorkerUID == b.WorkerUID || a.WorkerUID == b.ClientUID || b.WorkerUID == a.ClientUID)) {
+	if len(policy.Payments) > 64 || policy.Payment != nil && len(policy.Payments) > 0 {
 		return ErrUnavailable
 	}
-	for _, other := range []*pluginapi.Selection{policy.SMTP, policy.Payment} {
-		if r := policy.Resource; r != nil && other != nil && (r.Socket == other.Socket || !rules.allowSameUID && (r.WorkerUID == other.WorkerUID || r.WorkerUID == other.ClientUID || other.WorkerUID == r.ClientUID)) {
+	all := []*pluginapi.Selection{policy.SMTP, policy.Payment, policy.Resource}
+	for _, selected := range all {
+		if selected != nil && selected.Slot != "" {
 			return ErrUnavailable
+		}
+	}
+	seen := map[string]bool{}
+	for i := range policy.Payments {
+		p := &policy.Payments[i]
+		if !pluginapi.ValidGatewayID(p.Slot) || seen[p.Slot] || p.Socket != "/run/aster-payment/"+p.Slot+"/plugin.sock" || validateSelection(p, "payment", rules) != nil {
+			return ErrUnavailable
+		}
+		seen[p.Slot] = true
+		all = append(all, p)
+	}
+	for i, left := range all {
+		for _, right := range all[i+1:] {
+			if left != nil && right != nil && (left.Socket == right.Socket || !rules.allowSameUID && (left.WorkerUID == right.WorkerUID || left.WorkerUID == right.ClientUID || right.WorkerUID == left.ClientUID)) {
+				return ErrUnavailable
+			}
 		}
 	}
 	if s := selectionFor(policy, kind); s == nil || !s.Enabled {
@@ -209,6 +234,9 @@ func loadApprovalKind(root, policyPath, kind string, rules trust) (*Approval, er
 		return nil, err
 	}
 	s := *selectionFor(policy, kind)
+	if strings.HasPrefix(kind, "payment:") {
+		kind = "payment"
+	}
 	base := filepath.Join(root, s.ID, s.Version)
 	raw, err = readProtected(filepath.Join(base, "manifest.json"), pluginapi.MaxManifestBytes, rules)
 	if err != nil {
@@ -263,8 +291,12 @@ func OpenApproved(root, policyPath string) (*Approval, error) {
 
 // OpenApprovedPayment pins the independently selected payment worker without
 // executing it. The launcher applies the same approval checks as the core.
-func OpenApprovedPayment(root, policyPath string) (*Approval, error) {
-	return loadApprovalKind(root, policyPath, "payment", trust{})
+func OpenApprovedPayment(root, policyPath string, slot ...string) (*Approval, error) {
+	kind := "payment"
+	if len(slot) > 0 && slot[0] != "" {
+		kind += ":" + slot[0]
+	}
+	return loadApprovalKind(root, policyPath, kind, trust{})
 }
 
 // OpenApprovedResource is the independent host-only resource worker slot.

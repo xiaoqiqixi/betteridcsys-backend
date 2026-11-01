@@ -34,7 +34,7 @@ BINS = {'bin/aster-api': './cmd/server', 'bin/aster-plugin-host': './cmd/plugin-
 SCRIPTS = ('backup-native.sh', 'core-manager.py', 'core-operation.py', 'plugin-manager.py', 'update-manager.py')
 TOOLS = ('scripts/backend_bundle.py', 'scripts/frontend_pair.py', 'scripts/pair_runtime.py',
          'scripts/release_bundle.py', 'contracts/frontend-bundle/frontend_bundle.py')
-SYSTEMD = {'aster-api.service', 'aster-payment.service', 'aster-resource.service', 'aster-smtp.service',
+SYSTEMD = {'aster-api.service', 'aster-payment.service', 'aster-payment@.service', 'aster-resource.service', 'aster-smtp.service',
            'api.env.example', 'journald-aster.conf.example'}
 
 

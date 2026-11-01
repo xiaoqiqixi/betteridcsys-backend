@@ -148,6 +148,33 @@ class ManagerTest(unittest.TestCase):
         self.assertFalse(final["payment"]["enabled"])
         self.assertTrue(final["smtp"]["enabled"])
 
+    def test_named_slots_migrate_without_reapproval_and_isolate_lifecycle(self):
+        self.install_payment()
+        legacy = self.mutate("select", 0, kind="payment", selection=self.payment_selection())["payment"]
+        migrated = self.mutate("migrate", 1, kind="payment", slot=legacy["id"])
+        first = migrated["payments"][0]
+        self.assertNotIn("payment", migrated)
+        self.assertEqual(first["manifest_sha256"], legacy["manifest_sha256"])
+        self.assertEqual(first["worker_uid"], legacy["worker_uid"])
+        self.assertEqual(first["socket"], "/run/aster-payment/payment.contract-example/plugin.sock")
+        other = self.payment_selection()
+        other.update(worker_uid=2004, socket="/run/aster-payment/second/plugin.sock")
+        both = self.mutate("select", 2, kind="payment", slot="second", selection=other)
+        self.assertEqual(len(both["payments"]), 2)
+        enabled = self.mutate("enable", 3, kind="payment", slot="second")
+        self.assertEqual(enabled["payments"][0], first)
+        self.assertTrue(enabled["payments"][1]["enabled"])
+        with self.assertRaises(manager.Rejected):
+            self.mutate("remove", 4, kind="payment", slot="second")
+        with self.assertRaises(manager.Rejected):
+            self.mutate("disable", 4, kind="payment")
+        self.mutate("disable", 4, kind="payment", slot="second")
+        final = self.mutate("remove", 5, kind="payment", slot="second")
+        self.assertEqual(final["payments"], [first])
+        for change in ({"worker_uid": first["worker_uid"]}, {"socket": first["socket"]}, {"client_uid": first["worker_uid"]}):
+            with self.assertRaises(manager.Rejected):
+                self.mutate("select", 6, kind="payment", slot="second", selection=other | change)
+
     def test_payment_package_identity_and_declared_capabilities_are_bound(self):
         for field, value in (("id", "payment.disabled"), ("id", "payment.Upper"),
                              ("protocol", "aster.payment/2"), ("capabilities", ["payment.checkout"]),

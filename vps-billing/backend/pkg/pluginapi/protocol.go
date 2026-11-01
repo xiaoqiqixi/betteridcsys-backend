@@ -30,7 +30,7 @@ const (
 	MaxRequestBytes  = 512 << 10
 	MaxResponseBytes = 8 << 10
 	MaxManifestBytes = 8 << 10
-	MaxPolicyBytes   = 16 << 10
+	MaxPolicyBytes   = 128 << 10
 )
 
 var ErrInvalid = errors.New("invalid plugin data")
@@ -58,14 +58,16 @@ type Target struct {
 
 // Policy contains no credentials. Only the host administrator can update it.
 type Policy struct {
-	Schema   int        `json:"schema"`
-	Revision uint64     `json:"revision"`
-	SMTP     *Selection `json:"smtp,omitempty"`
-	Payment  *Selection `json:"payment,omitempty"`
-	Resource *Selection `json:"resource,omitempty"`
+	Schema   int         `json:"schema"`
+	Revision uint64      `json:"revision"`
+	SMTP     *Selection  `json:"smtp,omitempty"`
+	Payment  *Selection  `json:"payment,omitempty"`
+	Payments []Selection `json:"payments,omitempty"`
+	Resource *Selection  `json:"resource,omitempty"`
 }
 
 type Selection struct {
+	Slot           string   `json:"slot,omitempty"`
 	Enabled        bool     `json:"enabled"`
 	ID             string   `json:"id"`
 	Version        string   `json:"version"`
@@ -110,9 +112,13 @@ type SendResponse struct {
 	DeliveryUncertain bool   `json:"delivery_uncertain"`
 }
 
-func ValidID(value string) bool      { return identifier.MatchString(value) }
-func ValidVersion(value string) bool { return release.MatchString(value) }
-func ValidDigest(value string) bool  { return digest.MatchString(value) }
+func ValidID(value string) bool { return identifier.MatchString(value) }
+
+var gatewayID = regexp.MustCompile(`^[a-z0-9][a-z0-9._-]{0,63}$`)
+
+func ValidGatewayID(value string) bool { return gatewayID.MatchString(value) }
+func ValidVersion(value string) bool   { return release.MatchString(value) }
+func ValidDigest(value string) bool    { return digest.MatchString(value) }
 
 func CompareVersion(a, b string) (int, error) {
 	if !ValidVersion(a) || !ValidVersion(b) {

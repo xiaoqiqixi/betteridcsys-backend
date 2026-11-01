@@ -1,0 +1,26 @@
+name: Payment gateway slots
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  slots-linux:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e
+        with:
+          go-version: '1.27.3'
+          cache: false
+      - name: Linux manager and approval lifecycle
+        run: python3 -B vps-billing/deploy/scripts/test-plugin-manager.py
+      - name: Linux socket protocol and plugin conformance
+        working-directory: vps-billing/backend
+        run: go test -race -count=1 ./pkg/pluginapi/... ./pkg/pluginserver/... ./internal/runtimeplugins/... ./plugins/...
+      - name: Real systemd instance isolation
+        run: sudo python3 -B vps-billing/deploy/ci/payment-slots-native.py
