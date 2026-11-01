@@ -194,6 +194,9 @@ func preflightChecks(version int) map[string]map[string]string {
 		checks["automation_settings"] = map[string]string{"automation_singleton": "id = 1"}
 		checks["automation_runs"] = map[string]string{"automation_counts": "processed >= 0 AND failed >= 0", "automation_status": "status IN ('running','succeeded','failed','uncertain')"}
 	}
+	if schemaIncludes(version, migrations.CreditPrecision) {
+		checks["credit_ledger"]["credit_precision"] = "decimal_places >= 0 AND decimal_places <= 6"
+	}
 	return checks
 }
 
@@ -348,6 +351,9 @@ func validatePreflightTableShape(ctx context.Context, conn *sql.Conn, version in
 		if expected := checks[table][name]; expected != "" {
 			check := currencyMigrationCheck{"CHECK", enforced, clause}
 			matches := currencyMigrationCheckMatches(check, expected)
+			if commerceLedgerColumns[table] != "" || automationColumns[table] != "" {
+				matches = commerceCheckMatches(check, expected)
+			}
 			if version >= 13 && (table == "product_configurations" || table == "order_product_configurations" || table == "provisioning_jobs") {
 				matches = productConfigurationMigrationCheckMatches(table, name, check, expected)
 			}

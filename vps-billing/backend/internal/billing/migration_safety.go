@@ -34,6 +34,9 @@ func validateAppliedMigrations(ctx context.Context, conn *sql.Conn, sources []st
 // MySQL DDL commits independently. Resume only known statements whose existing
 // definitions match exactly; a matching object name alone is insufficient.
 func prepareMigrationStatement(ctx context.Context, conn *sql.Conn, version int, q string) (string, bool, error) {
+	if version > 0 && version <= len(schemaVersions) && schemaVersions[version-1] == migrations.CreditPrecision {
+		return prepareCreditPrecisionMigration(ctx, conn, q)
+	}
 	if version > 0 && version <= len(schemaVersions) && (schemaVersions[version-1] == migrations.AccountSecurity || schemaVersions[version-1] == migrations.AccountFeatures) {
 		return prepareAccountMigration(ctx, conn, version, q)
 	}
@@ -154,6 +157,9 @@ func prepareMigrationStatement(ctx context.Context, conn *sql.Conn, version int,
 // Identifier/keyword case and MySQL's rendering of charset introducers are
 // irrelevant; literal case and expression grouping must remain significant.
 func normalizeMigrationCheck(expression string) (string, bool) {
+	if strings.Contains(expression, "--") {
+		return "", false
+	}
 	// CHECK_CLAUSE on MySQL 8.4 escapes the quote delimiters of charset
 	// literals. Shipped checks contain only unescaped ASCII currency literals.
 	expression = strings.ReplaceAll(expression, `\'`, `'`)
@@ -188,7 +194,9 @@ func normalizeMigrationCheck(expression string) (string, bool) {
 				return "", false
 			}
 			literal := expression[i+1 : i+1+end]
-			if literal != "USD" && literal != "CNY" {
+			switch literal {
+			case "USD", "CNY", "top_up", "invoice_payment", "refund", "adjustment", "affiliate_payout", "overpayment", "running", "succeeded", "failed", "uncertain":
+			default:
 				return "", false
 			}
 			tokens = append(tokens, "'"+literal+"'")
@@ -224,7 +232,7 @@ func normalizeMigrationCheck(expression string) (string, bool) {
 			i = end
 			continue
 		}
-		if c == '(' || c == ')' || c == ',' || c == '=' || c == '<' || c == '>' {
+		if c == '(' || c == ')' || c == ',' || c == '=' || c == '<' || c == '>' || c == '+' || c == '-' {
 			token := string(c)
 			i++
 			if (c == '<' || c == '>') && i < len(expression) && expression[i] == '=' {

@@ -64,6 +64,57 @@ func TestMySQLCreditLedgerConcurrencyAndReplay(t *testing.T) {
 	}
 }
 
+func TestMySQLCreditSnapshotsEverySupportedPrecision(t *testing.T) {
+	f := mysqlCatalogFixture(t)
+	m := f.store.(*MySQL)
+	for _, tc := range []struct {
+		currency string
+		decimals int
+		amount   string
+	}{{"JPY", 0, "1"}, {"EUR", 2, "1.23"}, {"KWD", 3, "1.234"}, {"XTS", 6, "1.234567"}} {
+		t.Run(tc.currency, func(t *testing.T) {
+			configureTestCurrency(t, m, f.admin, tc.currency, tc.decimals, tc.amount)
+			u := User{ID: ID(), Email: ID() + "@credit.test", Name: "Credit customer", Role: "customer", PasswordHash: "unused"}
+			if err := m.AddUser(t.Context(), u); err != nil {
+				t.Fatal(err)
+			}
+			migrationExec(t, t.Context(), m.DB, "UPDATE users SET currency=? WHERE id=?", tc.currency, u.ID)
+			entry, err := m.AdjustCredit06(t.Context(), f.admin, u.ID, 123, "Precision snapshot", "credit-precision-"+tc.currency)
+			if err != nil || entry.Amount.DecimalPlaces != int64(tc.decimals) || entry.Amount.Currency != tc.currency {
+				t.Fatal(entry, err)
+			}
+			contracttest.Data(t, "CreditEntry", map[string]any{"data": entry})
+		})
+	}
+}
+
+func TestCommerceCheckNormalizationPreservesLiteralSemantics(t *testing.T) {
+	for _, expression := range []string{"kind IN ('top_up','invoice_payment','refund','adjustment','affiliate_payout','overpayment')", "status IN ('running','succeeded','failed','uncertain')"} {
+		if !commerceCheckMatches(currencyMigrationCheck{"CHECK", "YES", expression}, expression) {
+			t.Fatal("unrecognized commerce check", expression)
+		}
+	}
+	for _, test := range []struct {
+		actual, expected string
+		valid            bool
+	}{
+		{"((amount_minor >= -(9007199254740991)) and (amount_minor <= 9007199254740991))", "amount_minor >= -9007199254740991 AND amount_minor <= 9007199254740991", true},
+		{"((refunded_minor <= (credit_applied_minor + amount_paid_minor)))", "refunded_minor <= credit_applied_minor + amount_paid_minor", true},
+		{"amount_minor >= -9007199254740990", "amount_minor >= -9007199254740991", false},
+		{"(amount_minor >= 0) OR (amount_minor <= 9007199254740991)", "amount_minor >= 0 AND amount_minor <= 9007199254740991", false},
+	} {
+		if commerceCheckMatches(currencyMigrationCheck{"CHECK", "YES", test.actual}, test.expected) != test.valid {
+			t.Fatal("changed commerce check", test)
+		}
+	}
+	if _, ok := normalizeMigrationCheck("kind IN ('TOP_UP')"); ok {
+		t.Fatal("changed literal case accepted")
+	}
+	if _, ok := normalizeMigrationCheck("status='running' OR 1=1 -- ignored"); ok {
+		t.Fatal("SQL comment accepted")
+	}
+}
+
 func TestMySQLCreditHandlersOwnershipAndContract(t *testing.T) {
 	f := mysqlCatalogFixture(t)
 	m := f.store.(*MySQL)

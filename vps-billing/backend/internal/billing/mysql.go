@@ -84,7 +84,7 @@ func OpenMySQL(ctx context.Context, dsn string, allowInsecure bool) (*MySQL, err
 	return &MySQL{DB: db, transport: transport, database: cfg.DBName}, nil
 }
 
-var schemaVersions = []string{migrations.Initial, migrations.SiteSettings, migrations.Currencies, migrations.BillingSnapshots, migrations.ExactCurrencyCodes, migrations.EmailSettings, migrations.CurrencyRegistry, migrations.PaymentRuntime, migrations.AuditQueryIndexes, migrations.CustomerAccounts, migrations.CatalogTaxonomy, migrations.CatalogNodes, migrations.ProductConfigurations, migrations.PaymentResolution, migrations.StaffRoles, migrations.CommerceCatalog, migrations.AccountSecurity, migrations.CommerceCoupons, migrations.PaymentGateways, migrations.CommerceLedger, migrations.Automation, migrations.AccountFeatures}
+var schemaVersions = []string{migrations.Initial, migrations.SiteSettings, migrations.Currencies, migrations.BillingSnapshots, migrations.ExactCurrencyCodes, migrations.EmailSettings, migrations.CurrencyRegistry, migrations.PaymentRuntime, migrations.AuditQueryIndexes, migrations.CustomerAccounts, migrations.CatalogTaxonomy, migrations.CatalogNodes, migrations.ProductConfigurations, migrations.PaymentResolution, migrations.StaffRoles, migrations.CommerceCatalog, migrations.AccountSecurity, migrations.CommerceCoupons, migrations.PaymentGateways, migrations.CommerceLedger, migrations.Automation, migrations.AccountFeatures, migrations.CreditPrecision}
 
 func (m *MySQL) Ping(ctx context.Context) error {
 	rows, err := m.DB.QueryContext(ctx, "SELECT version,checksum FROM schema_migrations ORDER BY version")

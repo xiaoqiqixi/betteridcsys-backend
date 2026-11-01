@@ -67,3 +67,6 @@ var Automation string
 
 //go:embed 022_account_features.sql
 var AccountFeatures string
+
+//go:embed 023_credit_precision.sql
+var CreditPrecision string
