@@ -10,6 +10,15 @@ CI = ROOT / 'vps-billing/deploy/ci'
 
 
 class NativeMigration(unittest.TestCase):
+    def test_main_push_runs_read_only_release_regressions(self):
+        workflow = (ROOT / '.github/workflows/release-tooling.yml').read_text()
+        self.assertIn('  push:\n    branches: [main]\n', workflow)
+        self.assertIn('run: bash scripts/check-release-tooling.sh', workflow)
+        self.assertIn('  contents: read\n  actions: read\n', workflow)
+        self.assertNotIn(': write', workflow)
+        self.assertNotIn('gh release', workflow)
+        self.assertNotIn('attest-build-provenance@', workflow)
+
     def test_all_privileged_entrypoints_pin_both_repository_name_and_id(self):
         for name in ('core-native.sh', 'accept-native.sh', 'payment-native.sh', 'plugin-native.sh', 'performance-native.sh'):
             text = (CI / name).read_text()
