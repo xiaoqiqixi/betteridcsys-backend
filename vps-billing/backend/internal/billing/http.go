@@ -311,6 +311,10 @@ func (a *App) serve(w http.ResponseWriter, r *http.Request) {
 	if admin {
 		uid = ""
 	}
+	if id, matched := paymentVoidPath(p); matched {
+		a.voidPaymentHTTP(w, r, u, id)
+		return
+	}
 	if r.Method == "POST" && p == "/orders" {
 		a.createOrder(w, r, u)
 		return

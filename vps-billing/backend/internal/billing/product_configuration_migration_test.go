@@ -7,7 +7,7 @@ import (
 )
 
 func TestProductConfigurationMigrationIsAdditiveAndPrivate(t *testing.T) {
-	if len(schemaVersions) != 13 {
+	if len(schemaVersions) != 14 {
 		t.Fatal("schema13 not registered", len(schemaVersions))
 	}
 	statements := migrationStatements(schemaVersions[12])
@@ -51,7 +51,7 @@ func TestMySQLProductConfigurationMigrationPreservesHistoryWithoutBackfill(t *te
 		t.Fatal("repeat additive migration", err)
 	}
 	status, err := m.SchemaStatus(ctx)
-	if err != nil || status.Status != "current" || status.SchemaVersion != 13 {
+	if err != nil || status.Status != "current" || status.SchemaVersion != 14 {
 		t.Fatal(status, err)
 	}
 }

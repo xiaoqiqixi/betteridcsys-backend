@@ -84,7 +84,7 @@ func OpenMySQL(ctx context.Context, dsn string, allowInsecure bool) (*MySQL, err
 	return &MySQL{DB: db, transport: transport, database: cfg.DBName}, nil
 }
 
-var schemaVersions = []string{migrations.Initial, migrations.SiteSettings, migrations.Currencies, migrations.BillingSnapshots, migrations.ExactCurrencyCodes, migrations.EmailSettings, migrations.CurrencyRegistry, migrations.PaymentRuntime, migrations.AuditQueryIndexes, migrations.CustomerAccounts, migrations.CatalogTaxonomy, migrations.CatalogNodes, migrations.ProductConfigurations}
+var schemaVersions = []string{migrations.Initial, migrations.SiteSettings, migrations.Currencies, migrations.BillingSnapshots, migrations.ExactCurrencyCodes, migrations.EmailSettings, migrations.CurrencyRegistry, migrations.PaymentRuntime, migrations.AuditQueryIndexes, migrations.CustomerAccounts, migrations.CatalogTaxonomy, migrations.CatalogNodes, migrations.ProductConfigurations, migrations.PaymentResolution}
 
 func (m *MySQL) Ping(ctx context.Context) error {
 	rows, err := m.DB.QueryContext(ctx, "SELECT version,checksum FROM schema_migrations ORDER BY version")
@@ -200,6 +200,15 @@ func (m *MySQL) Migrate(ctx context.Context) error {
 				}
 				if _, _, err = prepareAuditIndex(ctx, conn, q); err != nil {
 					return fmt.Errorf("migration 9 preparation failed: %w", err)
+				}
+			}
+		}
+		if version == 14 {
+			for _, q := range strings.Split(source, ";") {
+				if q = strings.TrimSpace(q); q != "" {
+					if _, _, err = preparePaymentResolutionMigration(ctx, conn, q); err != nil {
+						return fmt.Errorf("migration 14 preparation failed: %w", err)
+					}
 				}
 			}
 		}
@@ -494,7 +503,7 @@ func (m *MySQL) RecentOrders(ctx context.Context, uid string) ([]Order, error) {
 
 func (m *MySQL) Invoices(c context.Context, uid string) ([]Invoice, error) {
 	w, a := filter(uid)
-	r, e := m.DB.QueryContext(c, "SELECT id,number,user_id,order_id,status,amount_minor,currency,issued_at,due_at,paid_at,issuer_snapshot,currency_snapshot FROM invoices"+w+" ORDER BY issued_at DESC LIMIT 1000", a...)
+	r, e := m.DB.QueryContext(c, "SELECT id,number,user_id,order_id,status,amount_minor,currency,issued_at,due_at,paid_at,issuer_snapshot,currency_snapshot,settlement_review FROM invoices"+w+" ORDER BY issued_at DESC LIMIT 1000", a...)
 	if e != nil {
 		return nil, e
 	}
@@ -503,7 +512,7 @@ func (m *MySQL) Invoices(c context.Context, uid string) ([]Invoice, error) {
 	for r.Next() {
 		var i Invoice
 		var issuerRaw, currencyRaw []byte
-		e = r.Scan(&i.ID, &i.Number, &i.UserID, &i.OrderID, &i.Status, &i.AmountMinor, &i.Currency, &i.IssuedAt, &i.DueAt, &i.PaidAt, &issuerRaw, &currencyRaw)
+		e = r.Scan(&i.ID, &i.Number, &i.UserID, &i.OrderID, &i.Status, &i.AmountMinor, &i.Currency, &i.IssuedAt, &i.DueAt, &i.PaidAt, &issuerRaw, &currencyRaw, &i.SettlementReview)
 		if e != nil {
 			return nil, e
 		}
@@ -669,13 +678,13 @@ func (m *MySQL) createOrderOnce(c context.Context, u User, pid, host, key, curre
 func (m *MySQL) Invoice(c context.Context, uid, id string) (Invoice, error) {
 	var i Invoice
 	var issuerRaw, currencyRaw []byte
-	query := "SELECT id,number,user_id,order_id,status,amount_minor,currency,issued_at,due_at,paid_at,issuer_snapshot,currency_snapshot FROM invoices WHERE id=?"
+	query := "SELECT id,number,user_id,order_id,status,amount_minor,currency,issued_at,due_at,paid_at,issuer_snapshot,currency_snapshot,settlement_review FROM invoices WHERE id=?"
 	args := []any{id}
 	if uid != "" {
 		query += " AND user_id=?"
 		args = append(args, uid)
 	}
-	e := m.DB.QueryRowContext(c, query, args...).Scan(&i.ID, &i.Number, &i.UserID, &i.OrderID, &i.Status, &i.AmountMinor, &i.Currency, &i.IssuedAt, &i.DueAt, &i.PaidAt, &issuerRaw, &currencyRaw)
+	e := m.DB.QueryRowContext(c, query, args...).Scan(&i.ID, &i.Number, &i.UserID, &i.OrderID, &i.Status, &i.AmountMinor, &i.Currency, &i.IssuedAt, &i.DueAt, &i.PaidAt, &issuerRaw, &currencyRaw, &i.SettlementReview)
 	if e == nil && len(issuerRaw) > 0 {
 		e = json.Unmarshal(issuerRaw, &i.Issuer)
 	}

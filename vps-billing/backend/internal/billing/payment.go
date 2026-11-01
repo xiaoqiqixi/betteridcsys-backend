@@ -18,8 +18,8 @@ var (
 
 // PaymentAttempt is saved before the first adapter call. Its expectation is a
 // snapshot of core records and administrator-selected identity, never callback
-// input. No expiry or failed network call releases this reservation: a provider
-// may have accepted a checkout even when its response was lost.
+// input. Provider expiry is persisted in Checkout; only its expiry plus grace
+// releases a known checkout. Uncertain outcomes require explicit staff review.
 type PaymentAttempt struct {
 	ID          string                             `json:"id"`
 	RequestKey  string                             `json:"-"`
@@ -31,15 +31,17 @@ type PaymentAttempt struct {
 }
 
 type PaymentSettlement struct {
-	AttemptID string  `json:"attempt_id"`
-	Invoice   Invoice `json:"invoice"`
-	Order     Order   `json:"order"`
-	Replay    bool    `json:"replay"`
+	AttemptID   string  `json:"attempt_id"`
+	Invoice     Invoice `json:"invoice"`
+	Order       Order   `json:"order"`
+	Replay      bool    `json:"replay"`
+	Disposition string  `json:"disposition"`
 }
 
 type paymentReceipt struct {
 	AttemptID, ProviderID, EventID, TransactionID string
 	SettledAt, ReceivedAt                         time.Time
+	Disposition                                   string
 }
 
 var paymentProviderID = regexp.MustCompile(`^[a-z][a-z0-9_.-]{1,63}$`)
@@ -85,17 +87,16 @@ func paymentExpectation(o Order, i Invoice, provider, merchant string) integrati
 }
 
 func validateAttemptPair(a PaymentAttempt, o Order, i Invoice) error {
-	if a.State != "pending" && a.State != "checkout" && a.State != "uncertain" && a.State != "settled" {
+	if a.State != "pending" && a.State != "checkout" && a.State != "uncertain" && a.State != "settled" && a.State != "expired" && a.State != "voided" {
 		return ErrPaymentState
 	}
 	if a.Expectation != paymentExpectation(o, i, a.Expectation.ProviderID, a.Expectation.MerchantAccountID) {
 		return ErrPaymentConflict
 	}
-	if a.State == "settled" {
-		if o.Status != "paid" || i.Status != "paid" || i.PaidAt == nil {
-			return ErrPaymentState
-		}
-	} else if o.Status != "pending_payment" || i.Status != "unpaid" || i.PaidAt != nil {
+	validPair := (o.Status == "paid" && i.Status == "paid" && i.PaidAt != nil) ||
+		(o.Status == "pending_payment" && i.Status == "unpaid" && i.PaidAt == nil) ||
+		(o.Status == "cancelled" && i.Status == "void" && i.PaidAt == nil)
+	if !validPair || (a.State == "settled" && i.Status != "paid" && !(i.Status == "void" && i.SettlementReview)) {
 		return ErrPaymentState
 	}
 	return nil
@@ -138,4 +139,18 @@ func paidEvent(o Order, i Invoice, a PaymentAttempt) []byte {
 
 func paidAudit(o Order, a PaymentAttempt, now time.Time) Audit {
 	return Audit{ID: ID(), UserID: o.UserID, Action: "payment.settled", Target: o.ID, CreatedAt: now, ActorEmail: "payment:" + a.Expectation.ProviderID, Detail: "已验签的支付回调与核心账单匹配，订单与账单已原子记账；未执行资源开通"}
+}
+
+func settlementDisposition(i Invoice) string {
+	switch i.Status {
+	case "paid":
+		return "duplicate"
+	case "void":
+		return "cancelled"
+	default:
+		return "settled"
+	}
+}
+func reviewPaymentAudit(o Order, a PaymentAttempt, disposition string, now time.Time) Audit {
+	return Audit{ID: ID(), UserID: o.UserID, Action: "payment." + disposition, Target: o.ID, CreatedAt: now, ActorEmail: "payment:" + a.Expectation.ProviderID, Detail: "Verified additional settlement requires manual reconciliation; attempt=" + a.ID}
 }
