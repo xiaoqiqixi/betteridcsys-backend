@@ -145,7 +145,7 @@ class RuntimeReleaseTests(unittest.TestCase):
     def test_0510_candidate_publication_binds_versions_schema_and_history_boundary(self):
         migrations = tuple(path.name for path in sorted(
             (Path(__file__).resolve().parents[2] / "backend/migrations").glob("*.sql")))
-        self.assertEqual(len(migrations), 13)
+        self.assertEqual(len(migrations), 15)
         api, env, event, files, artifact, _, _ = normal_flow(
             "core", raw=True, version="0.5.10", migration_names=migrations)
         build = pipeline.strict_json(files["BUILD.json"])
@@ -177,13 +177,13 @@ class RuntimeReleaseTests(unittest.TestCase):
                 self.assertFalse(any('source.tar.gz' in name for name in files))
                 self.assertEqual(set(pipeline.validate_package(files, SHA, version, kind)), set(files))
 
-    def test_059_raw_metadata_binds_active_core_smtp_and_all_thirteen_migrations(self):
+    def test_059_raw_metadata_binds_core_smtp_and_all_selected_migrations(self):
         # Explicit active-release fixture; historical archive/raw defaults remain
         # 0.4.0/0.5.2 and retain their original compatibility/inventory semantics.
         migrations = tuple(path.name for path in sorted(
             (Path(__file__).resolve().parents[2] / "backend/migrations").glob("*.sql")))
-        self.assertEqual(len(migrations), 13)
-        self.assertEqual(migrations[-1], "013_product_configurations.sql")
+        self.assertEqual(len(migrations), 15)
+        self.assertEqual(migrations[-1], "015_staff_roles.sql")
         api, env, event, files, _, kind, version = normal_flow(
             "core", raw=True, version="0.5.9", migration_names=migrations)
         self.assertEqual((kind, version), ("core", "0.5.9"))
