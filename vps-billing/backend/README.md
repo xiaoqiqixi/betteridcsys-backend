@@ -1,6 +1,6 @@
 # Aster Billing API（星屿云）
 
-Go HTTP API、MySQL 8.4/InnoDB 存储和显式 demo 内存模式。当前代码 Core 为 0.5.10；支持可配置运营身份、简体中文/English、登记币种独立报价与订单/账单。全新安装仅 CNY，升级保留旧 USD。支付渠道由开发者按 [支付适配器合同](../docs/PAYMENT_PLUGINS.md)集成；官方默认关闭支付，SMTP 为单独安装的运行时插件。完整 API 约定见 [CONTRACT.md](../docs/CONTRACT.md)，实际验证见 [VALIDATION.md](../docs/VALIDATION.md)。
+Go HTTP API、MySQL 8.4/InnoDB 存储和显式 demo 内存模式。当前代码 Core 为 0.6.0；支持可配置运营身份、简体中文/English、登记币种独立报价与订单/账单。全新安装仅 CNY，升级保留旧 USD。支付渠道由开发者按 [支付适配器合同](../docs/PAYMENT_PLUGINS.md)集成；官方默认关闭支付，SMTP 为单独安装的运行时插件。完整 API 约定见 [CONTRACT.md](../docs/CONTRACT.md)，实际验证见 [VALIDATION.md](../docs/VALIDATION.md)。
 
 ## 本机演示
 
