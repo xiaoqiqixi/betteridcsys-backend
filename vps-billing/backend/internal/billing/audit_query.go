@@ -269,13 +269,21 @@ func (a *App) auditEventsHTTP(w http.ResponseWriter, r *http.Request, actor User
 	if actor.Role != "admin" {
 		page.Items = customerAudits(page.Items, actor.Email)
 	}
+	// Use a methodless type: embedding Audit would promote MarshalJSON and
+	// silently discard the administrator-only owner_id sibling field.
+	type auditFields Audit
 	type event struct {
-		Audit
-		OwnerID string `json:"owner_id,omitempty"`
+		auditFields
+		OwnerID    string  `json:"owner_id,omitempty"`
+		ActorEmail *string `json:"actor_email,omitempty"`
+		Detail     *string `json:"detail,omitempty"`
 	}
 	items := make([]event, len(page.Items))
 	for i, row := range page.Items {
-		items[i].Audit = row
+		items[i].auditFields = auditFields(row)
+		if row.ActorType != "staff" && row.ActorType != "system" {
+			items[i].ActorEmail, items[i].Detail = &row.ActorEmail, &row.Detail
+		}
 		if admin {
 			items[i].OwnerID = row.UserID
 		}
