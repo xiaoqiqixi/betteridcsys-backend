@@ -509,9 +509,8 @@ def clone_installed_baseline(source, destination):
 
 
 def verify_paired_candidate(source, assets, installed, commit):
-    spec = importlib.util.spec_from_file_location("native_paired_candidate", source / "scripts/release_bundle.py")
-    policy = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(policy)
+    executor = module("core_paired_candidate_executor", "core-operation.py")
+    policy = executor.updater.paired_policy()
     pin = policy.P.validate_pin(json.loads((source / "FRONTEND_PAIR.json").read_bytes()))
     names = policy.names(pin['core_version'], pin) - {'BUILD.json', 'PROVENANCE.json'}
     require({p.name for p in assets.iterdir()} == names, "Paired candidate asset inventory differs")
@@ -1584,8 +1583,15 @@ def parser():
 
 def main():
     if len(sys.argv) == 4 and sys.argv[1] == "--clone-installed-baseline":
-        require(os.geteuid() == 0 and os.environ.get("GITHUB_REPOSITORY_ID") == "1435344087" and
-                os.environ.get("RUNNER_ENVIRONMENT") == "github-hosted", "Disposable runner required")
+        require(os.geteuid() == 0 and os.environ.get("GITHUB_ACTIONS") == "true" and
+                os.environ.get("GITHUB_REPOSITORY") == "xiaoqiqixi/betteridcsys-backend" and
+                os.environ.get("GITHUB_REPOSITORY_ID") == "1435344087" and
+                os.environ.get("RUNNER_ENVIRONMENT") == "github-hosted" and
+                re.fullmatch(r"[0-9]+", os.environ.get("GITHUB_RUN_ID", "")) and
+                re.fullmatch(r"[0-9]+", os.environ.get("GITHUB_RUN_ATTEMPT", "")), "Disposable runner required")
+        prefix = "/opt/aster-ci-" + os.environ["GITHUB_RUN_ID"] + "-" + os.environ["GITHUB_RUN_ATTEMPT"] + "-"
+        require(re.fullmatch(re.escape(prefix) + r"[0-9]+/core-upgrade/releases/0\.5\.2", sys.argv[3]),
+                "Clone destination must belong to the current disposable fixture")
         print(json.dumps(clone_installed_baseline(sys.argv[2], sys.argv[3]), sort_keys=True))
         return
     args = parser().parse_args()

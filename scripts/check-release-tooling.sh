@@ -13,6 +13,9 @@ python3 -B "$root/scripts/test_native_migration.py"
 # the independent release and host-tool regression suites.
 python3 -B -m unittest discover -s "$root/vps-billing/deploy/ci" -p 'test_runtime_release.py'
 python3 -B -m unittest discover -s "$root/vps-billing/deploy/ci" -p 'test_check.py'
+for name in accept_native plugin_native payment_native; do
+  python3 -B -m unittest discover -s "$root/vps-billing/deploy/ci" -p "test_$name.py"
+done
 for name in release-manifest plugin-manager update-manager core-manager core-operation; do
   python3 -B "$root/vps-billing/deploy/scripts/test-$name.py"
 done
