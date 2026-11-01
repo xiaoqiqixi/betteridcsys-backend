@@ -54,6 +54,10 @@ type staffStore interface {
 }
 
 func (a *App) staffHTTP(w http.ResponseWriter, r *http.Request, u User, p string) {
+	if p == "/admin/staff" && r.Method == "POST" {
+		a.inviteStaff(w, r, u)
+		return
+	}
 	s, ok := a.Store.(staffStore)
 	if !ok {
 		a.internal(w, r, ErrUnavailable)
@@ -66,10 +70,10 @@ func (a *App) staffHTTP(w http.ResponseWriter, r *http.Request, u User, p string
 		v, err = s.StaffRoles(r.Context())
 	case p == "/admin/roles" && r.Method == "POST":
 		var in staffRoleInput
-		if !body(w, r, &in) {
+		if !accountBody(w, r, "adminSaveRole", &in) {
 			return
 		}
-		if !validText(in.Name, 60, true) || !validText(in.Description, 240, false) || in.Permissions == nil || !staffaccess.ValidPermissions(in.Permissions) || (in.ID != "" && (in.Revision == nil || *in.Revision < 1 || *in.Revision >= MaxMinor)) {
+		if strings.TrimSpace(in.Name) == "" || !validText(in.Name, 60, true) || !validText(in.Description, 240, false) || in.Permissions == nil || !staffaccess.ValidPermissions(in.Permissions) || (in.ID != "" && (in.Revision == nil || *in.Revision < 1 || *in.Revision >= MaxMinor)) {
 			fail(w, r, 400, "INVALID_BODY", "Invalid role")
 			return
 		}
@@ -83,7 +87,7 @@ func (a *App) staffHTTP(w http.ResponseWriter, r *http.Request, u User, p string
 			return
 		}
 		var in staffMemberInput
-		if !body(w, r, &in) {
+		if !accountBody(w, r, "adminUpdateStaff", &in) {
 			return
 		}
 		if in.Revision == nil || *in.Revision < 1 || *in.Revision >= MaxMinor || (in.Status != nil && *in.Status != "active" && *in.Status != "disabled") || (in.RoleID != nil && (len(*in.RoleID) == 0 || len(*in.RoleID) > 64)) {

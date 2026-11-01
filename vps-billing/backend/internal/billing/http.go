@@ -228,12 +228,15 @@ func (a *App) serve(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
+	if a.authAccountsHTTP(w, r, p) {
+		return
+	}
 	if p == "/session" && r.Method == "GET" {
 		t := a.token(r)
-		var user any
+		var user *User
 		u, e := a.current(r)
 		if e == nil {
-			user = u
+			user = &u
 		} else if !errors.Is(e, ErrNotFound) {
 			a.internal(w, r, e)
 			return
@@ -242,7 +245,7 @@ func (a *App) serve(w http.ResponseWriter, r *http.Request) {
 			t = ID() + ID()
 			a.setCookie(w, t)
 		}
-		jsonOut(w, 200, map[string]any{"user": user, "csrf_token": a.csrf(t), "demo_mode": a.Config.Demo})
+		a.writeSession(w, r, user, t)
 		return
 	}
 	if p == "/auth/login" && r.Method == "POST" {
@@ -256,7 +259,7 @@ func (a *App) serve(w http.ResponseWriter, r *http.Request) {
 		}
 		t := ID() + ID()
 		a.setCookie(w, t)
-		jsonOut(w, 200, map[string]any{"user": nil, "csrf_token": a.csrf(t)})
+		a.writeSession(w, r, nil, t)
 		return
 	}
 	if p == "/cart/quote" {
@@ -321,6 +324,13 @@ func (a *App) serve(w http.ResponseWriter, r *http.Request) {
 }
 func (a *App) serveAuthorized(w http.ResponseWriter, r *http.Request, u User, p string, admin bool) {
 	if a.gatewayRoutes(w, r, u, p) {
+		return
+	}
+	if !admin && a.accountProfileHTTP(w, r, u, p) {
+		return
+	}
+	if p == "/admin/email-templates" || strings.HasPrefix(p, "/admin/email-templates/") {
+		a.emailTemplatesHTTP(w, r, u, p)
 		return
 	}
 	if p == "/admin/roles" || p == "/admin/staff" || strings.HasPrefix(p, "/admin/staff/") {
@@ -569,6 +579,9 @@ func (a *App) result(w http.ResponseWriter, r *http.Request, v any, e error) {
 	}
 }
 func (a *App) allowLogin(key string) bool {
+	if !strings.HasPrefix(key, "ip:") {
+		return true
+	}
 	a.limiterMu.Lock()
 	defer a.limiterMu.Unlock()
 	now := time.Now()
@@ -587,21 +600,9 @@ func (a *App) allowLogin(key string) bool {
 	if now.Sub(b.Start) > 15*time.Minute {
 		b.Count, b.Start = 0, now
 	}
-	if strings.HasPrefix(key, "email:") && b.Count >= 20 {
-		// Denied requests never extend the deadline. A sprayed account gets
-		// another authentication opportunity at most 30 seconds later.
-		delay := time.Second << min(b.Count-20, 5)
-		if delay > 30*time.Second {
-			delay = 30 * time.Second
-		}
-		if now.Sub(b.Start) < delay {
-			return false
-		}
-		b.Start = now
-	}
 	b.Count = min(b.Count+1, 26)
 	a.attempts[key] = b
-	return strings.HasPrefix(key, "email:") || b.Count <= 20
+	return b.Count <= 20
 }
 
 // IPv4-mapped addresses share the IPv4 /32 bucket; IPv6 privacy addresses
@@ -623,30 +624,18 @@ func (a *App) login(w http.ResponseWriter, r *http.Request) {
 	var v struct {
 		Email    string `json:"email"`
 		Password string `json:"password"`
+		Remember bool   `json:"remember"`
 	}
-	if !body(w, r, &v) {
+	if !accountBody(w, r, "login", &v) {
 		return
 	}
 	v.Email = strings.ToLower(strings.TrimSpace(v.Email))
-	if len(v.Email) > 254 || len(v.Password) > 72 {
+	if len(v.Email) > 254 || len(v.Password) > 1024 {
 		fail(w, r, 401, "INVALID_CREDENTIALS", "邮箱或密码不正确")
 		return
 	}
-	ip, _, _ := net.SplitHostPort(r.RemoteAddr)
-	if parsed := net.ParseIP(ip); parsed != nil {
-		ip = parsed.String()
-	}
-	for _, cidr := range a.Config.TrustedProxyCIDRs {
-		_, network, e := net.ParseCIDR(cidr)
-		if e == nil && network.Contains(net.ParseIP(ip)) {
-			forwarded := strings.TrimSpace(r.Header.Get("X-Real-IP"))
-			if net.ParseIP(forwarded) != nil {
-				ip = net.ParseIP(forwarded).String()
-			}
-			break
-		}
-	}
-	if !a.allowLogin("ip:"+ip) || !a.allowLogin("pair:"+v.Email+":"+loginIPPrefix(ip)) || !a.allowLogin("email:"+v.Email) {
+	ip := a.clientIP(r)
+	if !a.allowLogin("ip:" + ip) {
 		w.Header().Set("Retry-After", "30")
 		fail(w, r, 429, "RATE_LIMITED", "尝试次数过多，请稍后再试")
 		return
@@ -659,13 +648,27 @@ func (a *App) login(w http.ResponseWriter, r *http.Request) {
 		a.internal(w, r, e)
 		return
 	}
-	valid := bcrypt.CompareHashAndPassword(hash, []byte(v.Password)) == nil
+	valid := checkPassword(string(hash), v.Password)
+	if err := a.recordLogin(r, u, v.Email, valid && e == nil && !u.Disabled); err != nil {
+		a.internal(w, r, err)
+		return
+	}
 	if !valid || e != nil || u.Disabled {
 		fail(w, r, 401, "INVALID_CREDENTIALS", "邮箱或密码不正确")
 		return
 	}
+	security, err := a.securitySettings(r.Context())
+	if err != nil {
+		a.internal(w, r, err)
+		return
+	}
+	hours := security.ClientSessionHours
+	if u.Role == "admin" {
+		hours = security.StaffSessionHours
+	}
+	lifetime := time.Duration(hours) * time.Hour
 	token := ID() + ID()
-	if e = a.Store.PutSession(r.Context(), Session{Revision: u.Revision, Hash: digest(token), UserID: u.ID, Expires: time.Now().UTC().Add(8 * time.Hour)}); e != nil {
+	if e = a.Store.PutSession(r.Context(), Session{Revision: u.Revision, Hash: digest(token), UserID: u.ID, Expires: time.Now().UTC().Add(lifetime), IP: ip, UserAgent: shortUserAgent(r)}); e != nil {
 		if errors.Is(e, ErrNotFound) || errors.Is(e, ErrConflict) {
 			fail(w, r, 401, "INVALID_CREDENTIALS", "邮箱或密码不正确")
 			return
@@ -679,8 +682,8 @@ func (a *App) login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	observeActor(r.Context(), u)
-	a.setCookie(w, token)
-	jsonOut(w, 200, map[string]any{"user": u, "csrf_token": a.csrf(token), "demo_mode": a.Config.Demo})
+	a.setSessionCookie(w, token, lifetime, v.Remember)
+	a.writeSession(w, r, &u, token)
 }
 
 var hostnamePattern = regexp.MustCompile(`^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$`)

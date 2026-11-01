@@ -54,42 +54,45 @@ func TestLoginLimiterIPv6PrefixAndIPv4Identity(t *testing.T) {
 	}
 }
 
-func TestLoginLimiterEmailEventuallyReopens(t *testing.T) {
+func TestLoginLimiterNeverTracksEmails(t *testing.T) {
 	a := &App{attempts: map[string]bucket{}}
-	for n := 0; n < 100; n++ {
-		a.allowLogin("email:target@example.invalid")
+	for n := 0; n < 1000; n++ {
+		if !a.allowLogin("email:target@example.invalid") {
+			t.Fatal("email backoff remains")
+		}
 	}
-	b := a.attempts["email:target@example.invalid"]
-	b.Start = time.Now().Add(-time.Minute)
-	a.attempts["email:target@example.invalid"] = b
-	if !a.allowLogin("email:target@example.invalid") {
-		t.Fatal("email cannot recover after capped backoff")
+	if len(a.attempts) != 0 {
+		t.Fatal("email attempts consumed bounded IP storage")
+	}
+	for n := 0; n < 30; n++ {
+		a.allowLogin("ip:192.0.2.1")
+	}
+	if !a.allowLogin("ip:192.0.2.2") {
+		t.Fatal("same email would be blocked at another prefix")
 	}
 }
-
-func TestEmailBackoffIsCappedAndRejectedSprayDoesNotExtendIt(t *testing.T) {
+func TestRejectedIPRequestsDoNotExtendWindow(t *testing.T) {
 	a := &App{attempts: map[string]bucket{}}
-	key := "email:target@example.invalid"
+	key := "ip:192.0.2.1"
 	for range 20 {
 		if !a.allowLogin(key) {
 			t.Fatal("initial burst denied")
 		}
 	}
-	for range 10 {
-		b := a.attempts[key]
-		b.Start = time.Now().Add(-31 * time.Second)
-		a.attempts[key] = b
-		if !a.allowLogin(key) {
-			t.Fatal("email backoff exceeded cap")
+	stored := "ip:" + loginIPPrefix("192.0.2.1")
+	start := a.attempts[stored].Start
+	for range 100 {
+		if a.allowLogin(key) {
+			t.Fatal("IP limit bypassed")
 		}
-		deadlineBase := a.attempts[key].Start
-		for range 100 {
-			if a.allowLogin(key) {
-				t.Fatal("backoff bypassed")
-			}
-		}
-		if !a.attempts[key].Start.Equal(deadlineBase) {
-			t.Fatal("rejected spray extended account lock")
-		}
+	}
+	if !a.attempts[stored].Start.Equal(start) {
+		t.Fatal("rejected spray extended window")
+	}
+	b := a.attempts[stored]
+	b.Start = time.Now().Add(-16 * time.Minute)
+	a.attempts[stored] = b
+	if !a.allowLogin(key) {
+		t.Fatal("expired IP window did not reopen")
 	}
 }
