@@ -40,3 +40,6 @@ var CatalogNodes string
 
 //go:embed 013_product_configurations.sql
 var ProductConfigurations string
+
+//go:embed 014_payment_resolution.sql
+var PaymentResolution string

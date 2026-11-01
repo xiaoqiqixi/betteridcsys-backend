@@ -54,7 +54,7 @@ func (a *App) checkout(w http.ResponseWriter, r *http.Request, actor User, invoi
 	// registry. No external operation precedes this durable cancellation barrier.
 	// The customer checkout path keeps ownership even for an administrator.
 	actor.Role = "customer"
-	attempt, replay, err := a.Store.ReservePayment(r.Context(), actor, invoice.ID, "invoice:"+invoice.ID, cfg.ProviderID, cfg.MerchantID)
+	attempt, replay, err := a.reserveCheckout(r.Context(), actor, invoice.ID, r.Header.Get("Idempotency-Key"), cfg.ProviderID, cfg.MerchantID)
 	if err != nil {
 		a.paymentStoreError(w, r, err)
 		return
@@ -92,7 +92,7 @@ func (a *App) checkout(w http.ResponseWriter, r *http.Request, actor User, invoi
 		a.paymentStoreError(w, r, saveErr)
 		return
 	}
-	if saved.State == "settled" {
+	if saved.State != "checkout" {
 		fail(w, r, 409, "INVOICE_NOT_PAYABLE", "账单已完成付款，请刷新查看")
 		return
 	}

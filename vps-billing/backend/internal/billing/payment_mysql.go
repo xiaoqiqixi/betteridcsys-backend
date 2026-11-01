@@ -120,9 +120,12 @@ func (m *MySQL) ReservePayment(ctx context.Context, actor User, invoiceID, key, 
 		if e != nil {
 			return reserved{}, e
 		}
-		// The unique invoice key prevents a second provider or request key from
-		// issuing another live checkout for the same obligation.
-		a, e := readPaymentAttempt(tx.QueryRowContext(ctx, "SELECT "+paymentAttemptColumns+" FROM payment_attempts WHERE invoice_id=? OR (user_id=? AND request_key=?) ORDER BY id LIMIT 1 FOR UPDATE", invoiceID, i.UserID, key))
+		if e = expirePaymentsSQL(ctx, tx, invoiceID); e != nil {
+			return reserved{}, e
+		}
+		// The invoice lock serializes every reserve/cancel/settle operation.
+		// Retired attempts keep their original request keys and receipts.
+		a, e := readPaymentAttempt(tx.QueryRowContext(ctx, "SELECT "+paymentAttemptColumns+" FROM payment_attempts WHERE user_id=? AND request_key=? FOR UPDATE", i.UserID, key))
 		if e == nil {
 			if a.RequestKey != key || a.Expectation != paymentExpectation(o, i, provider, merchant) {
 				return reserved{}, ErrPaymentConflict
@@ -136,6 +139,14 @@ func (m *MySQL) ReservePayment(ctx context.Context, actor User, invoiceID, key, 
 			return reserved{a, true}, nil
 		}
 		if !errors.Is(e, ErrNotFound) {
+			return reserved{}, e
+		}
+		var active string
+		e = tx.QueryRowContext(ctx, "SELECT id FROM payment_attempts WHERE invoice_id=? AND state IN ('pending','checkout','uncertain') LIMIT 1 FOR UPDATE", invoiceID).Scan(&active)
+		if e == nil {
+			return reserved{}, ErrPaymentConflict
+		}
+		if !errors.Is(e, sql.ErrNoRows) {
 			return reserved{}, e
 		}
 		if o.Status != "pending_payment" || i.Status != "unpaid" || i.PaidAt != nil {
@@ -176,6 +187,9 @@ func (m *MySQL) PaymentAttempt(ctx context.Context, actor User, id string) (Paym
 		if e != nil {
 			return PaymentAttempt{}, e
 		}
+		if e = expirePaymentsSQL(ctx, tx, a.Expectation.InvoiceID); e != nil {
+			return PaymentAttempt{}, e
+		}
 		a, e = readPaymentAttempt(tx.QueryRowContext(ctx, "SELECT "+paymentAttemptColumns+" FROM payment_attempts WHERE id=? FOR UPDATE", id))
 		if e != nil {
 			return PaymentAttempt{}, e
@@ -208,7 +222,7 @@ func (m *MySQL) CompletePaymentCheckout(ctx context.Context, id string, c integr
 			return completed{}, e
 		}
 		switch a.State {
-		case "settled":
+		case "settled", "expired", "voided":
 			return completed{a, false}, nil
 		case "uncertain":
 			return completed{a, true}, nil
@@ -277,14 +291,15 @@ func (m *MySQL) SettlePayment(ctx context.Context, id string, v integrations.Ver
 		if e = validateAttemptPair(a, o, i); e != nil {
 			return PaymentSettlement{}, e
 		}
-		rows, e := tx.QueryContext(ctx, "SELECT attempt_id,provider_id,event_id,transaction_id,settled_at,received_at FROM payment_settlements WHERE attempt_id=? OR (provider_id=? AND (event_id=? OR transaction_id=?)) FOR UPDATE", id, v.ProviderID, v.EventID, v.TransactionID)
+		rows, e := tx.QueryContext(ctx, "SELECT attempt_id,provider_id,event_id,transaction_id,settled_at,received_at,disposition FROM payment_settlements WHERE attempt_id=? OR (provider_id=? AND (event_id=? OR transaction_id=?)) FOR UPDATE", id, v.ProviderID, v.EventID, v.TransactionID)
 		if e != nil {
 			return PaymentSettlement{}, e
 		}
 		replayed := false
+		disposition := settlementDisposition(i)
 		for rows.Next() {
 			var p paymentReceipt
-			if e = rows.Scan(&p.AttemptID, &p.ProviderID, &p.EventID, &p.TransactionID, &p.SettledAt, &p.ReceivedAt); e != nil {
+			if e = rows.Scan(&p.AttemptID, &p.ProviderID, &p.EventID, &p.TransactionID, &p.SettledAt, &p.ReceivedAt, &p.Disposition); e != nil {
 				rows.Close()
 				return PaymentSettlement{}, e
 			}
@@ -293,6 +308,7 @@ func (m *MySQL) SettlePayment(ctx context.Context, id string, v integrations.Ver
 				return PaymentSettlement{}, ErrPaymentConflict
 			}
 			replayed = true
+			disposition = p.Disposition
 		}
 		e = rows.Err()
 		rows.Close()
@@ -303,41 +319,51 @@ func (m *MySQL) SettlePayment(ctx context.Context, id string, v integrations.Ver
 			if e = tx.Commit(); e != nil {
 				return PaymentSettlement{}, e
 			}
-			return PaymentSettlement{AttemptID: id, Invoice: i, Order: o, Replay: true}, nil
+			return PaymentSettlement{AttemptID: id, Invoice: i, Order: o, Replay: true, Disposition: disposition}, nil
 		}
 		if a.State == "settled" {
 			return PaymentSettlement{}, ErrPaymentState
 		}
 		now := time.Now().UTC().Truncate(time.Microsecond)
 		paid := v.SettledAt.UTC().Truncate(time.Microsecond)
-		if _, e = tx.ExecContext(ctx, "INSERT INTO payment_settlements(attempt_id,provider_id,event_id,transaction_id,settled_at,received_at) VALUES(?,?,?,?,?,?)", id, v.ProviderID, v.EventID, v.TransactionID, paid, now); e != nil {
+		if _, e = tx.ExecContext(ctx, "INSERT INTO payment_settlements(attempt_id,provider_id,event_id,transaction_id,settled_at,received_at,disposition) VALUES(?,?,?,?,?,?,?)", id, v.ProviderID, v.EventID, v.TransactionID, paid, now, disposition); e != nil {
 			return PaymentSettlement{}, e
 		}
-		result, e := tx.ExecContext(ctx, "UPDATE orders SET status='paid' WHERE id=? AND status='pending_payment'", o.ID)
-		if e = paymentUpdateResult(result, e); e != nil {
-			return PaymentSettlement{}, e
-		}
-		result, e = tx.ExecContext(ctx, "UPDATE invoices SET status='paid',paid_at=? WHERE id=? AND order_id=? AND status='unpaid' AND paid_at IS NULL", paid, i.ID, o.ID)
-		if e = paymentUpdateResult(result, e); e != nil {
-			return PaymentSettlement{}, e
+		if disposition == "settled" {
+			result, e := tx.ExecContext(ctx, "UPDATE orders SET status='paid' WHERE id=? AND status='pending_payment'", o.ID)
+			if e = paymentUpdateResult(result, e); e != nil {
+				return PaymentSettlement{}, e
+			}
+			result, e = tx.ExecContext(ctx, "UPDATE invoices SET status='paid',paid_at=? WHERE id=? AND order_id=? AND status='unpaid' AND paid_at IS NULL", paid, i.ID, o.ID)
+			if e = paymentUpdateResult(result, e); e != nil {
+				return PaymentSettlement{}, e
+			}
+			o.Status, i.Status, i.PaidAt = "paid", "paid", &paid
+		} else {
+			if _, e = tx.ExecContext(ctx, "UPDATE invoices SET settlement_review=TRUE WHERE id=?", i.ID); e != nil {
+				return PaymentSettlement{}, e
+			}
+			i.SettlementReview = true
 		}
 		if _, e = tx.ExecContext(ctx, "UPDATE payment_attempts SET state='settled',updated_at=? WHERE id=?", now, id); e != nil {
 			return PaymentSettlement{}, e
 		}
-		o.Status = "paid"
-		i.Status = "paid"
-		i.PaidAt = &paid
 		audit := paidAudit(o, a, now)
+		if disposition != "settled" {
+			audit = reviewPaymentAudit(o, a, disposition, now)
+		}
 		if _, e = tx.ExecContext(ctx, "INSERT INTO audit_events(id,user_id,action,target,created_at,actor_email,detail) VALUES(?,?,?,?,?,?,?)", audit.ID, audit.UserID, audit.Action, audit.Target, audit.CreatedAt, audit.ActorEmail, audit.Detail); e != nil {
 			return PaymentSettlement{}, e
 		}
-		if _, e = tx.ExecContext(ctx, "INSERT INTO outbox_events(id,aggregate_id,event_type,payload,created_at) VALUES(?,?,?,?,?)", ID(), o.ID, "payment.settled", paidEvent(o, i, a), now); e != nil {
-			return PaymentSettlement{}, e
+		if disposition == "settled" {
+			if _, e = tx.ExecContext(ctx, "INSERT INTO outbox_events(id,aggregate_id,event_type,payload,created_at) VALUES(?,?,?,?,?)", ID(), o.ID, "payment.settled", paidEvent(o, i, a), now); e != nil {
+				return PaymentSettlement{}, e
+			}
 		}
 		if e = tx.Commit(); e != nil {
 			return PaymentSettlement{}, e
 		}
-		return PaymentSettlement{AttemptID: id, Invoice: i, Order: o}, nil
+		return PaymentSettlement{AttemptID: id, Invoice: i, Order: o, Disposition: disposition}, nil
 	})
 }
 

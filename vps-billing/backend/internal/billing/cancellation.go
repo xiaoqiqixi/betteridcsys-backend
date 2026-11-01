@@ -149,8 +149,9 @@ func (m *Memory) CancelOrder(_ context.Context, actor User, orderID, reason stri
 	i := m.invoices[ii]
 	// This uses the same mutex as reservation and settlement. An expired or
 	// uncertain checkout still may have moved money outside the core.
+	m.expirePayments(i.ID)
 	for _, attempt := range m.paymentAttempts {
-		if attempt.Expectation.OrderID == orderID {
+		if attempt.Expectation.OrderID == orderID && paymentPending(attempt) {
 			return OrderCancellation{}, ErrCancellationState
 		}
 	}

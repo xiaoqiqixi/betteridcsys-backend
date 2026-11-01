@@ -53,8 +53,9 @@ func (m *Memory) ReservePayment(_ context.Context, actor User, invoiceID, key, p
 	if currency, _ := m.currencies.find(i.Currency); !currency.Enabled {
 		return PaymentAttempt{}, false, ErrCurrency
 	}
+	m.expirePayments(invoiceID)
 	for _, a := range m.paymentAttempts {
-		if (a.Expectation.AccountID == i.UserID && a.RequestKey == key) || a.Expectation.InvoiceID == invoiceID {
+		if a.Expectation.AccountID == i.UserID && a.RequestKey == key {
 			if a.RequestKey != key || a.Expectation != paymentExpectation(o, i, provider, merchant) {
 				return PaymentAttempt{}, false, ErrPaymentConflict
 			}
@@ -62,6 +63,11 @@ func (m *Memory) ReservePayment(_ context.Context, actor User, invoiceID, key, p
 				return PaymentAttempt{}, false, e
 			}
 			return clonePaymentAttempt(a), true, nil
+		}
+	}
+	for _, a := range m.paymentAttempts {
+		if a.Expectation.InvoiceID == invoiceID && paymentPending(a) {
+			return PaymentAttempt{}, false, ErrPaymentConflict
 		}
 	}
 	if o.Status != "pending_payment" || i.Status != "unpaid" || i.PaidAt != nil {
@@ -90,6 +96,8 @@ func (m *Memory) PaymentAttempt(_ context.Context, actor User, id string) (Payme
 	if e != nil {
 		return PaymentAttempt{}, e
 	}
+	m.expirePayments(a.Expectation.InvoiceID)
+	a = m.paymentAttempts[id]
 	if e = validateAttemptPair(a, m.orders[oi], m.invoices[ii]); e != nil {
 		return PaymentAttempt{}, e
 	}
@@ -103,7 +111,7 @@ func (m *Memory) CompletePaymentCheckout(_ context.Context, id string, c integra
 	if !ok {
 		return PaymentAttempt{}, ErrNotFound
 	}
-	if a.State == "settled" {
+	if a.State == "settled" || a.State == "expired" || a.State == "voided" {
 		return clonePaymentAttempt(a), nil
 	}
 	if a.State == "uncertain" {
@@ -155,29 +163,38 @@ func (m *Memory) SettlePayment(_ context.Context, id string, v integrations.Veri
 			if !samePaymentReceipt(p, a, v) || a.State != "settled" {
 				return PaymentSettlement{}, ErrPaymentConflict
 			}
-			return PaymentSettlement{AttemptID: id, Invoice: cloneInvoice(i), Order: cloneOrder(o), Replay: true}, nil
+			return PaymentSettlement{AttemptID: id, Invoice: cloneInvoice(i), Order: cloneOrder(o), Replay: true, Disposition: p.Disposition}, nil
 		}
 	}
 	if a.State == "settled" {
 		return PaymentSettlement{}, ErrPaymentState
 	}
+	disposition := settlementDisposition(i)
 	for _, event := range m.orderEvents {
-		if event.AggregateID == o.ID && (event.EventType == "payment.settled" || event.EventType == "order.cancelled") {
+		if disposition == "settled" && event.AggregateID == o.ID && (event.EventType == "payment.settled" || event.EventType == "order.cancelled") {
 			return PaymentSettlement{}, ErrPaymentState
 		}
 	}
 	now := time.Now().UTC().Truncate(time.Microsecond)
 	paid := v.SettledAt.UTC().Truncate(time.Microsecond)
-	o.Status = "paid"
-	i.Status = "paid"
-	i.PaidAt = &paid
+	if disposition == "settled" {
+		o.Status = "paid"
+		i.Status = "paid"
+		i.PaidAt = &paid
+	} else {
+		i.SettlementReview = true
+	}
 	a.State = "settled"
 	a.UpdatedAt = now
 	m.orders[oi] = o
 	m.invoices[ii] = i
 	m.paymentAttempts[id] = a
-	m.paymentReceipts = append(m.paymentReceipts, paymentReceipt{AttemptID: id, ProviderID: v.ProviderID, EventID: v.EventID, TransactionID: v.TransactionID, SettledAt: paid, ReceivedAt: now})
-	m.audits = append(m.audits, paidAudit(o, a, now))
-	m.orderEvents = append(m.orderEvents, orderOutboxEvent{ID: ID(), AggregateID: o.ID, EventType: "payment.settled", Payload: paidEvent(o, i, a), CreatedAt: now})
-	return PaymentSettlement{AttemptID: id, Invoice: cloneInvoice(i), Order: cloneOrder(o)}, nil
+	m.paymentReceipts = append(m.paymentReceipts, paymentReceipt{AttemptID: id, ProviderID: v.ProviderID, EventID: v.EventID, TransactionID: v.TransactionID, SettledAt: paid, ReceivedAt: now, Disposition: disposition})
+	if disposition == "settled" {
+		m.audits = append(m.audits, paidAudit(o, a, now))
+		m.orderEvents = append(m.orderEvents, orderOutboxEvent{ID: ID(), AggregateID: o.ID, EventType: "payment.settled", Payload: paidEvent(o, i, a), CreatedAt: now})
+	} else {
+		m.audits = append(m.audits, reviewPaymentAudit(o, a, disposition, now))
+	}
+	return PaymentSettlement{AttemptID: id, Invoice: cloneInvoice(i), Order: cloneOrder(o), Disposition: disposition}, nil
 }

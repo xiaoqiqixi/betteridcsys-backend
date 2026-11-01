@@ -69,8 +69,11 @@ func (m *MySQL) cancelOrderOnce(ctx context.Context, actor User, orderID, reason
 	if err != nil {
 		return OrderCancellation{}, err
 	}
+	if err = expirePaymentsSQL(ctx, tx, invoice.ID); err != nil {
+		return OrderCancellation{}, err
+	}
 	var attemptID string
-	err = tx.QueryRowContext(ctx, "SELECT id FROM payment_attempts WHERE order_id=? LIMIT 1 FOR UPDATE", order.ID).Scan(&attemptID)
+	err = tx.QueryRowContext(ctx, "SELECT id FROM payment_attempts WHERE order_id=? AND state IN ('pending','checkout','uncertain') LIMIT 1 FOR UPDATE", order.ID).Scan(&attemptID)
 	if err == nil {
 		return OrderCancellation{}, ErrCancellationState
 	}
@@ -141,7 +144,7 @@ func readCancellationOrder(row *sql.Row) (Order, error) {
 func readCancellationInvoice(ctx context.Context, tx *sql.Tx, orderID string) (Invoice, error) {
 	var invoice Invoice
 	var issuerRaw, currencyRaw []byte
-	err := tx.QueryRowContext(ctx, "SELECT id,number,user_id,order_id,status,amount_minor,currency,issued_at,due_at,paid_at,issuer_snapshot,currency_snapshot FROM invoices WHERE order_id=? FOR UPDATE", orderID).Scan(&invoice.ID, &invoice.Number, &invoice.UserID, &invoice.OrderID, &invoice.Status, &invoice.AmountMinor, &invoice.Currency, &invoice.IssuedAt, &invoice.DueAt, &invoice.PaidAt, &issuerRaw, &currencyRaw)
+	err := tx.QueryRowContext(ctx, "SELECT id,number,user_id,order_id,status,amount_minor,currency,issued_at,due_at,paid_at,issuer_snapshot,currency_snapshot,settlement_review FROM invoices WHERE order_id=? FOR UPDATE", orderID).Scan(&invoice.ID, &invoice.Number, &invoice.UserID, &invoice.OrderID, &invoice.Status, &invoice.AmountMinor, &invoice.Currency, &invoice.IssuedAt, &invoice.DueAt, &invoice.PaidAt, &issuerRaw, &currencyRaw, &invoice.SettlementReview)
 	if errors.Is(err, sql.ErrNoRows) {
 		return Invoice{}, ErrCancellationState
 	}

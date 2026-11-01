@@ -192,7 +192,7 @@ func (m *MySQL) OrderDetail(ctx context.Context, uid, id string) (OrderDetail, e
 	}
 	var invoice Invoice
 	var issuerRaw, currencyRaw []byte
-	err = tx.QueryRowContext(ctx, "SELECT id,number,user_id,order_id,status,amount_minor,currency,issued_at,due_at,paid_at,issuer_snapshot,currency_snapshot FROM invoices WHERE order_id=? AND user_id=?", id, owner).Scan(&invoice.ID, &invoice.Number, &invoice.UserID, &invoice.OrderID, &invoice.Status, &invoice.AmountMinor, &invoice.Currency, &invoice.IssuedAt, &invoice.DueAt, &invoice.PaidAt, &issuerRaw, &currencyRaw)
+	err = tx.QueryRowContext(ctx, "SELECT id,number,user_id,order_id,status,amount_minor,currency,issued_at,due_at,paid_at,issuer_snapshot,currency_snapshot,settlement_review FROM invoices WHERE order_id=? AND user_id=?", id, owner).Scan(&invoice.ID, &invoice.Number, &invoice.UserID, &invoice.OrderID, &invoice.Status, &invoice.AmountMinor, &invoice.Currency, &invoice.IssuedAt, &invoice.DueAt, &invoice.PaidAt, &issuerRaw, &currencyRaw, &invoice.SettlementReview)
 	if err == nil {
 		if len(issuerRaw) > 0 {
 			if err = json.Unmarshal(issuerRaw, &invoice.Issuer); err != nil {

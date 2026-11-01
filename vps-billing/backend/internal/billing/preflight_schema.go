@@ -8,7 +8,7 @@ import (
 )
 
 // These bounded descriptions are the physical columns shipped by migrations
-// 1–13, not an SQL interpreter. A history row alone cannot detect interrupted
+// 1–14, not an SQL interpreter. A history row alone cannot detect interrupted
 // DDL or a later manual edit. Compatible extra indexes/checks are permitted.
 func preflightColumns(version int) map[string]map[string]string {
 	specs := map[string]string{
@@ -63,6 +63,11 @@ func preflightColumns(version int) map[string]map[string]string {
 		specs["product_configurations"] = "plan_id:varchar(64)! revision:bigint! spec:json! configuration_sha256:char(64)! updated_at:datetime(6)!"
 		specs["order_product_configurations"] = "order_id:char(32)! plan_id:varchar(64)! configuration_revision:bigint! spec:json! configuration_sha256:char(64)! created_at:datetime(6)!"
 		specs["provisioning_jobs"] = "id:char(32)! order_id:char(32)! state:enum('queued','sending','accepted','succeeded','rejected','uncertain')! request:json! request_sha256:char(64)! claim_token:char(32)? lease_expires_at:datetime(6)? result:json? attempts:int! created_at:datetime(6)! updated_at:datetime(6)!"
+	}
+	if version >= 14 {
+		specs["payment_attempts"] = strings.Replace(specs["payment_attempts"], "'uncertain','settled'", "'uncertain','settled','expired','voided'", 1)
+		specs["payment_settlements"] += " disposition:enum('settled','duplicate','cancelled')!"
+		specs["invoices"] += " settlement_review:tinyint(1)!"
 	}
 	result := make(map[string]map[string]string, len(specs))
 	for table, spec := range specs {
@@ -146,10 +151,14 @@ func preflightChecks(version int) map[string]map[string]string {
 		checks["order_product_configurations"] = map[string]string{"order_product_configuration_revision": "configuration_revision >= 1 AND configuration_revision <= 9007199254740991"}
 		checks["provisioning_jobs"] = map[string]string{"provisioning_job_attempts": "attempts >= 0 AND attempts <= 1"}
 	}
+	if version >= 14 {
+		checks["invoices"]["invoices_settlement_review_boolean"] = "settlement_review IN (0,1)"
+	}
 	return checks
 }
 
 var preflightDefaults = map[string]string{
+	"invoices.settlement_review": "0", "payment_settlements.disposition": "settled",
 	"provisioning_jobs.attempts": "0",
 	"users.disabled":             "0", "users.revision": "1",
 	"schema_migrations.applied_at": "current_timestamp(6)", "users.created_at": "current_timestamp(6)", "order_requests.created_at": "current_timestamp(6)",
@@ -322,6 +331,11 @@ func validatePreflightTableShape(ctx context.Context, conn *sql.Conn, version in
 	if err := validatePreflightTableKeys(ctx, conn, version, tables, partial); err != nil {
 		return err
 	}
+	if version >= 14 && (!partial || tables["payment_attempts"] != "") {
+		if err := validatePaymentHistoryIndex(ctx, conn); err != nil {
+			return err
+		}
+	}
 	if version >= 9 && (!partial || tables["audit_events"] != "") {
 		return validateAuditIndexes(ctx, conn)
 	}
@@ -357,6 +371,9 @@ func validatePreflightTableKeys(ctx context.Context, conn *sql.Conn, version int
 		for _, key := range []string{"payment_attempts:id", "payment_attempts:user_id,request_key", "payment_attempts:invoice_id", "payment_settlements:attempt_id", "payment_settlements:provider_id,event_id", "payment_settlements:provider_id,transaction_id"} {
 			required[key] = true
 		}
+	}
+	if version >= 14 {
+		delete(required, "payment_attempts:invoice_id")
 	}
 	if version >= 11 {
 		for _, t := range []string{"catalog_types", "catalog_regions", "catalog_taxonomy_settings"} {
