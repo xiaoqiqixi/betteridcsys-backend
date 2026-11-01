@@ -102,3 +102,5 @@ unset PROVISIONING_POLICY_FILE
 新增自动测试覆盖 canonical 原请求/原结果、保留 null resources、身份/目标 pin、root-only 客户端政策、同物理连接握手和 4 种重放组合完整 HTTP 409、processor 只调用一次、禁用/选择轮换、unknown/panic 不重发且秘密不出错、独立资源 slot 生命周期、原 HTTPS 回归及原主机 claim/complete 回归。Linux socket/peer UID、systemd credential 行为必须在 Linux 执行，macOS 交叉编译不计为通过。
 
 真实主控+KVM 开通/网络效果、生产 token 权限与真实 systemd service 安装验收仍需对应环境证据。本轮测试不付款、不接触真实客户、不用演示成功冒充开通。
+
+主机开通命令的 `PROVISIONING_MYSQL_DSN_FILE` 支持远端 MySQL，但必须使用 `tls=true` 验证服务器证书和主机名；禁止 `skip-verify`、`preferred` 和明文回退。同机绝对路径 Unix socket 保留例外。配置无效返回 `PROVISIONING_MYSQL_CONFIGURATION_INVALID`，连接失败返回 `PROVISIONING_MYSQL_CONNECTION_FAILED`；响应不包含 DSN、密码或证书路径。

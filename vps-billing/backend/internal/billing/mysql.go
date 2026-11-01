@@ -59,10 +59,12 @@ func mysqlConfiguration(dsn string, allowInsecure bool) (*mysql.Config, error) {
 	return cfg, nil
 }
 
+var ErrMySQLConfiguration = errors.New("invalid MySQL configuration")
+
 func OpenMySQL(ctx context.Context, dsn string, allowInsecure bool) (*MySQL, error) {
 	cfg, e := mysqlConfiguration(dsn, allowInsecure)
 	if e != nil {
-		return nil, e
+		return nil, errors.Join(ErrMySQLConfiguration, e)
 	}
 	db, e := sql.Open("mysql", cfg.FormatDSN())
 	if e != nil {

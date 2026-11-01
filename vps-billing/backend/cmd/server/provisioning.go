@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"errors"
 	"flag"
+	"github.com/go-sql-driver/mysql"
 	"io"
 	"os"
 	"regexp"
@@ -111,8 +112,9 @@ func runHostProvisioning(out io.Writer, jobID string, reconcile bool) int {
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 25*time.Second)
 	defer cancel()
-	store, err := billing.OpenMySQL(ctx, strings.TrimSpace(string(dsn)), true)
+	store, err := openProvisioningMySQL(ctx, strings.TrimSpace(string(dsn)))
 	if err != nil {
+		response.Code = provisioningMySQLErrorCode(err)
 		return emit(2)
 	}
 	defer store.DB.Close()
@@ -166,4 +168,20 @@ func hostProvisioningTransport(mode, policyPath, pluginRoot, pluginPolicy string
 	default:
 		return nil, controllers.ErrUnavailable
 	}
+}
+
+// A host command opts into the local socket exception only for a Unix DSN.
+// Remote connections use exactly the API server's certificate verification.
+func openProvisioningMySQL(ctx context.Context, dsn string) (*billing.MySQL, error) {
+	cfg, err := mysql.ParseDSN(dsn)
+	if err != nil {
+		return nil, billing.ErrMySQLConfiguration
+	}
+	return billing.OpenMySQL(ctx, dsn, cfg.Net == "unix")
+}
+func provisioningMySQLErrorCode(err error) string {
+	if errors.Is(err, billing.ErrMySQLConfiguration) {
+		return "PROVISIONING_MYSQL_CONFIGURATION_INVALID"
+	}
+	return "PROVISIONING_MYSQL_CONNECTION_FAILED"
 }

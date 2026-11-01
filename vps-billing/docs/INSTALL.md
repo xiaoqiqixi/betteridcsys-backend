@@ -214,3 +214,5 @@ curl --fail --show-error https://billing.example.com/readyz
 留存发布提交/摘要、MySQL 版本/socket、账号权限、操作 journal、服务/TLS 和恢复演练记录。公共 CA 续期、整机重启、容量、独立实例/离机恢复另行验收，具体范围见 [ACCEPTANCE.md](ACCEPTANCE.md)、[VALIDATION.md](VALIDATION.md)及[日常运维](OPERATIONS.md)。
 
 安装完成后按[财务首次使用](GETTING_STARTED.md)登录自己的管理员账户、设置站点、审核 CNY 报价并发布商品；不要把安装进程完成当作已经开始收款或开通资源。
+
+开通/对账主机命令从受保护的 `PROVISIONING_MYSQL_DSN_FILE` 读取独立数据库凭据。远端 DSN 须使用 `tls=true` 和受信任证书；本机绝对路径 Unix socket 可免 TLS。配置错误码为 `PROVISIONING_MYSQL_CONFIGURATION_INVALID`，连接失败为 `PROVISIONING_MYSQL_CONNECTION_FAILED`。不要将 DSN 放在命令参数、日志或网页中。
