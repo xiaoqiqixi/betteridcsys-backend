@@ -42,9 +42,12 @@ COUNTS = {
     "catalog_types": 1, "currency_settings": 1, "email_settings": 1,
     "invoices": 10000, "order_requests": 10000, "orders": 10000,
     "outbox_events": 10000, "payment_attempts": 0, "payment_settlements": 0,
-    "plan_prices": 3, "plans": 3, "schema_migrations": 13,
+    "plan_prices": 3, "plans": 3, "schema_migrations": 16,
     "product_configurations": 0, "order_product_configurations": 0, "provisioning_jobs": 0,
     "services": 1000, "sessions": 2, "site_settings": 1, "users": 101,
+    "staff_roles": 1, "staff_members": 1, "products": 3, "product_prices": 0,
+    "product_options": 0, "product_option_choices": 0, "option_prices": 0,
+    "os_images": 0, "product_os_images": 0, "commerce_requests": 0, "commerce_taxonomy": 0,
 }
 LOCK_KEYS = {"Innodb_row_lock_waits", "Innodb_row_lock_time", "Table_locks_waited"}
 MACHINE_KEYS = {

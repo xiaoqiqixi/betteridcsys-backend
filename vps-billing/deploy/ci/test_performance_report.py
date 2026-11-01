@@ -90,9 +90,12 @@ def fixture(baseline=False):
                        "currency_settings": 1, "email_settings": 1,
                        "invoices": 10000, "order_requests": 10000, "orders": 10000,
                        "outbox_events": 10000, "payment_attempts": 0, "payment_settlements": 0,
-                       "plan_prices": 3, "plans": 3, "schema_migrations": 13, "services": 1000,
+                       "plan_prices": 3, "plans": 3, "schema_migrations": 16, "services": 1000,
                        "product_configurations": 0, "order_product_configurations": 0, "provisioning_jobs": 0,
-                       "sessions": 2, "site_settings": 1, "users": 101},
+                       "sessions": 2, "site_settings": 1, "users": 101,
+                       "staff_roles": 1, "staff_members": 1, "products": 3, "product_prices": 0,
+                       "product_options": 0, "product_option_choices": 0, "option_prices": 0,
+                       "os_images": 0, "product_os_images": 0, "commerce_requests": 0, "commerce_taxonomy": 0},
             "sha256": DATASET, "before_after_equal": True,
         },
         "epochs": ([epoch("baseline_before", BASELINE, "f" * 64), candidate,
@@ -108,6 +111,13 @@ def fixture(baseline=False):
 
 
 class PerformanceReportTest(unittest.TestCase):
+    def test_exact_dataset_inventory_tracks_all_selected_migrations(self):
+        files = sorted((SCRIPT.parents[2] / 'backend/migrations').glob('*.sql'))
+        tables = set(re.findall(r'CREATE TABLE IF NOT EXISTS ([a-z_]+)', '\n'.join(path.read_text() for path in files)))
+        self.assertEqual(set(REPORT.COUNTS), tables | {'schema_migrations'})
+        self.assertEqual(REPORT.COUNTS['schema_migrations'], len(files))
+        self.assertEqual(REPORT.COUNTS['staff_members'], 1)
+
     def setUp(self):
         self.temporary = tempfile.TemporaryDirectory(prefix="aster-performance-report-test-")
         self.addCleanup(self.temporary.cleanup)
@@ -205,14 +215,15 @@ class PerformanceReportTest(unittest.TestCase):
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertIn("errors=4\n", result.stdout)
 
-    def test_schema_13_inventory_requires_exact_empty_product_configuration_tables(self):
+    def test_current_inventory_requires_exact_empty_product_configuration_tables(self):
         value = fixture()
         expected = {"catalog_nodes": 2, "catalog_types": 1, "catalog_regions": 2,
-                    "catalog_taxonomy_settings": 1, "schema_migrations": 13,
-                    "product_configurations": 0, "order_product_configurations": 0, "provisioning_jobs": 0}
+                    "catalog_taxonomy_settings": 1, "schema_migrations": 16,
+                    "product_configurations": 0, "order_product_configurations": 0, "provisioning_jobs": 0,
+                    "staff_roles": 1, "staff_members": 1, "products": 3, "product_prices": 0}
         self.assertEqual({key: value["dataset"]["counts"][key] for key in expected}, expected)
         self.assertEqual(value["dataset"]["counts"], REPORT.COUNTS)
-        self.assertEqual(len(value["dataset"]["counts"]), 23)
+        self.assertEqual(len(value["dataset"]["counts"]), 34)
 
         legacy = copy.deepcopy(value)
         for key in ("catalog_nodes", "catalog_types", "catalog_regions", "catalog_taxonomy_settings",

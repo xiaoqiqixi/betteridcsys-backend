@@ -317,6 +317,11 @@ func httpPerfSeed(ctx context.Context, f *httpPerfFixture, seed string, p httpPe
 			return err
 		}
 	}
+	// Match the current AddUser contract: an admin role alone grants no staff
+	// permissions. Seed the real owner membership before any measured request.
+	if _, err = tx.ExecContext(ctx, "INSERT INTO staff_members(user_id,role_id) VALUES(?,'owner')", f.adminID); err != nil {
+		return err
+	}
 	f.cookie = httpPerfID(seed, "customer-cookie-a") + httpPerfID(seed, "customer-cookie-b")
 	f.adminCookie = httpPerfID(seed, "admin-cookie-a") + httpPerfID(seed, "admin-cookie-b")
 	for _, session := range []Session{{Hash: digest(f.cookie), UserID: f.customer, Expires: stamp.AddDate(40, 0, 0)}, {Hash: digest(f.adminCookie), UserID: f.adminID, Expires: stamp.AddDate(40, 0, 0)}} {
