@@ -86,6 +86,11 @@ func preflightColumns(version int) map[string]map[string]string {
 			specs[k] = v
 		}
 	}
+	if schemaIncludes(version, migrations.Automation) {
+		for k, v := range automationColumns {
+			specs[k] = v
+		}
+	}
 	result := make(map[string]map[string]string, len(specs))
 	for table, spec := range specs {
 		result[table] = map[string]string{}
@@ -184,6 +189,10 @@ func preflightChecks(version int) map[string]map[string]string {
 	if schemaIncludes(version, migrations.CommerceLedger) {
 		checks["credit_ledger"] = map[string]string{"credit_sequence": "sequence >= 1 AND sequence <= 9007199254740991", "credit_amount": "amount_minor >= -9007199254740991 AND amount_minor <= 9007199254740991", "credit_balance": "balance_after_minor >= 0 AND balance_after_minor <= 9007199254740991", "credit_precision": "decimal_places >= 0 AND decimal_places <= 3", "credit_kind": "kind IN ('top_up','invoice_payment','refund','adjustment','affiliate_payout','overpayment')"}
 		checks["credit_limits"] = map[string]string{"credit_limits_amount": "min_minor >= 1 AND max_minor >= min_minor AND max_minor <= 9007199254740991"}
+	}
+	if schemaIncludes(version, migrations.Automation) {
+		checks["automation_settings"] = map[string]string{"automation_singleton": "id = 1"}
+		checks["automation_runs"] = map[string]string{"automation_counts": "processed >= 0 AND failed >= 0", "automation_status": "status IN ('running','succeeded','failed','uncertain')"}
 	}
 	return checks
 }
@@ -448,6 +457,11 @@ func validatePreflightTableKeys(ctx context.Context, conn *sql.Conn, version int
 	}
 	if schemaIncludes(version, migrations.CommerceLedger) {
 		for _, k := range []string{"credit_ledger:user_id,sequence", "credit_ledger:id", "credit_limits:currency"} {
+			required[k] = true
+		}
+	}
+	if schemaIncludes(version, migrations.Automation) {
+		for _, k := range []string{"automation_settings:id", "automation_runs:id", "automation_runs:job,scheduled_at"} {
 			required[k] = true
 		}
 	}

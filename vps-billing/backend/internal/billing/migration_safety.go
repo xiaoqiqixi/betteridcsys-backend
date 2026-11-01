@@ -40,6 +40,9 @@ func prepareMigrationStatement(ctx context.Context, conn *sql.Conn, version int,
 	if version > 0 && version <= len(schemaVersions) && schemaVersions[version-1] == migrations.StaffRoles {
 		return prepareStaffMigration(ctx, conn, version, q)
 	}
+	if version > 0 && version <= len(schemaVersions) && schemaVersions[version-1] == migrations.Automation {
+		return prepareAutomationMigration(ctx, conn, version, q)
+	}
 	if version > 0 && version <= len(schemaVersions) && schemaVersions[version-1] == migrations.CommerceLedger {
 		return prepareCommerceTables(ctx, conn, version, q, commerceLedgerColumns)
 	}

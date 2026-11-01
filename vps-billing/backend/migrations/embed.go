@@ -61,3 +61,6 @@ var PaymentGateways string
 
 //go:embed 020_credit_ledger.sql
 var CommerceLedger string
+
+//go:embed 021_automation.sql
+var Automation string

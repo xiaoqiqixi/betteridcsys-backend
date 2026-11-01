@@ -43,6 +43,7 @@ type bucket struct {
 	Start time.Time
 }
 type App struct {
+	Automation   *AutomationRegistry
 	SMTP         *SMTPService
 	Integrations *integrations.Registry
 	Store        Store
@@ -74,7 +75,9 @@ func NewAppWithIntegrations(s Store, c Config, registry *integrations.Registry) 
 		smtpService.runtime = c.Plugins
 		smtpService.sender = c.Plugins
 	}
-	return &App{SMTP: smtpService, Integrations: registry.WithManagedEmail(smtpService), Store: s, Config: c, attempts: map[string]bucket{}, dummyHash: h}
+	a := &App{Automation: &AutomationRegistry{jobs: map[string]AutomationJob{}}, SMTP: smtpService, Integrations: registry.WithManagedEmail(smtpService), Store: s, Config: c, attempts: map[string]bucket{}, dummyHash: h}
+	a.registerCommerceAutomation()
+	return a
 }
 func (a *App) cookieName() string {
 	if a.Config.SecureCookie {
@@ -335,6 +338,9 @@ func (a *App) serveAuthorized(w http.ResponseWriter, r *http.Request, u User, p 
 	}
 	if p == "/admin/roles" || p == "/admin/staff" || strings.HasPrefix(p, "/admin/staff/") {
 		a.staffHTTP(w, r, u, p)
+		return
+	}
+	if a.automationHTTP(w, r, u, p) {
 		return
 	}
 	if a.credit06HTTP(w, r, u, p) {
