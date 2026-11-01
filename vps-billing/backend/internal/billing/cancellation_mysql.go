@@ -18,6 +18,26 @@ func (m *MySQL) CancelOrder(ctx context.Context, actor User, orderID, reason str
 	if err != nil {
 		return OrderCancellation{}, err
 	}
+	var commerceVersion int
+	err = m.DB.QueryRowContext(ctx, "SELECT commerce_version FROM invoices WHERE order_id=?", orderID).Scan(&commerceVersion)
+	if err != nil && !errors.Is(err, sql.ErrNoRows) {
+		return OrderCancellation{}, err
+	}
+	if commerceVersion != 0 {
+		order, err := m.CancelOrder06(ctx, actor, orderID, reason)
+		if err != nil {
+			return OrderCancellation{}, err
+		}
+		legacy, err := readCancellationOrder(m.DB.QueryRowContext(ctx, "SELECT "+orderColumns+" FROM orders WHERE id=?", orderID))
+		if err != nil {
+			return OrderCancellation{}, err
+		}
+		if order.InvoiceID == nil {
+			return OrderCancellation{}, ErrCancellationState
+		}
+		invoice, err := m.Invoice(ctx, legacy.UserID, *order.InvoiceID)
+		return OrderCancellation{Order: legacy, Invoice: invoice}, err
+	}
 	for n := 0; n < 3; n++ {
 		out, err := m.cancelOrderOnce(ctx, actor, orderID, reason)
 		var databaseErr *mysql.MySQLError

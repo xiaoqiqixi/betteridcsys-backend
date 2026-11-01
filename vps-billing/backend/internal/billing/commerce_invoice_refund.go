@@ -10,8 +10,24 @@ import (
 )
 
 func (m *MySQL) CancelInvoice06(ctx context.Context, actor User, id, reason string) (api.AdminInvoice, error) {
+	if actor.Role != "admin" {
+		return api.AdminInvoice{}, ErrAdminRequired
+	}
 	if !accountText(reason, 500) || len([]rune(reason)) < 3 {
 		return api.AdminInvoice{}, ErrCommerceInput
+	}
+	var orderID *string
+	if err := m.DB.QueryRowContext(ctx, "SELECT order_id FROM invoices WHERE id=?", id).Scan(&orderID); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			err = ErrNotFound
+		}
+		return api.AdminInvoice{}, err
+	}
+	if orderID != nil {
+		if _, err := m.CancelOrder06(ctx, actor, *orderID, reason); err != nil {
+			return api.AdminInvoice{}, err
+		}
+		return m.Invoice06(ctx, "", id)
 	}
 	return retryPayment(ctx, func() (api.AdminInvoice, error) {
 		var out api.AdminInvoice

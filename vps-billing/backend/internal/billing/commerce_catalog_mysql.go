@@ -13,7 +13,7 @@ import (
 	"github.com/go-sql-driver/mysql"
 )
 
-const product06Columns = `p.id,p.slug,p.kind,r.type_id,n.region_id,p.node_id,p.name_i18n,p.description_i18n,p.badges,p.specs,p.stock,p.visibility,p.controller_id,p.remote_product_id,p.sort_order,p.revision,(n.enabled AND r.enabled AND t.enabled)`
+const product06Columns = `p.id,p.slug,p.kind,r.type_id,n.region_id,p.node_id,p.name_i18n,p.description_i18n,p.badges,p.specs,p.stock,p.visibility,p.controller_id,p.remote_product_id,p.sort_order,p.revision,(n.enabled AND r.enabled AND t.enabled),(SELECT COUNT(*) FROM services s WHERE s.product_id=p.id AND s.status NOT IN ('terminated','cancelled'))`
 const product06Joins = ` FROM products p JOIN catalog_nodes n ON n.id=p.node_id JOIN catalog_regions r ON r.id=n.region_id JOIN catalog_types t ON t.id=r.type_id`
 
 func readProducts06(ctx context.Context, q currencyQuerier, admin bool, id, currency, typeID, regionID, lock string) ([]api.AdminProduct, error) {
@@ -38,7 +38,7 @@ func readProducts06(ctx context.Context, q currencyQuerier, admin bool, id, curr
 		var p api.AdminProduct
 		var name, description, badges, specs []byte
 		var visible bool
-		if err = rows.Scan(&p.ID, &p.Slug, &p.Kind, &p.TypeID, &p.RegionID, &p.NodeID, &name, &description, &badges, &specs, &p.Stock, &p.Visibility, &p.ControllerID, &p.RemoteProductID, &p.SortOrder, &p.Revision, &visible); err != nil {
+		if err = rows.Scan(&p.ID, &p.Slug, &p.Kind, &p.TypeID, &p.RegionID, &p.NodeID, &name, &description, &badges, &specs, &p.Stock, &p.Visibility, &p.ControllerID, &p.RemoteProductID, &p.SortOrder, &p.Revision, &visible, &p.ActiveServices); err != nil {
 			rows.Close()
 			return nil, err
 		}

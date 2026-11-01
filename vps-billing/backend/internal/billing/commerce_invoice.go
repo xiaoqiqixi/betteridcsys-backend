@@ -596,12 +596,8 @@ func completeInvoice06(ctx context.Context, tx *sql.Tx, record invoiceRecord06, 
 		if v.Kind != "order" || v.OrderID == nil {
 			return v, ErrCommerceUnavailable
 		}
-		var modernItems int
-		if err := tx.QueryRowContext(ctx, "SELECT COUNT(*) FROM order_items WHERE order_id=? AND COALESCE(JSON_EXTRACT(snapshot,'$.legacy'),JSON_EXTRACT('false','$'))<>JSON_EXTRACT('true','$')", *v.OrderID).Scan(&modernItems); err != nil {
+		if err := fulfillPaidOrder06(ctx, tx, v, paid); err != nil {
 			return v, err
-		}
-		if modernItems != 0 {
-			return v, ErrCommerceUnavailable
 		}
 	}
 	if _, err := tx.ExecContext(ctx, "UPDATE invoices SET status='paid',paid_at=? WHERE id=? AND status='unpaid'", paid, v.ID); err != nil {
