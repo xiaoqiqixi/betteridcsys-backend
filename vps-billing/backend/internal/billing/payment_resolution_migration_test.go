@@ -36,6 +36,7 @@ func TestMySQLPaymentResolutionRejectsCollisionsBeforeDDL(t *testing.T) {
 	for name, ddl := range map[string]string{
 		"invoice flag":        "ALTER TABLE invoices ADD COLUMN settlement_review BOOLEAN NULL DEFAULT FALSE",
 		"receipt disposition": "ALTER TABLE payment_settlements ADD COLUMN disposition VARCHAR(30) NOT NULL DEFAULT 'settled'",
+		"extra unique":        "CREATE UNIQUE INDEX unexpected_invoice_only ON payment_attempts(invoice_id)",
 		"history index":       "CREATE INDEX payment_attempts_invoice_history ON payment_attempts(order_id)",
 		"attempt state":       "ALTER TABLE payment_attempts MODIFY state VARCHAR(30) NOT NULL",
 	} {

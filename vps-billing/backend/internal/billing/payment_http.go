@@ -155,6 +155,8 @@ func (a *App) paymentCallbackHTTP(w http.ResponseWriter, r *http.Request, provid
 
 func (a *App) paymentStoreError(w http.ResponseWriter, r *http.Request, err error) {
 	switch {
+	case errors.Is(err, ErrAdminRequired):
+		fail(w, r, 403, "FORBIDDEN", "没有权限执行此操作")
 	case errors.Is(err, ErrNotFound):
 		fail(w, r, 404, "NOT_FOUND", "未找到此支付记录")
 	case errors.Is(err, ErrPaymentConflict):

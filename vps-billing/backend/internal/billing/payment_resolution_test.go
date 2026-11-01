@@ -110,6 +110,11 @@ func resolutionContract(t *testing.T, f paymentFixture, admin User, expire func(
 		if _, err := resolver.VoidPayment(f.ctx, admin, a.ID, " "); !errors.Is(err, ErrPaymentInput) {
 			t.Fatal("missing reason", err)
 		}
+		forged := f.owner
+		forged.Role = "admin"
+		if _, err := resolver.VoidPayment(f.ctx, forged, a.ID, "forged authority"); !errors.Is(err, ErrAdminRequired) {
+			t.Fatal("store did not recheck staff authority", err)
+		}
 		voided, err := resolver.VoidPayment(f.ctx, admin, a.ID, "provider reconciled by staff")
 		if err != nil || voided.State != "voided" {
 			t.Fatal(voided, err)
@@ -244,5 +249,40 @@ func TestPaymentResolutionHTTP(t *testing.T) {
 	}
 	if status, out := h.customer.request("POST", "/api/v1/orders/"+o.ID+"/cancel", map[string]string{"reason": "voided"}, ""); status != 200 {
 		t.Fatal("resolved attempt blocks cancel with live runtime", status, out)
+	}
+}
+
+func TestLateVerifiedCallbackAfterReplacementIsRetained(t *testing.T) {
+	h := newPaymentHTTPHarness(t, nil)
+	_, invoice := h.order(t)
+	h.checkout(t, invoice)
+	h.memory.mu.Lock()
+	for id, a := range h.memory.paymentAttempts {
+		c := *a.Checkout
+		c.ExpiresAt = time.Now().Add(-paymentExpiryGrace - time.Second)
+		a.Checkout = &c
+		h.memory.paymentAttempts[id] = a
+	}
+	h.memory.mu.Unlock()
+	h.checkout(t, invoice)
+	path := "/api/v1/payment-callbacks/" + h.runtime.selection.ID
+	// New checkout settles first; a verified old checkout is real duplicate money.
+	for _, n := range []int{1, 0} {
+		raw, signature := h.runtime.signed(t, h.runtime.event(t, n))
+		if status, out := paymentHTTPNotify(t, h, "POST", path, raw, "invalid", ""); status == 200 {
+			t.Fatal("invalid signature accepted", out)
+		}
+		for range 2 {
+			if status, out := paymentHTTPNotify(t, h, "POST", path, raw, signature, ""); status != 200 {
+				t.Fatal("late receipt/replay lost", status, out)
+			}
+		}
+	}
+	saved, err := h.memory.Invoice(t.Context(), h.owner.ID, invoice.ID)
+	if err != nil || !saved.SettlementReview || saved.Status != "paid" {
+		t.Fatal(saved, err)
+	}
+	if len(h.memory.paymentReceipts) != 2 {
+		t.Fatal("lost or repeated receipt", len(h.memory.paymentReceipts))
 	}
 }

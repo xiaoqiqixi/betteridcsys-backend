@@ -88,7 +88,7 @@ func (m *Memory) VoidPayment(ctx context.Context, actor User, id, reason string)
 	// Re-read staff authority at the mutation boundary.
 	current, ok := m.users[actor.ID]
 	if !ok || current.Role != "admin" || current.Disabled {
-		return PaymentAttempt{}, ErrNotFound
+		return PaymentAttempt{}, ErrAdminRequired
 	}
 	a, ok := m.paymentAttempts[id]
 	if !ok {
