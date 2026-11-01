@@ -88,23 +88,4 @@ func (a *App) coupons06HTTP(w http.ResponseWriter, r *http.Request, actor User, 
 	fail(w, r, 405, "METHOD_NOT_ALLOWED", "Method not allowed")
 	return true
 }
-func (a *App) paymentGateways06HTTP(w http.ResponseWriter, r *http.Request) {
-	if r.Method != "GET" {
-		fail(w, r, 405, "METHOD_NOT_ALLOWED", "Method not allowed")
-		return
-	}
-	out := []api.PaymentGateway{}
-	manifest, _, err := a.paymentSelection()
-	if err == nil {
-		currencies := []string{}
-		for _, c := range manifest.Payment.Currencies {
-			currencies = append(currencies, c.Code)
-		}
-		name := text06(manifest.Payment.Name)
-		if name == "" {
-			name = manifest.ID
-		}
-		out = append(out, api.PaymentGateway{ID: manifest.ID, Name: name, Description: manifest.Payment.Description, Icon: "card", Currencies: currencies})
-	}
-	jsonOut(w, 200, out)
-}
+func (a *App) paymentGateways06HTTP(w http.ResponseWriter, r *http.Request) { a.listGateways(w, r) }

@@ -168,7 +168,7 @@ func (m *MySQL) StaffMembers(ctx context.Context) ([]StaffMember, error) {
 	}
 	return out, rows.Err()
 }
-func staffWriteTx(ctx context.Context, tx *sql.Tx, actor string) error {
+func staffWriteTx(ctx context.Context, tx *sql.Tx, actor string, permission ...string) error {
 	// Same lock order as the legacy account writer, including last-owner checks.
 	var mutex int
 	if err := tx.QueryRowContext(ctx, "SELECT id FROM email_settings WHERE id=1 FOR UPDATE").Scan(&mutex); err != nil {
@@ -186,7 +186,11 @@ func staffWriteTx(ctx context.Context, tx *sql.Tx, actor string) error {
 	if err = json.Unmarshal(raw, &p.Permissions); err != nil {
 		return err
 	}
-	if !staffaccess.Allows(p.RoleID, p.Builtin, p.Permissions, "staff.write") {
+	perm := "staff.write"
+	if len(permission) > 0 {
+		perm = permission[0]
+	}
+	if !staffaccess.Allows(p.RoleID, p.Builtin, p.Permissions, perm) {
 		return ErrAdminRequired
 	}
 	return nil

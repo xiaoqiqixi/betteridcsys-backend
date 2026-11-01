@@ -22,14 +22,24 @@ type PaymentRuntime interface {
 }
 
 func (a *App) paymentSelection() (pluginapi.Manifest, paymentv1.Config, error) {
+	return a.paymentSelectionFor("")
+}
+func (a *App) paymentSelectionFor(gateway string) (pluginapi.Manifest, paymentv1.Config, error) {
 	if a.Config.PaymentRuntime == nil {
 		return pluginapi.Manifest{}, paymentv1.Config{}, paymentv1.ErrUnavailable
 	}
 	m, s, err := a.Config.PaymentRuntime.PaymentSelection()
+	if gateway != "" {
+		if runtime, ok := a.Config.PaymentRuntime.(GatewayRuntime); ok {
+			m, s, err = runtime.PaymentGatewaySelection(gateway)
+		} else if gateway != s.ID {
+			err = paymentv1.ErrUnavailable
+		}
+	}
 	if err != nil || !s.Enabled || m.Payment == nil || m.Validate(pluginapi.CoreVersion) != nil || s.ID != m.ID || s.Version != m.Version || !pluginapi.ValidDigest(s.ManifestSHA256) {
 		return pluginapi.Manifest{}, paymentv1.Config{}, paymentv1.ErrUnavailable
 	}
-	c := paymentv1.Config{MerchantID: s.MerchantID, ProviderID: m.ID, ManifestSHA256: s.ManifestSHA256}
+	c := paymentv1.Config{GatewayID: s.Slot, MerchantID: s.MerchantID, ProviderID: m.ID, ManifestSHA256: s.ManifestSHA256}
 	if paymentv1.ValidateConfig(c) != nil {
 		return pluginapi.Manifest{}, paymentv1.Config{}, paymentv1.ErrUnavailable
 	}
@@ -37,13 +47,36 @@ func (a *App) paymentSelection() (pluginapi.Manifest, paymentv1.Config, error) {
 }
 
 func (a *App) checkout(w http.ResponseWriter, r *http.Request, actor User, invoice Invoice) {
+	a.checkoutWithGateway(w, r, actor, invoice, "", false)
+}
+func (a *App) checkoutWithGateway(w http.ResponseWriter, r *http.Request, actor User, invoice Invoice, gateway string, modern bool) {
 	if invoice.Status != "unpaid" || invoice.PaidAt != nil || !validAmount(invoice.AmountMinor) || !validCurrencyFormat(invoice.CurrencyFormat) || invoice.CurrencyFormat.Code != invoice.Currency {
 		fail(w, r, 409, "INVOICE_NOT_PAYABLE", "当前账单不可支付")
 		return
 	}
-	manifest, cfg, err := a.paymentSelection()
+	manifest, cfg, err := a.paymentSelectionFor(gateway)
 	if err != nil {
 		fail(w, r, 503, "PAYMENT_NOT_CONFIGURED", "支付渠道当前不可用，已有付款请核对原渠道")
+		return
+	}
+	if modern {
+		store, ok := a.Store.(gatewayStore)
+		if !ok {
+			a.paymentStoreError(w, r, ErrUnavailable)
+			return
+		}
+		settings, e := store.GatewaySettings(r.Context(), gateway)
+		if e != nil {
+			a.paymentStoreError(w, r, e)
+			return
+		}
+		if !settings.Enabled {
+			fail(w, r, 503, "PAYMENT_NOT_CONFIGURED", "Gateway disabled")
+			return
+		}
+	}
+	if !manifest.Payment.WithinLimits(invoice.Currency, invoice.AmountMinor) {
+		fail(w, r, 409, "PAYMENT_AMOUNT_UNSUPPORTED", "Amount is outside gateway limits")
 		return
 	}
 	if !manifest.Payment.Supports(invoice.Currency, invoice.CurrencyFormat.DecimalPlaces) {
@@ -54,16 +87,20 @@ func (a *App) checkout(w http.ResponseWriter, r *http.Request, actor User, invoi
 	// registry. No external operation precedes this durable cancellation barrier.
 	// The customer checkout path keeps ownership even for an administrator.
 	actor.Role = "customer"
-	attempt, replay, err := a.reserveCheckout(r.Context(), actor, invoice.ID, r.Header.Get("Idempotency-Key"), cfg.ProviderID, cfg.MerchantID)
+	attempt, replay, err := a.reserveCheckout(r.Context(), actor, invoice.ID, r.Header.Get("Idempotency-Key"), settlementGateway(cfg), cfg.MerchantID)
 	if err != nil {
+		if modern && errors.Is(err, ErrPaymentConflict) {
+			fail(w, r, 409, "IDEMPOTENCY_KEY_REUSED", "Payment key conflicts with an existing request")
+			return
+		}
 		a.paymentStoreError(w, r, err)
 		return
 	}
 	if replay {
-		if attempt.State == "checkout" && attempt.Checkout != nil && attempt.Checkout.ExpiresAt.After(time.Now()) {
-			out := paymentv1.Checkout{ProviderID: attempt.Checkout.ProviderID, SessionID: attempt.Checkout.SessionID, URL: attempt.Checkout.URL, ExpiresAt: attempt.Checkout.ExpiresAt}
+		if attempt.State == "checkout" && attempt.Checkout != nil && (attempt.Checkout.ExpiresAt.IsZero() || attempt.Checkout.ExpiresAt.After(time.Now())) {
+			out := wireCheckout(*attempt.Checkout, cfg)
 			if paymentv1.ValidateCheckout(out, cfg.ProviderID, *manifest.Payment, time.Now()) == nil {
-				jsonOut(w, 200, attempt.Checkout)
+				a.checkoutResponse(w, attempt, *attempt.Checkout, modern)
 				return
 			}
 		}
@@ -73,7 +110,7 @@ func (a *App) checkout(w http.ResponseWriter, r *http.Request, actor User, invoi
 	want := attempt.Expectation
 	callbackURL := ""
 	if !a.Config.Demo {
-		callbackURL = a.Config.Origin + "/api/v1/payment-callbacks/" + cfg.ProviderID
+		callbackURL = a.Config.Origin + "/api/v1/payment-callbacks/" + settlementGateway(cfg)
 	}
 	out, callErr := a.Config.PaymentRuntime.CreatePayment(r.Context(), cfg, paymentv1.Intent{
 		AttemptID: attempt.ID, IdempotencyKey: attempt.ID, InvoiceID: want.InvoiceID, OrderID: want.OrderID, AccountID: want.AccountID,
@@ -81,8 +118,11 @@ func (a *App) checkout(w http.ResponseWriter, r *http.Request, actor User, invoi
 	})
 	if callErr == nil {
 		callErr = paymentv1.ValidateCheckout(out, cfg.ProviderID, *manifest.Payment, time.Now())
+		if out.GatewayID != cfg.GatewayID {
+			callErr = paymentv1.ErrInvalid
+		}
 	}
-	checkout := integrations.Checkout{ProviderID: out.ProviderID, SessionID: out.SessionID, URL: out.URL, ExpiresAt: out.ExpiresAt}
+	checkout := integrations.Checkout{ProviderID: settlementGateway(cfg), SessionID: out.SessionID, URL: out.URL, ExpiresAt: out.ExpiresAt, Flow: out.Flow, QRPayload: out.QRPayload, Instructions: out.Instructions, Reference: out.Reference}
 	// A lost browser connection must not erase an uncertain external operation.
 	// The pending record itself remains a durable barrier even if this write fails.
 	finishCtx, cancel := context.WithTimeout(context.WithoutCancel(r.Context()), 2*time.Second)
@@ -100,7 +140,7 @@ func (a *App) checkout(w http.ResponseWriter, r *http.Request, actor User, invoi
 		fail(w, r, 502, "PAYMENT_PROVIDER_ERROR", "支付会话结果未确认，请核对渠道结果，勿重复付款")
 		return
 	}
-	jsonOut(w, 200, checkout)
+	a.checkoutResponse(w, saved, checkout, modern)
 }
 
 func (a *App) paymentCallbackHTTP(w http.ResponseWriter, r *http.Request, providerID string) {
@@ -108,8 +148,8 @@ func (a *App) paymentCallbackHTTP(w http.ResponseWriter, r *http.Request, provid
 		fail(w, r, 405, "METHOD_NOT_ALLOWED", "不支持此请求方式")
 		return
 	}
-	manifest, cfg, err := a.paymentSelection()
-	if err != nil || providerID != cfg.ProviderID || strings.Contains(providerID, "/") {
+	manifest, cfg, err := a.paymentSelectionFor(providerID)
+	if err != nil || providerID != settlementGateway(cfg) || strings.Contains(providerID, "/") {
 		fail(w, r, 503, "PAYMENT_NOT_CONFIGURED", "支付回调当前不可用")
 		return
 	}
@@ -138,12 +178,12 @@ func (a *App) paymentCallbackHTTP(w http.ResponseWriter, r *http.Request, provid
 		fail(w, r, 503, "PAYMENT_PROVIDER_ERROR", "支付渠道暂不可用，请稍后重试通知")
 		return
 	}
-	if err != nil || paymentv1.ValidateEvent(verified, cfg.ProviderID, cfg.MerchantID, *manifest.Payment, time.Now()) != nil {
+	if err != nil || verified.GatewayID != cfg.GatewayID || paymentv1.ValidateEvent(verified, cfg.ProviderID, cfg.MerchantID, *manifest.Payment, time.Now()) != nil {
 		fail(w, r, 400, "PAYMENT_CALLBACK_INVALID", "支付通知验证失败")
 		return
 	}
 	_, err = a.Store.SettlePayment(r.Context(), verified.AttemptID, integrations.VerifiedPayment{
-		AttemptID: verified.AttemptID, ProviderID: verified.ProviderID, EventID: verified.EventID, TransactionID: verified.TransactionID, MerchantAccountID: verified.MerchantAccountID,
+		AttemptID: verified.AttemptID, ProviderID: settlementGateway(cfg), EventID: verified.EventID, TransactionID: verified.TransactionID, MerchantAccountID: verified.MerchantAccountID,
 		AccountID: verified.AccountID, OrderID: verified.OrderID, InvoiceID: verified.InvoiceID, AmountMinor: verified.AmountMinor, Currency: verified.Currency, CurrencyDecimalPlaces: verified.CurrencyDecimalPlaces, SettledAt: verified.SettledAt, Status: verified.Status,
 	})
 	if err != nil {

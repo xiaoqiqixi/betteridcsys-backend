@@ -26,10 +26,10 @@ func TestMoneyValidation(t *testing.T) {
 func TestContractResponseAndUnion(t *testing.T) {
 	Response(t, "GET", "/products", map[string]any{"data": []any{}})
 	Data(t, "Ok", map[string]any{"data": map[string]any{"ok": true}})
-	if err := validate("/components/schemas/PayResult", map[string]any{"status": "redirect", "checkout_url": "https://payments.example/checkout", "expires_at": "2026-11-01T12:00:00Z"}); err != nil {
+	if err := validate("/components/schemas/PayResult", map[string]any{"status": "redirect", "payment_id": "payment_1", "checkout_url": "https://payments.example/checkout", "expires_at": "2026-11-01T12:00:00Z"}); err != nil {
 		t.Fatal(err)
 	}
-	if err := validate("/components/schemas/PayResult", map[string]any{"status": "redirect", "checkout_url": "not a uri", "expires_at": "yesterday"}); err == nil {
+	if err := validate("/components/schemas/PayResult", map[string]any{"status": "redirect", "payment_id": "payment_1", "checkout_url": "not a uri", "expires_at": "yesterday"}); err == nil {
 		t.Fatal("invalid union accepted")
 	}
 	if err := validate("/components/schemas/Absent", nil); err == nil {

@@ -68,10 +68,14 @@ type CheckoutRequest struct {
 	IdempotencyKey                string
 }
 type Checkout struct {
-	ProviderID string    `json:"provider_id"`
-	SessionID  string    `json:"session_id"`
-	URL        string    `json:"checkout_url"`
-	ExpiresAt  time.Time `json:"expires_at"`
+	Flow         string    `json:"flow,omitempty"`
+	QRPayload    string    `json:"qr_payload,omitempty"`
+	Instructions string    `json:"instructions,omitempty"`
+	Reference    string    `json:"reference,omitempty"`
+	ProviderID   string    `json:"provider_id"`
+	SessionID    string    `json:"session_id"`
+	URL          string    `json:"checkout_url"`
+	ExpiresAt    time.Time `json:"expires_at"`
 }
 type CallbackRequest struct {
 	Headers map[string][]string

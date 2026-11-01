@@ -195,12 +195,13 @@ type AdminService = struct {
 		Active bool      `json:"active"`
 		Since  Timestamp `json:"since"`
 	} `json:"rescue"`
-	Specs     ProductSpecs `json:"specs"`
-	OSImage   *OsImage     `json:"os_image"`
-	IPv4      []string     `json:"ipv4"`
-	IPv6      []string     `json:"ipv6"`
-	NodeLabel string       `json:"node_label"`
-	Traffic   *struct {
+	Specs           ProductSpecs `json:"specs"`
+	OSImage         *OsImage     `json:"os_image"`
+	AvailableImages []OsImage    `json:"available_images"`
+	IPv4            []string     `json:"ipv4"`
+	IPv6            []string     `json:"ipv6"`
+	NodeLabel       string       `json:"node_label"`
+	Traffic         *struct {
 		UsedGB   float64   `json:"used_gb"`
 		LimitGB  *int64    `json:"limit_gb"`
 		ResetsAt Timestamp `json:"resets_at"`
@@ -443,6 +444,8 @@ type CatalogTypeInput = struct {
 	Visible     bool          `json:"visible"`
 }
 
+type CheckoutFlow = string
+
 type ClientOverview = struct {
 	Counts struct {
 		ActiveServices int64 `json:"active_services"`
@@ -583,12 +586,16 @@ type Error = struct {
 
 type GatewayStatus = struct {
 	ID            string         `json:"id"`
-	Name          string         `json:"name"`
-	PluginVersion *string        `json:"plugin_version"`
+	Name          LocalizedText  `json:"name"`
+	PluginID      string         `json:"plugin_id"`
+	PluginVersion string         `json:"plugin_version"`
+	Flow          string         `json:"flow"`
 	Enabled       bool           `json:"enabled"`
 	Status        string         `json:"status"`
 	Currencies    []CurrencyCode `json:"currencies"`
 	DisplayOrder  int64          `json:"display_order"`
+	LastCheckedAt *Timestamp     `json:"last_checked_at"`
+	Revision      Revision       `json:"revision"`
 }
 
 type Id = string
@@ -731,10 +738,32 @@ type OsImage = struct {
 
 type PaymentGateway = struct {
 	ID          string         `json:"id"`
-	Name        string         `json:"name"`
+	Name        LocalizedText  `json:"name"`
 	Description LocalizedText  `json:"description,omitempty"`
-	Icon        string         `json:"icon"`
+	Logo        *string        `json:"logo"`
+	Flow        CheckoutFlow   `json:"flow"`
 	Currencies  []CurrencyCode `json:"currencies"`
+	Fee         *struct {
+		PercentBp int64 `json:"percent_bp"`
+		Fixed     []struct {
+			Currency    CurrencyCode `json:"currency"`
+			AmountMinor int64        `json:"amount_minor"`
+		} `json:"fixed"`
+	} `json:"fee"`
+	Min []struct {
+		Currency    CurrencyCode `json:"currency"`
+		AmountMinor int64        `json:"amount_minor"`
+	} `json:"min"`
+	Max []struct {
+		Currency    CurrencyCode `json:"currency"`
+		AmountMinor int64        `json:"amount_minor"`
+	} `json:"max"`
+}
+
+type PaymentStatus = struct {
+	PaymentID     Id            `json:"payment_id"`
+	Status        string        `json:"status"`
+	InvoiceStatus InvoiceStatus `json:"invoice_status"`
 }
 
 type PayResult = any
@@ -911,12 +940,13 @@ type Service = struct {
 		Active bool      `json:"active"`
 		Since  Timestamp `json:"since"`
 	} `json:"rescue"`
-	Specs     ProductSpecs `json:"specs"`
-	OSImage   *OsImage     `json:"os_image"`
-	IPv4      []string     `json:"ipv4"`
-	IPv6      []string     `json:"ipv6"`
-	NodeLabel string       `json:"node_label"`
-	Traffic   *struct {
+	Specs           ProductSpecs `json:"specs"`
+	OSImage         *OsImage     `json:"os_image"`
+	AvailableImages []OsImage    `json:"available_images"`
+	IPv4            []string     `json:"ipv4"`
+	IPv6            []string     `json:"ipv6"`
+	NodeLabel       string       `json:"node_label"`
+	Traffic         *struct {
 		UsedGB   float64   `json:"used_gb"`
 		LimitGB  *int64    `json:"limit_gb"`
 		ResetsAt Timestamp `json:"resets_at"`
@@ -1442,8 +1472,10 @@ type AdminCheckControllerResponse = CloudController
 type AdminListGatewaysResponse = []GatewayStatus
 
 type AdminUpdateGatewayInput = struct {
-	Enabled      bool  `json:"enabled,omitempty"`
-	DisplayOrder int64 `json:"display_order,omitempty"`
+	Revision     int64         `json:"revision"`
+	Enabled      bool          `json:"enabled,omitempty"`
+	DisplayOrder int64         `json:"display_order,omitempty"`
+	Name         LocalizedText `json:"name,omitempty"`
 }
 
 type AdminUpdateGatewayResponse = GatewayStatus
@@ -1864,6 +1896,8 @@ type GetInvoiceResponse = Invoice
 type PayInvoiceInput = any
 
 type PayInvoiceResponse = PayResult
+
+type GetPaymentStatusResponse = PaymentStatus
 
 type ListOrdersResponse = struct {
 	Items      []Order `json:"items"`

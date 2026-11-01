@@ -70,6 +70,9 @@ func preflightColumns(version int) map[string]map[string]string {
 		specs["payment_settlements"] += " disposition:enum('settled','duplicate','cancelled')!"
 		specs["invoices"] += " settlement_review:tinyint(1)!"
 	}
+	if schemaIncludes(version, migrations.PaymentGateways) {
+		specs["payment_gateway_settings"] = "id:varchar(64)! document:json!"
+	}
 	staffSchemaColumns(version, specs)
 	commerceSchemaColumns(version, specs)
 	accountSchemaColumns(version, specs)
@@ -415,6 +418,9 @@ func validatePreflightTableKeys(ctx context.Context, conn *sql.Conn, version int
 		required["staff_members:user_id"] = true
 	}
 
+	if schemaIncludes(version, migrations.PaymentGateways) {
+		required["payment_gateway_settings:id"] = true
+	}
 	if schemaIncludes(version, migrations.CommerceCatalog) {
 		for _, key := range commerceCatalogKeys {
 			required[key] = true

@@ -320,6 +320,9 @@ func (a *App) serve(w http.ResponseWriter, r *http.Request) {
 	a.serveAuthorized(w, r, u, p, false)
 }
 func (a *App) serveAuthorized(w http.ResponseWriter, r *http.Request, u User, p string, admin bool) {
+	if a.gatewayRoutes(w, r, u, p) {
+		return
+	}
 	if p == "/admin/roles" || p == "/admin/staff" || strings.HasPrefix(p, "/admin/staff/") {
 		a.staffHTTP(w, r, u, p)
 		return

@@ -57,6 +57,13 @@ func (m *Manager) gateway(id string) *Manager {
 	return child
 }
 func (m *Manager) PaymentGatewaySelection(id string) (pluginapi.Manifest, pluginapi.Selection, error) {
+	if selections, err := m.paymentSelections(); err == nil {
+		for _, s := range selections {
+			if s.Slot == "" && s.ID == id {
+				return m.PaymentSelection()
+			}
+		}
+	}
 	child := m.gateway(id)
 	if child == nil {
 		return pluginapi.Manifest{}, pluginapi.Selection{}, ErrDisabled

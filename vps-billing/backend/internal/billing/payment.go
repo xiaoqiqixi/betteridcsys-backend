@@ -2,6 +2,7 @@ package billing
 
 import (
 	"aster/billing/internal/integrations"
+	"aster/billing/pkg/pluginapi/paymentv1"
 	"encoding/json"
 	"errors"
 	"net/url"
@@ -44,7 +45,7 @@ type paymentReceipt struct {
 	Disposition                                   string
 }
 
-var paymentProviderID = regexp.MustCompile(`^[a-z][a-z0-9_.-]{1,63}$`)
+var paymentProviderID = regexp.MustCompile(`^[a-z0-9][a-z0-9_.-]{0,63}$`)
 
 func paymentToken(s string, max int) bool {
 	if len(s) == 0 || len(s) > max {
@@ -111,6 +112,17 @@ func clonePaymentAttempt(a PaymentAttempt) PaymentAttempt {
 }
 
 func validateCheckout(a PaymentAttempt, c integrations.Checkout) error {
+	if c.Flow == "qr" || c.Flow == "instructions" {
+		d := paymentv1.Declarations{Flow: c.Flow}
+		returnValue := paymentv1.ValidateCheckout(paymentv1.Checkout{ProviderID: c.ProviderID, SessionID: c.SessionID, Flow: c.Flow, URL: c.URL, QRPayload: c.QRPayload, Instructions: c.Instructions, Reference: c.Reference, ExpiresAt: c.ExpiresAt}, a.Expectation.ProviderID, d, time.Now())
+		if returnValue != nil {
+			return ErrPaymentInput
+		}
+		return nil
+	}
+	if c.Flow != "" && c.Flow != "redirect" || c.QRPayload != "" || c.Instructions != "" || c.Reference != "" {
+		return ErrPaymentInput
+	}
 	u, e := url.Parse(c.URL)
 	if c.ProviderID != a.Expectation.ProviderID || !paymentToken(c.SessionID, 128) || e != nil || u.Scheme != "https" || u.Hostname() == "" || u.User != nil || u.Fragment != "" || len(c.URL) > 2048 || c.ExpiresAt.IsZero() || !c.ExpiresAt.After(time.Now().UTC()) {
 		return ErrPaymentInput

@@ -3398,7 +3398,7 @@
     "/admin/integrations/gateways": {
       "get": {
         "operationId": "adminListGateways",
-        "summary": "Payment gateway plugins",
+        "summary": "Installed payment plugin slots",
         "tags": [
           "Admin: Integrations"
         ],
@@ -3447,7 +3447,7 @@
     "/admin/integrations/gateways/{id}": {
       "patch": {
         "operationId": "adminUpdateGateway",
-        "summary": "Enable / order a gateway",
+        "summary": "Enable, rename or reorder a gateway",
         "tags": [
           "Admin: Integrations"
         ],
@@ -3514,6 +3514,11 @@
               "schema": {
                 "type": "object",
                 "properties": {
+                  "revision": {
+                    "type": "integer",
+                    "minimum": -9007199254740991,
+                    "maximum": 9007199254740991
+                  },
                   "enabled": {
                     "type": "boolean"
                   },
@@ -3521,8 +3526,14 @@
                     "type": "integer",
                     "minimum": -9007199254740991,
                     "maximum": 9007199254740991
+                  },
+                  "name": {
+                    "$ref": "#/components/schemas/LocalizedText"
                   }
-                }
+                },
+                "required": [
+                  "revision"
+                ]
               }
             }
           }
@@ -8852,6 +8863,71 @@
         }
       }
     },
+    "/invoices/{id}/payments/{payment_id}": {
+      "get": {
+        "operationId": "getPaymentStatus",
+        "summary": "Poll a gateway payment (QR / instructions flows)",
+        "tags": [
+          "Billing"
+        ],
+        "x-access": "client",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9_-]{1,64}$"
+            }
+          },
+          {
+            "name": "payment_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9_-]{1,64}$"
+            }
+          }
+        ],
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data"
+                  ],
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/PaymentStatus"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/orders": {
       "get": {
         "operationId": "listOrders",
@@ -9246,11 +9322,21 @@
     "/payment-gateways": {
       "get": {
         "operationId": "listPaymentGateways",
-        "summary": "Enabled payment gateways",
+        "summary": "Payment methods from every enabled payment plugin",
         "tags": [
           "Billing"
         ],
         "x-access": "public",
+        "parameters": [
+          {
+            "name": "currency",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
         "security": [
           {}
         ],
@@ -12569,6 +12655,12 @@
               }
             ]
           },
+          "available_images": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/OsImage"
+            }
+          },
           "ipv4": {
             "type": "array",
             "items": {
@@ -12758,6 +12850,7 @@
           "rescue",
           "specs",
           "os_image",
+          "available_images",
           "ipv4",
           "ipv6",
           "node_label",
@@ -13821,6 +13914,15 @@
           "visible"
         ]
       },
+      "CheckoutFlow": {
+        "type": "string",
+        "enum": [
+          "redirect",
+          "qr",
+          "instructions"
+        ],
+        "description": "redirect: hosted page · qr: scan-to-pay payload · instructions: offline transfer details"
+      },
       "ClientOverview": {
         "type": "object",
         "properties": {
@@ -14475,12 +14577,20 @@
             "type": "string"
           },
           "name": {
+            "$ref": "#/components/schemas/LocalizedText"
+          },
+          "plugin_id": {
             "type": "string"
           },
           "plugin_version": {
-            "type": [
-              "string",
-              "null"
+            "type": "string"
+          },
+          "flow": {
+            "type": "string",
+            "enum": [
+              "redirect",
+              "qr",
+              "instructions"
             ]
           },
           "enabled": {
@@ -14490,9 +14600,9 @@
             "type": "string",
             "enum": [
               "ready",
-              "not_installed",
+              "stopped",
               "misconfigured",
-              "disabled"
+              "incompatible"
             ]
           },
           "currencies": {
@@ -14505,16 +14615,33 @@
             "type": "integer",
             "minimum": -9007199254740991,
             "maximum": 9007199254740991
+          },
+          "last_checked_at": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Timestamp"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "revision": {
+            "$ref": "#/components/schemas/Revision"
           }
         },
         "required": [
           "id",
           "name",
+          "plugin_id",
           "plugin_version",
+          "flow",
           "enabled",
           "status",
           "currencies",
-          "display_order"
+          "display_order",
+          "last_checked_at",
+          "revision"
         ],
         "additionalProperties": false
       },
@@ -15156,34 +15283,154 @@
             "pattern": "^[a-z0-9][a-z0-9._-]{0,63}$"
           },
           "name": {
-            "type": "string"
+            "$ref": "#/components/schemas/LocalizedText"
           },
           "description": {
             "$ref": "#/components/schemas/LocalizedText"
           },
-          "icon": {
-            "type": "string",
-            "enum": [
-              "card",
-              "paypal",
-              "crypto",
-              "alipay",
-              "wechat",
-              "bank"
+          "logo": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 22000,
+                "pattern": "^data:image\\/(svg\\+xml|png);base64,[A-Za-z0-9+/=]+$"
+              },
+              {
+                "type": "null"
+              }
             ]
+          },
+          "flow": {
+            "$ref": "#/components/schemas/CheckoutFlow"
           },
           "currencies": {
             "type": "array",
             "items": {
               "$ref": "#/components/schemas/CurrencyCode"
             }
+          },
+          "fee": {
+            "anyOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "percent_bp": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 10000
+                  },
+                  "fixed": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "currency": {
+                          "$ref": "#/components/schemas/CurrencyCode"
+                        },
+                        "amount_minor": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 9007199254740991
+                        }
+                      },
+                      "required": [
+                        "currency",
+                        "amount_minor"
+                      ],
+                      "additionalProperties": false
+                    }
+                  }
+                },
+                "required": [
+                  "percent_bp",
+                  "fixed"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "min": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "currency": {
+                  "$ref": "#/components/schemas/CurrencyCode"
+                },
+                "amount_minor": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 9007199254740991
+                }
+              },
+              "required": [
+                "currency",
+                "amount_minor"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "max": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "currency": {
+                  "$ref": "#/components/schemas/CurrencyCode"
+                },
+                "amount_minor": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 9007199254740991
+                }
+              },
+              "required": [
+                "currency",
+                "amount_minor"
+              ],
+              "additionalProperties": false
+            }
           }
         },
         "required": [
           "id",
           "name",
-          "icon",
-          "currencies"
+          "logo",
+          "flow",
+          "currencies",
+          "fee",
+          "min",
+          "max"
+        ],
+        "additionalProperties": false
+      },
+      "PaymentStatus": {
+        "type": "object",
+        "properties": {
+          "payment_id": {
+            "$ref": "#/components/schemas/Id"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "pending",
+              "succeeded",
+              "expired",
+              "voided",
+              "failed"
+            ]
+          },
+          "invoice_status": {
+            "$ref": "#/components/schemas/InvoiceStatus"
+          }
+        },
+        "required": [
+          "payment_id",
+          "status",
+          "invoice_status"
         ],
         "additionalProperties": false
       },
@@ -15213,6 +15460,9 @@
                 "type": "string",
                 "const": "redirect"
               },
+              "payment_id": {
+                "$ref": "#/components/schemas/Id"
+              },
               "checkout_url": {
                 "type": "string",
                 "format": "uri"
@@ -15223,7 +15473,81 @@
             },
             "required": [
               "status",
+              "payment_id",
               "checkout_url",
+              "expires_at"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "status": {
+                "type": "string",
+                "const": "qr"
+              },
+              "payment_id": {
+                "$ref": "#/components/schemas/Id"
+              },
+              "qr_payload": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 2048
+              },
+              "amount": {
+                "$ref": "#/components/schemas/Money"
+              },
+              "expires_at": {
+                "$ref": "#/components/schemas/Timestamp"
+              }
+            },
+            "required": [
+              "status",
+              "payment_id",
+              "qr_payload",
+              "amount",
+              "expires_at"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "status": {
+                "type": "string",
+                "const": "instructions"
+              },
+              "payment_id": {
+                "$ref": "#/components/schemas/Id"
+              },
+              "instructions": {
+                "type": "string",
+                "maxLength": 8000
+              },
+              "reference": {
+                "type": "string",
+                "maxLength": 120
+              },
+              "amount": {
+                "$ref": "#/components/schemas/Money"
+              },
+              "expires_at": {
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/Timestamp"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              }
+            },
+            "required": [
+              "status",
+              "payment_id",
+              "instructions",
+              "reference",
+              "amount",
               "expires_at"
             ],
             "additionalProperties": false
@@ -16074,6 +16398,12 @@
               }
             ]
           },
+          "available_images": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/OsImage"
+            }
+          },
           "ipv4": {
             "type": "array",
             "items": {
@@ -16219,6 +16549,7 @@
           "rescue",
           "specs",
           "os_image",
+          "available_images",
           "ipv4",
           "ipv6",
           "node_label",

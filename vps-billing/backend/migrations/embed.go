@@ -55,3 +55,6 @@ var AccountSecurity string
 
 //go:embed 018_commerce_coupons.sql
 var CommerceCoupons string
+
+//go:embed 019_payment_gateways.sql
+var PaymentGateways string
