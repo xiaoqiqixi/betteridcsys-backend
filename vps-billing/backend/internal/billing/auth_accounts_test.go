@@ -287,3 +287,23 @@ func TestAccountRequestValidation(t *testing.T) {
 		t.Fatal("long password mishandled", err)
 	}
 }
+
+func TestMySQLAccountOrderVerificationPolicy(t *testing.T) {
+	f, a, srv := accountServer(t)
+	m := f.Store.(*MySQL)
+	owner := client(t, srv.URL, f.admin.Email, "AccountFixture!2026")
+	c := client(t, srv.URL, f.customer.Email, "AccountFixture!2026")
+	site := accountHTTP(t, owner, "GET", "/admin/site-settings", "/admin/site-settings", nil, "").(map[string]any)
+	site["email_verification_required"] = true
+	accountHTTP(t, owner, "PATCH", "/admin/site-settings", "/admin/site-settings", site, "")
+	accountFailure(t, c, "POST", "/orders", map[string]any{}, 403)
+	accountHTTP(t, c, "POST", "/auth/email/resend", "/auth/email/resend", map[string]any{}, "")
+	token := queuedLink(t, a, m, f.customer.ID, "email_verification")
+	accountHTTP(t, c, "POST", "/auth/email/verify", "/auth/email/verify", map[string]any{"token": token}, "")
+	// Verification permits the request to reach order input validation.
+	status, out := c.request("POST", "/api/v1/orders", map[string]any{}, "verified-order-input")
+	if status != 400 {
+		t.Fatal(status, out)
+	}
+	contracttest.Error(t, out)
+}

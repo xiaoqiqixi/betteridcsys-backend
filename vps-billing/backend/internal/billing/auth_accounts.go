@@ -403,3 +403,28 @@ func (a *App) readSiteSettings6(ctx context.Context, q accountQueryer) (financea
 	v = siteSettingsFromLegacy(old)
 	return v, nil
 }
+
+func (a *App) orderEmailVerified(w http.ResponseWriter, r *http.Request, u User) bool {
+	m, ok := a.Store.(*MySQL)
+	if !ok {
+		return true
+	} // The legacy in-memory demo has no registration policy.
+	settings, err := a.readSiteSettings6(r.Context(), m.DB)
+	if err != nil {
+		a.internal(w, r, err)
+		return false
+	}
+	if !settings.EmailVerificationRequired {
+		return true
+	}
+	profile, err := readProfile(r.Context(), m.DB, u.ID)
+	if err != nil {
+		a.accountResult(w, r, nil, err)
+		return false
+	}
+	if !profile.EmailVerified {
+		fail(w, r, 403, "EMAIL_VERIFICATION_REQUIRED", "Verify your email address before placing an order")
+		return false
+	}
+	return true
+}
