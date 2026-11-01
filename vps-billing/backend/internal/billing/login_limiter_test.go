@@ -66,3 +66,30 @@ func TestLoginLimiterEmailEventuallyReopens(t *testing.T) {
 		t.Fatal("email cannot recover after capped backoff")
 	}
 }
+
+func TestEmailBackoffIsCappedAndRejectedSprayDoesNotExtendIt(t *testing.T) {
+	a := &App{attempts: map[string]bucket{}}
+	key := "email:target@example.invalid"
+	for range 20 {
+		if !a.allowLogin(key) {
+			t.Fatal("initial burst denied")
+		}
+	}
+	for range 10 {
+		b := a.attempts[key]
+		b.Start = time.Now().Add(-31 * time.Second)
+		a.attempts[key] = b
+		if !a.allowLogin(key) {
+			t.Fatal("email backoff exceeded cap")
+		}
+		deadlineBase := a.attempts[key].Start
+		for range 100 {
+			if a.allowLogin(key) {
+				t.Fatal("backoff bypassed")
+			}
+		}
+		if !a.attempts[key].Start.Equal(deadlineBase) {
+			t.Fatal("rejected spray extended account lock")
+		}
+	}
+}
