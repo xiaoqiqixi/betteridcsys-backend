@@ -11,6 +11,7 @@ import (
 	"strconv"
 	"strings"
 	"time"
+	"unicode/utf8"
 )
 
 var ErrInsufficientCredit = errors.New("insufficient credit")
@@ -87,7 +88,7 @@ func appendCredit06(ctx context.Context, tx *sql.Tx, uid, kind string, delta int
 // AdjustCredit06 exposes the same append-only, idempotent operation to account
 // administration. Negative adjustments cannot take an account below zero.
 func (m *MySQL) AdjustCredit06(ctx context.Context, actor User, uid string, delta int64, reason, key string) (api.CreditEntry, error) {
-	if len(reason) < 3 || len(reason) > 500 || delta < -MaxMinor || delta > MaxMinor || !validCancellationID(uid) || !keyPattern.MatchString(key) {
+	if utf8.RuneCountInString(reason) < 3 || utf8.RuneCountInString(reason) > 500 || delta < -MaxMinor || delta > MaxMinor || !validCancellationID(uid) || !keyPattern.MatchString(key) {
 		return api.CreditEntry{}, ErrCommerceInput
 	}
 	raw, _ := json.Marshal([]any{uid, delta, reason})
@@ -110,6 +111,13 @@ func (m *MySQL) AdjustCredit06(ctx context.Context, actor User, uid string, delt
 		money, err := accountMoney06(ctx, tx, uid, " FOR UPDATE")
 		if err != nil {
 			return out, err
+		}
+		var role string
+		if err = tx.QueryRowContext(ctx, "SELECT role FROM users WHERE id=?", uid).Scan(&role); err != nil {
+			return out, err
+		}
+		if role != "customer" {
+			return out, ErrNotFound
 		}
 		replay, err := requestReplay06(ctx, tx, actor.ID, "credit:"+uid, key, fingerprint, &out)
 		if err != nil || replay {

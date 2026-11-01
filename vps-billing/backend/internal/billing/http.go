@@ -336,6 +336,9 @@ func (a *App) serve(w http.ResponseWriter, r *http.Request) {
 	a.serveAuthorized(w, r, u, p, false)
 }
 func (a *App) serveAuthorized(w http.ResponseWriter, r *http.Request, u User, p string, admin bool) {
+	if admin && a.clientAdminHTTP(w, r, u, p) {
+		return
+	}
 	if a.accountSettingsHTTP(w, r, u, p) {
 		return
 	}
