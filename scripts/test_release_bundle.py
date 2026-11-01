@@ -169,6 +169,40 @@ class ReleasePolicy(unittest.TestCase):
             with self.subTest(key=key), self.assertRaises(policy.P.Rejected):
                 policy.attestation_identity(bad, self.proof, 'BUILD.json', self.files['BUILD.json'])
 
+    def test_tag_movement_and_annotated_tag_cycles_are_rejected(self):
+        ref = dict(ref='refs/tags/v0.5.10', object=dict(type='commit', sha=self.source))
+        with mock.patch.object(policy, 'api', return_value=ref):
+            policy.release_tag(self.source, '0.5.10')
+            ref['object']['sha'] = 'f' * 40
+            with self.assertRaises(policy.P.Rejected):
+                policy.release_tag(self.source, '0.5.10')
+        ref['object'] = dict(type='tag', sha='f' * 40)
+        with mock.patch.object(policy, 'api', side_effect=[ref, dict(sha='f'*40, object=ref['object'])]):
+            with self.assertRaises(policy.P.Rejected):
+                policy.release_tag(self.source, '0.5.10')
+
+    def test_tag_release_requires_successful_exact_source_ci_and_both_native_jobs(self):
+        repository = dict(id=1435344087, full_name=policy.REPOSITORY, private=False, default_branch='main')
+        run = dict(self.run, path='.github/workflows/ci.yml', head_branch='main')
+        jobs = dict(total_count=1, jobs=[dict(self.jobs['jobs'][0], name='Go and real MySQL (ubuntu-24.04)')])
+        def api(path):
+            if path == 'repos/' + policy.REPOSITORY: return repository
+            if '/compare/' in path: return dict(status='identical', merge_base_commit=dict(sha=self.source))
+            if '/actions/workflows/' in path: return dict(workflow_runs=[run])
+            return jobs
+        with mock.patch.object(policy, 'api', side_effect=api), mock.patch.object(policy.P, 'git', return_value=self.source):
+            with self.assertRaises(policy.P.Rejected):
+                policy.release_gate(self.source, False)
+            names = ['Go and real MySQL (ubuntu-22.04)', 'Go and real MySQL (ubuntu-24.04)', 'vulnerability',
+                     'Real MySQL financial browser acceptance', 'Native financial acceptance (ubuntu-22.04)',
+                     'Native financial acceptance (ubuntu-24.04)']
+            jobs.update(total_count=len(names), jobs=[dict(self.jobs['jobs'][0], name=name) for name in names])
+            policy.release_gate(self.source, False)
+            jobs['jobs'][-1]['conclusion'] = 'skipped'
+            with self.assertRaises(policy.P.Rejected):
+                policy.release_gate(self.source, False)
+            policy.release_gate(self.source, True)
+
     def test_workflows_pin_actions_and_keep_pr_and_dispatch_unpublished(self):
         release = (ROOT / '.github/workflows/release.yml').read_text()
         dry = (ROOT / '.github/workflows/release-tooling.yml').read_text()
