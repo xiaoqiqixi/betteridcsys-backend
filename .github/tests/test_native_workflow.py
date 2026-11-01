@@ -14,11 +14,13 @@ def job(name):
 
 class NativeWorkflow(unittest.TestCase):
     def test_main_evidence_completes_while_new_pushes_wait(self):
-        workflow = WORKFLOW.read_text()
-        concurrency = workflow.split('concurrency:\n', 1)[1].split('\njobs:', 1)[0]
-        self.assertIn('group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}', concurrency)
-        condition = re.search(r'^  cancel-in-progress: (.+)$', concurrency, re.MULTILINE).group(1)
-        self.assertEqual(condition, "${{ github.event_name == 'pull_request' }}")
+        for name in ('ci.yml', 'release-tooling.yml'):
+            with self.subTest(workflow=name):
+                workflow = (WORKFLOW.parent / name).read_text()
+                concurrency = workflow.split('concurrency:\n', 1)[1].split('\njobs:', 1)[0]
+                self.assertIn('group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}', concurrency)
+                condition = re.search(r'^  cancel-in-progress: (.+)$', concurrency, re.MULTILINE).group(1)
+                self.assertEqual(condition, "${{ github.event_name == 'pull_request' }}")
 
     def test_both_jobs_require_the_official_main_push_and_read_only_token(self):
         for name in ('native-financial', 'financial-performance'):

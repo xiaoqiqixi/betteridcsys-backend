@@ -7,6 +7,10 @@ on:
 permissions:
   contents: read
   actions: read
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  # Finish running main checks and retain only the newest pending source.
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 jobs:
   tooling:
     runs-on: ubuntu-24.04
