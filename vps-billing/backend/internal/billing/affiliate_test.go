@@ -203,3 +203,63 @@ func TestMySQLAffiliateRefundDuringHoldAndRecurringPolicy(t *testing.T) {
 		t.Fatal("release job not registered")
 	}
 }
+
+func TestMySQLAffiliateCommercePartialSettlementAndCreditRollback(t *testing.T) {
+	f := newCancellationSQLFixture(t)
+	m := f.m
+	p := paymentFixture{store: m, owner: f.owner, other: f.other, ctx: f.ctx}
+	migrationExec(t, f.ctx, m.DB, "INSERT INTO affiliates(user_id,code,created_at) VALUES(?,?,UTC_TIMESTAMP(6))", f.other.ID, ID())
+	migrationExec(t, f.ctx, m.DB, "INSERT INTO affiliate_referrals(client_id,affiliate_id,created_at,converted) VALUES(?,?,UTC_TIMESTAMP(6),FALSE)", f.owner.ID, f.other.ID)
+	setAffiliatePolicy(t, m, 1000, true)
+	_, invoice := p.order(t)
+	partial, err := m.AddInvoicePayment06(f.ctx, f.admin, invoice.ID, invoice06Payment(1000, "affiliate-partial"), "affiliate-partial-1")
+	if err != nil || partial.Status != "unpaid" {
+		t.Fatal(partial, err)
+	}
+	var n int
+	if err = m.DB.QueryRow("SELECT COUNT(*) FROM affiliate_commissions").Scan(&n); err != nil || n != 0 {
+		t.Fatal("partial invoice earned commission", n, err)
+	}
+	remaining := invoice.AmountMinor - 1000
+	if _, err = m.AdjustCredit06(f.ctx, f.admin, f.owner.ID, remaining, "Opening credit", "affiliate-credit-seed"); err != nil {
+		t.Fatal(err)
+	}
+	setAffiliatePolicy(t, m, 10001, true)
+	if _, err = m.PayCredit06(f.ctx, f.owner, invoice.ID, "affiliate-credit-pay"); err == nil {
+		t.Fatal("invalid commission policy accepted")
+	}
+	v, err := m.Invoice06(f.ctx, f.owner.ID, invoice.ID)
+	if err != nil || v.Status != "unpaid" || v.CreditApplied.AmountMinor != 0 || len(v.Payments) != 1 {
+		t.Fatal("failed commission escaped settlement transaction", v, err)
+	}
+	credit, err := m.Credit06(f.ctx, f.owner.ID)
+	if err != nil || credit.Balance.AmountMinor != remaining {
+		t.Fatal("failed commission consumed credit", credit, err)
+	}
+	setAffiliatePolicy(t, m, 1000, true)
+	for range 2 {
+		if _, err = m.PayCredit06(f.ctx, f.owner, invoice.ID, "affiliate-credit-pay"); err != nil {
+			t.Fatal(err)
+		}
+	}
+	var commission int64
+	if err = m.DB.QueryRow("SELECT amount_minor FROM affiliate_commissions WHERE invoice_id=?", invoice.ID).Scan(&commission); err != nil || commission != invoice.AmountMinor/10 {
+		t.Fatal(commission, err)
+	}
+	// A second invoice enters commerce through a partial manual payment and
+	// completes through a gateway. Both completion routes must use the hook.
+	_, second := p.order(t)
+	if _, err = m.AddInvoicePayment06(f.ctx, f.admin, second.ID, invoice06Payment(1000, "affiliate-partial-two"), "affiliate-partial-2"); err != nil {
+		t.Fatal(err)
+	}
+	attempt := p.reserve(t, second)
+	paid := syntheticPayment(attempt)
+	for range 2 {
+		if _, err = m.SettlePayment(f.ctx, attempt.ID, paid); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err = m.DB.QueryRow("SELECT COUNT(*) FROM affiliate_commissions").Scan(&n); err != nil || n != 2 {
+		t.Fatal("commerce settlement replay", n, err)
+	}
+}

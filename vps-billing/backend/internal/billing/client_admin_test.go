@@ -46,7 +46,7 @@ func TestMySQLClientAdminLifecycleAndPrivateNotes(t *testing.T) {
 	accountHTTP(t, owner, "POST", "/admin/clients/"+id+"/revoke-sessions", "/admin/clients/{id}/revoke-sessions", map[string]any{}, "")
 	accountFailure(t, c, "GET", "/account", nil, 401)
 	c = client(t, srv.URL, in["email"].(string), "Managed password!2026")
-	accountHTTP(t, c, "POST", "/account/api-tokens", "/account/api-tokens", map[string]any{"name": "API", "scopes": []string{"read"}, "ip_allowlist": []string{}}, "managed-token-1")
+	accountHTTP(t, c, "POST", "/account/api-tokens", "/account/api-tokens", map[string]any{"name": "API", "scopes": []string{"read"}, "ip_allowlist": []string{}, "expires_in_days": nil}, "managed-token-1")
 	v = accountHTTP(t, owner, "PATCH", "/admin/clients/"+id, "/admin/clients/{id}", map[string]any{"revision": v["revision"], "status": "closed"}, "").(map[string]any)
 	if v["status"] != "closed" {
 		t.Fatal(v)

@@ -57,8 +57,8 @@ the settings API never returns its password.
 
 `recordAffiliateCommissionTx(ctx, tx, invoiceID, now)` must run once when an invoice
 becomes fully paid, inside the payment transaction, before commit. The current
-settlement path calls it. Future commerce settlement paths must use the same helper
-for gateway, credit and administrative settlements. Invoice uniqueness prevents
+legacy settlement path and commerce `completeInvoice06` call it, covering gateway,
+credit and administrative settlements. Invoice uniqueness prevents
 double recording. Failed settlement rolls back commission and referral conversion.
 Top-ups and manual invoices do not earn commission. Account credit has no implicit FX:
 an affiliate and referred invoice must use the same currency. First earned commission

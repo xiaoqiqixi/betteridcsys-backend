@@ -607,6 +607,9 @@ func completeInvoice06(ctx context.Context, tx *sql.Tx, record invoiceRecord06, 
 	if _, err := tx.ExecContext(ctx, "UPDATE invoices SET status='paid',paid_at=? WHERE id=? AND status='unpaid'", paid, v.ID); err != nil {
 		return v, err
 	}
+	if err := recordAffiliateCommissionTx(ctx, tx, v.ID, time.Now().UTC()); err != nil {
+		return v, err
+	}
 	if v.OrderID != nil {
 		if _, err := tx.ExecContext(ctx, "UPDATE orders SET status='paid',paid_at=? WHERE id=? AND status='pending_payment'", paid, *v.OrderID); err != nil {
 			return v, err
