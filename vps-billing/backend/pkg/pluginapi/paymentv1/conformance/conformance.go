@@ -38,7 +38,8 @@ func Test(t *testing.T, s Suite) {
 	}
 	if s.Callback != nil {
 		e, err := s.Processor.Verify(ctx, s.Config, *s.Callback)
-		if err != nil || e.GatewayID != s.Config.GatewayID || paymentv1.ValidateEvent(e, s.Config.ProviderID, s.Config.MerchantID, *s.Manifest.Payment, time.Now()) != nil {
+		query := paymentv1.Query{Intent: s.Intent, SessionID: out.SessionID}
+		if err != nil || paymentv1.ValidateQueryResult(paymentv1.QueryResult{Status: "succeeded", Event: &e}, s.Config, query, *s.Manifest.Payment, time.Now()) != nil {
 			t.Fatal("verified event contract", err)
 		}
 		bad := *s.Callback
@@ -62,12 +63,16 @@ func Test(t *testing.T, s Suite) {
 	}
 	if s.Manifest.HasCapability(pluginapi.PaymentRefundCapability) {
 		p, ok := s.Processor.(paymentv1.Refunder)
-		if !ok || s.Refund == nil {
+		if !ok || s.Refund == nil || paymentv1.ValidateRefund(*s.Refund, *s.Manifest.Payment) != nil {
 			t.Fatal("refund capability lacks hook/fixture")
 		}
 		result, err := p.Refund(ctx, s.Config, *s.Refund)
 		if err != nil || paymentv1.ValidateRefundResult(result) != nil {
 			t.Fatal("refund contract", err)
+		}
+		again, err := p.Refund(ctx, s.Config, *s.Refund)
+		if err != nil || paymentv1.ValidateRefundResult(again) != nil || again.RefundID != result.RefundID {
+			t.Fatal("refund idempotency", err)
 		}
 	}
 }

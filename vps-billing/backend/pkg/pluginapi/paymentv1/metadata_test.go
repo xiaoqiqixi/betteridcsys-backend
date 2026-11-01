@@ -33,6 +33,15 @@ func TestFlowsLimitsAndPassiveLogos(t *testing.T) {
 	if ValidateLogo("data:image/png;base64,"+base64.StdEncoding.EncodeToString([]byte("not PNG"))) == nil {
 		t.Fatal("invalid PNG accepted")
 	}
+	// The transport value, including its MIME prefix and base64 expansion, must
+	// fit the public 16 KiB limit even when the decoded image would fit.
+	for _, size := range []int{12000, 12300} {
+		raw := "<svg><desc>" + strings.Repeat("a", size) + "</desc></svg>"
+		uri := "data:image/svg+xml;base64," + base64.StdEncoding.EncodeToString([]byte(raw))
+		if (ValidateLogo(uri) == nil) != (len(uri) <= 16<<10) {
+			t.Fatal("logo URI size limit", len(uri))
+		}
+	}
 }
 
 func TestQueryCannotInventOrCrossSettlement(t *testing.T) {

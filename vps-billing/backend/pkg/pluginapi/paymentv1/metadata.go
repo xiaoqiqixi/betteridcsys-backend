@@ -110,7 +110,7 @@ func (d Declarations) WithinLimits(currency string, amount int64) bool {
 // entities, links, embedded images, foreign objects, animation or URL references.
 func ValidateLogo(uri string) error {
 	parts := strings.SplitN(uri, ",", 2)
-	if len(parts) != 2 || len(uri) > 22000 {
+	if len(parts) != 2 || len(uri) > 16<<10 {
 		return ErrInvalid
 	}
 	raw, err := base64.StdEncoding.Strict().DecodeString(parts[1])

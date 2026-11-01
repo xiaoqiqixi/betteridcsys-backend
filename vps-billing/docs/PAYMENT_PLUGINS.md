@@ -68,7 +68,8 @@ This is a structural example; replace the digest with the actual executable hash
 ```
 
 Metadata lives under `payment`. Names/descriptions support `en` and `zh-CN`.
-Optional `logo` is a base64 PNG or SVG data URI, at most 16 KiB decoded. Core
+Optional `logo` is a base64 PNG or SVG data URI, at most 16 KiB including the
+MIME prefix and base64 encoding. Core
 decodes PNGs (maximum 1024×1024) and accepts only passive SVG elements/attributes;
 scripts, external references, CSS, animation and entities are rejected. Text is
 plain text. Limits and fee entries use supported currencies and integer minor

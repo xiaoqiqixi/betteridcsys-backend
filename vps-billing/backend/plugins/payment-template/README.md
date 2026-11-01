@@ -2,7 +2,8 @@
 
 Copy this directory into your own module and depend on the Go SDK packages
 `pkg/pluginapi/paymentv1` and `pkg/pluginserver`. Replace `payment.template` with
-your plugin ID. The template deliberately creates instructions that collect no
+your plugin ID and update the template import in `cmd/plugin/main.go` to your
+module path. The template deliberately creates instructions that collect no
 money and rejects every callback.
 
 Hooks: `Create` receives a durable Core attempt and must use its idempotency key;
