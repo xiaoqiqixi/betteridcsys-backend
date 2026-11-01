@@ -240,7 +240,17 @@ func ValidateCheckout(out Checkout, provider string, d Declarations, now time.Ti
 	}
 	switch flow {
 	case "redirect":
-		if !httpsURL(out.URL, false) || out.QRPayload != "" || out.Instructions != "" || out.Reference != "" {
+		// Core 0.6's explicit redirect flow preserves the provider's opaque
+		// fragment (for example Stripe Checkout). It cannot change the approved
+		// host. Legacy declarations retain their fragment-free URL contract.
+		checkedURL := out.URL
+		if d.Flow == "redirect" && out.Flow == "redirect" {
+			if parsed, err := url.Parse(out.URL); err == nil {
+				parsed.Fragment, parsed.RawFragment = "", ""
+				checkedURL = parsed.String()
+			}
+		}
+		if len(out.URL) > 2048 || strings.ContainsAny(out.URL, "\r\n\x00") || !httpsURL(checkedURL, false) || out.QRPayload != "" || out.Instructions != "" || out.Reference != "" {
 			return ErrInvalid
 		}
 		u, _ := url.Parse(out.URL)

@@ -124,7 +124,7 @@ func validateCheckout(a PaymentAttempt, c integrations.Checkout) error {
 		return ErrPaymentInput
 	}
 	u, e := url.Parse(c.URL)
-	if c.ProviderID != a.Expectation.ProviderID || !paymentToken(c.SessionID, 128) || e != nil || u.Scheme != "https" || u.Hostname() == "" || u.User != nil || u.Fragment != "" || len(c.URL) > 2048 || c.ExpiresAt.IsZero() || !c.ExpiresAt.After(time.Now().UTC()) {
+	if c.ProviderID != a.Expectation.ProviderID || !paymentToken(c.SessionID, 128) || e != nil || u.Scheme != "https" || u.Hostname() == "" || u.User != nil || (u.Fragment != "" && c.Flow != "redirect") || len(c.URL) > 2048 || c.ExpiresAt.IsZero() || !c.ExpiresAt.After(time.Now().UTC()) {
 		return ErrPaymentInput
 	}
 	return nil

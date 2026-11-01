@@ -51,3 +51,22 @@ func TestQueryCannotInventOrCrossSettlement(t *testing.T) {
 		t.Fatal("success without evidence")
 	}
 }
+
+func TestExplicitRedirectPreservesFragmentWithinApprovedHost(t *testing.T) {
+	d := Declarations{Flow: "redirect", Currencies: []Currency{{"USD", 2}}, CheckoutHosts: []string{"checkout.stripe.com"}}
+	c := Checkout{ProviderID: "payment.stripe", SessionID: "session", Flow: "redirect", URL: "https://checkout.stripe.com/c/pay/session#opaque%2Fdata", ExpiresAt: time.Now().Add(time.Hour)}
+	if ValidateCheckout(c, c.ProviderID, d, time.Now()) != nil {
+		t.Fatal("approved provider fragment rejected")
+	}
+	legacy := d
+	legacy.Flow = ""
+	if ValidateCheckout(c, c.ProviderID, legacy, time.Now()) == nil {
+		t.Fatal("legacy fragment rule changed")
+	}
+	for _, raw := range []string{"https://checkout.stripe.com.evil.test/c#x", "https://evil.test/#https://checkout.stripe.com", "https://user@checkout.stripe.com/#x", "https://checkout.stripe.com:8443/#x", "http://checkout.stripe.com/#x", "https://checkout.stripe.com/#x\n", "https://checkout.stripe.com/#" + strings.Repeat("x", 2048)} {
+		c.URL = raw
+		if ValidateCheckout(c, c.ProviderID, d, time.Now()) == nil {
+			t.Fatal("unsafe redirect accepted", raw[:30])
+		}
+	}
+}
