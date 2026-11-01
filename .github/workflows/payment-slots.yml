@@ -5,6 +5,10 @@ on:
   workflow_dispatch:
 permissions:
   contents: read
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  # Complete running main evidence and retain only the newest pending source.
+  cancel-in-progress: false
 jobs:
   payments-mysql:
     runs-on: ubuntu-24.04
