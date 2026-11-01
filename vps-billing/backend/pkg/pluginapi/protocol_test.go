@@ -108,7 +108,7 @@ func TestManifestCompatibility(t *testing.T) {
 	for _, mutate := range []func(*Manifest){func(m *Manifest) { m.Executable = "../plugin" }, func(m *Manifest) { m.ID = "../../x" }, func(m *Manifest) { m.Capabilities = append(m.Capabilities, "database") }, func(m *Manifest) { m.Protocol = "aster.smtp/2" }, func(m *Manifest) { m.SHA256 = strings.Repeat("A", 64) }} {
 		m := manifest
 		mutate(&m)
-		if m.Validate(CoreVersion) == nil {
+		if m.Validate("0.5.10") == nil {
 			t.Fatal("accepted incompatible manifest")
 		}
 	}
@@ -128,6 +128,9 @@ func TestPaymentProtocolCannotClaimEarlierCoreSupport(t *testing.T) {
 	manifest := Manifest{Schema: 1, ID: "payment.fixture", Version: "0.1.0", Protocol: PaymentProtocol, CoreMin: PaymentMinCoreVersion, CoreMaxExclusive: "0.6.0", Capabilities: PaymentCapabilities(), Executable: "plugin", SHA256: strings.Repeat("a", 64), Payment: &paymentv1.Declarations{Currencies: []paymentv1.Currency{{Code: "CNY", Precision: 2}}, CheckoutHosts: []string{"checkout.example.test"}}}
 	if err := manifest.Validate(PaymentMinCoreVersion); err != nil {
 		t.Fatal("earliest supported core rejected", err)
+	}
+	if manifest.Validate(CoreVersion) == nil {
+		t.Fatal("old payment manifest upper bound broadened on Core 0.6")
 	}
 	for _, core := range []string{"0.4.999", "0.5.0", "0.5.2"} {
 		if manifest.Validate(core) == nil {
@@ -169,10 +172,10 @@ func TestResponseMustExplicitlyDeclareOutcome(t *testing.T) {
 }
 
 func TestResourceManifestCannotBorrowPaymentOrLegacyCompatibility(t *testing.T) {
-	if CoreVersion != "0.5.10" || ResourceMinCoreVersion != "0.5.10" {
+	if CoreVersion != "0.6.0" || ResourceMinCoreVersion != "0.5.10" {
 		t.Fatal("resource protocol must begin at its first Core release, 0.5.10")
 	}
-	m := Manifest{Schema: 1, ID: "resource.aster-cloud", Version: "0.1.0", Protocol: ResourceProtocol, CoreMin: ResourceMinCoreVersion, CoreMaxExclusive: "0.6.0", Capabilities: ResourceCapabilities(), Executable: "plugin", SHA256: strings.Repeat("a", 64)}
+	m := Manifest{Schema: 1, ID: "resource.aster-cloud", Version: "0.1.0", Protocol: ResourceProtocol, CoreMin: ResourceMinCoreVersion, CoreMaxExclusive: "0.7.0", Capabilities: ResourceCapabilities(), Executable: "plugin", SHA256: strings.Repeat("a", 64)}
 	if e := m.Validate(CoreVersion); e != nil {
 		t.Fatal(e)
 	}

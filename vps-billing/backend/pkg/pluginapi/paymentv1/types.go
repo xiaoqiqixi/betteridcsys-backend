@@ -25,13 +25,21 @@ type Currency struct {
 	Precision int    `json:"precision"`
 }
 type Declarations struct {
-	Currencies    []Currency `json:"currencies"`
-	CheckoutHosts []string   `json:"checkout_hosts"`
+	Name          map[string]string `json:"name,omitempty"`
+	Description   map[string]string `json:"description,omitempty"`
+	Logo          string            `json:"logo,omitempty"`
+	Flow          string            `json:"flow,omitempty"`
+	Fee           *Fee              `json:"fee,omitempty"`
+	Min           []CurrencyAmount  `json:"min,omitempty"`
+	Max           []CurrencyAmount  `json:"max,omitempty"`
+	Currencies    []Currency        `json:"currencies"`
+	CheckoutHosts []string          `json:"checkout_hosts"`
 }
 
 // Config carries only the explicitly approved merchant identity. Credentials
 // stay in the worker's separately protected configuration, outside core.
 type Config struct {
+	GatewayID      string `json:"gateway_id,omitempty"`
 	MerchantID     string `json:"merchant_id"`
 	ProviderID     string `json:"provider_id"`
 	ManifestSHA256 string `json:"manifest_sha256"`
@@ -49,10 +57,15 @@ type Intent struct {
 	ReturnURL             string `json:"return_url"`
 }
 type Checkout struct {
-	ProviderID string    `json:"provider_id"`
-	SessionID  string    `json:"session_id"`
-	URL        string    `json:"checkout_url"`
-	ExpiresAt  time.Time `json:"expires_at"`
+	Flow         string    `json:"flow,omitempty"`
+	QRPayload    string    `json:"qr_payload,omitempty"`
+	Instructions string    `json:"instructions,omitempty"`
+	Reference    string    `json:"reference,omitempty"`
+	GatewayID    string    `json:"gateway_id,omitempty"`
+	ProviderID   string    `json:"provider_id"`
+	SessionID    string    `json:"session_id"`
+	URL          string    `json:"checkout_url"`
+	ExpiresAt    time.Time `json:"expires_at"`
 }
 type Header struct {
 	Name   string   `json:"name"`
@@ -66,6 +79,7 @@ type Callback struct {
 	Body     []byte   `json:"body"`
 }
 type VerifiedEvent struct {
+	GatewayID             string    `json:"gateway_id,omitempty"`
 	AttemptID             string    `json:"attempt_id"`
 	ProviderID            string    `json:"provider_id"`
 	EventID               string    `json:"event_id"`
@@ -116,7 +130,10 @@ func ValidHost(host string) bool {
 	return true
 }
 func (d Declarations) Validate() error {
-	if len(d.Currencies) == 0 || len(d.Currencies) > 32 || len(d.CheckoutHosts) == 0 || len(d.CheckoutHosts) > 8 {
+	if len(d.Currencies) == 0 || len(d.Currencies) > 32 || (d.CheckoutFlow() == "redirect" && len(d.CheckoutHosts) == 0) || len(d.CheckoutHosts) > 8 {
+		return ErrInvalid
+	}
+	if d.ValidateMetadata() != nil {
 		return ErrInvalid
 	}
 	seen := map[string]bool{}
@@ -144,6 +161,9 @@ func (d Declarations) Supports(code string, precision int) bool {
 	return false
 }
 func ValidateConfig(c Config) error {
+	if c.GatewayID != "" && !ValidGatewayID(c.GatewayID) {
+		return ErrInvalid
+	}
 	if !ValidID(c.MerchantID) || !ValidID(c.ProviderID) || len(c.ManifestSHA256) != 64 {
 		return ErrInvalid
 	}
@@ -198,18 +218,43 @@ func ValidateIntent(in Intent, d Declarations) error {
 			return ErrInvalid
 		}
 	}
-	if in.AttemptID != in.IdempotencyKey || in.AmountMinor <= 0 || in.AmountMinor > MaxMinor || !d.Supports(in.Currency, in.CurrencyDecimalPlaces) || !coreURL(in.CallbackURL) || !coreURL(in.ReturnURL) {
+	if in.AttemptID != in.IdempotencyKey || in.AmountMinor <= 0 || in.AmountMinor > MaxMinor || !d.Supports(in.Currency, in.CurrencyDecimalPlaces) || !d.WithinLimits(in.Currency, in.AmountMinor) || !coreURL(in.CallbackURL) || !coreURL(in.ReturnURL) {
 		return ErrInvalid
 	}
 	return nil
 }
 func ValidateCheckout(out Checkout, provider string, d Declarations, now time.Time) error {
-	if out.ProviderID != provider || !ValidID(out.SessionID) || !httpsURL(out.URL, false) || !out.ExpiresAt.After(now) || out.ExpiresAt.After(now.Add(24*time.Hour)) {
+	flow := out.Flow
+	if flow == "" {
+		flow = "redirect"
+	}
+	if out.ProviderID != provider || !ValidID(out.SessionID) || flow != d.CheckoutFlow() {
 		return ErrInvalid
 	}
-	u, _ := url.Parse(out.URL)
-	for _, h := range d.CheckoutHosts {
-		if u.Hostname() == h {
+	if out.ExpiresAt.IsZero() {
+		if flow != "instructions" {
+			return ErrInvalid
+		}
+	} else if !out.ExpiresAt.After(now) || out.ExpiresAt.After(now.Add(24*time.Hour)) {
+		return ErrInvalid
+	}
+	switch flow {
+	case "redirect":
+		if !httpsURL(out.URL, false) || out.QRPayload != "" || out.Instructions != "" || out.Reference != "" {
+			return ErrInvalid
+		}
+		u, _ := url.Parse(out.URL)
+		for _, h := range d.CheckoutHosts {
+			if u.Hostname() == h {
+				return nil
+			}
+		}
+	case "qr":
+		if out.URL == "" && out.Instructions == "" && out.Reference == "" && PlainText(out.QRPayload, 2048, false) {
+			return nil
+		}
+	case "instructions":
+		if out.URL == "" && out.QRPayload == "" && PlainText(out.Instructions, 8000, true) && PlainText(out.Reference, 120, false) {
 			return nil
 		}
 	}

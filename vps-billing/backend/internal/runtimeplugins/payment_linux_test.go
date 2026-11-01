@@ -67,6 +67,37 @@ type paymentProcessor struct {
 	verify func(context.Context, paymentv1.Config, paymentv1.Callback) (paymentv1.VerifiedEvent, error)
 }
 
+type optionalPaymentProcessor struct{ paymentProcessor }
+
+func (p optionalPaymentProcessor) Query(context.Context, paymentv1.Config, paymentv1.Query) (paymentv1.QueryResult, error) {
+	e := paymentEvent()
+	return paymentv1.QueryResult{Status: "succeeded", Event: &e}, nil
+}
+func (p optionalPaymentProcessor) Refund(context.Context, paymentv1.Config, paymentv1.Refund) (paymentv1.RefundResult, error) {
+	return paymentv1.RefundResult{RefundID: "refund-1", Status: "pending"}, nil
+}
+func TestPaymentOptionalOperations(t *testing.T) {
+	f := newPaymentFixture(t)
+	f.manifest.Capabilities = append(pluginapi.PaymentCapabilities(), pluginapi.PaymentQueryCapability, pluginapi.PaymentRefundCapability)
+	raw := writeJSON(t, f.manifestPath, f.manifest)
+	f.policy.Payment.ManifestSHA256 = digestBytes(raw)
+	writeJSON(t, f.manager.policy, f.policy)
+	f.paymentServe(t, optionalPaymentProcessor{})
+	q := paymentv1.Query{Intent: paymentIntent(), SessionID: "session-1"}
+	out, err := f.manager.QueryPayment(t.Context(), f.paymentConfig(), q)
+	if err != nil || out.Status != "succeeded" || out.Event.TransactionID != "tx-1" {
+		t.Fatal(out, err)
+	}
+	refund, err := f.manager.RefundPayment(t.Context(), f.paymentConfig(), paymentv1.Refund{IdempotencyKey: "refund-key", TransactionID: "tx-1", AmountMinor: 100, Currency: "CNY", CurrencyDecimalPlaces: 2})
+	if err != nil || refund.Status != "pending" {
+		t.Fatal(refund, err)
+	}
+	q.Intent.AmountMinor++
+	if _, err := f.manager.QueryPayment(t.Context(), f.paymentConfig(), q); err == nil {
+		t.Fatal("mismatching query evidence accepted")
+	}
+}
+
 func (p paymentProcessor) Create(c context.Context, cfg paymentv1.Config, in paymentv1.Intent) (paymentv1.Checkout, error) {
 	if p.create == nil {
 		return paymentCheckout(), nil

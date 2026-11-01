@@ -41,7 +41,7 @@ func newPaymentHTTPRuntime(t *testing.T) *paymentHTTPRuntime {
 	declarations := paymentfixture.Declarations()
 	return &paymentHTTPRuntime{
 		manifest: pluginapi.Manifest{Schema: 1, ID: paymentfixture.ProviderID, Version: "1.0.0", Protocol: pluginapi.PaymentProtocol,
-			CoreMin: "0.5.3", CoreMaxExclusive: "0.6.0", Capabilities: pluginapi.PaymentCapabilities(), Executable: "plugin", SHA256: strings.Repeat("a", 64), Payment: &declarations},
+			CoreMin: "0.5.3", CoreMaxExclusive: "0.7.0", Capabilities: pluginapi.PaymentCapabilities(), Executable: "plugin", SHA256: strings.Repeat("a", 64), Payment: &declarations},
 		selection: pluginapi.Selection{Enabled: true, ID: paymentfixture.ProviderID, Version: "1.0.0", ManifestSHA256: strings.Repeat("b", 64), MerchantID: "fixture-merchant"},
 		processor: processor, secret: key,
 	}

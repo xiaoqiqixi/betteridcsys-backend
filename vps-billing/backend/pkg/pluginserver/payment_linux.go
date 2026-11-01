@@ -15,6 +15,7 @@ import (
 type PaymentServer struct {
 	Manifest   pluginapi.Manifest
 	ClientUID  uint32
+	GatewayID  string
 	MerchantID string
 	Processor  paymentv1.Processor
 	operations chan struct{}
@@ -23,6 +24,19 @@ type PaymentServer struct {
 func (s PaymentServer) Serve(ctx context.Context, listener *net.UnixListener) error {
 	if ctx == nil || listener == nil || s.Processor == nil || s.Manifest.Protocol != pluginapi.PaymentProtocol || s.Manifest.Validate(s.Manifest.CoreMin) != nil || !paymentv1.ValidID(s.MerchantID) {
 		return pluginapi.ErrInvalid
+	}
+	if s.GatewayID != "" && !paymentv1.ValidGatewayID(s.GatewayID) {
+		return pluginapi.ErrInvalid
+	}
+	if s.Manifest.HasCapability(pluginapi.PaymentQueryCapability) {
+		if _, ok := s.Processor.(paymentv1.Querier); !ok {
+			return pluginapi.ErrInvalid
+		}
+	}
+	if s.Manifest.HasCapability(pluginapi.PaymentRefundCapability) {
+		if _, ok := s.Processor.(paymentv1.Refunder); !ok {
+			return pluginapi.ErrInvalid
+		}
 	}
 	s.operations = make(chan struct{}, 8)
 	server := &http.Server{Handler: http.HandlerFunc(s.serveHTTP), ReadHeaderTimeout: time.Second, ReadTimeout: 2 * time.Second, WriteTimeout: 15 * time.Second, IdleTimeout: 2 * time.Second, MaxHeaderBytes: 4096, ErrorLog: log.New(io.Discard, "", 0), ConnContext: func(ctx context.Context, _ net.Conn) context.Context {
@@ -55,7 +69,7 @@ func (s PaymentServer) serveHTTP(w http.ResponseWriter, r *http.Request) {
 		reply(w, pluginapi.Identity{Protocol: s.Manifest.Protocol, ID: s.Manifest.ID, Version: s.Manifest.Version, SHA256: s.Manifest.SHA256, Capabilities: s.Manifest.Capabilities, Nonce: h.Nonce})
 		return
 	}
-	if r.URL.Path != "/v1/payment/checkout" && r.URL.Path != "/v1/payment/verify" {
+	if r.URL.Path != "/v1/payment/checkout" && r.URL.Path != "/v1/payment/verify" && r.URL.Path != "/v1/payment/query" && r.URL.Path != "/v1/payment/refund" {
 		http.Error(w, "not found", 404)
 		return
 	}
@@ -75,10 +89,18 @@ func (s PaymentServer) serveHTTP(w http.ResponseWriter, r *http.Request) {
 		s.create(w, r, state)
 		return
 	}
+	if r.URL.Path == "/v1/payment/query" {
+		s.query(w, r, state)
+		return
+	}
+	if r.URL.Path == "/v1/payment/refund" {
+		s.refund(w, r, state)
+		return
+	}
 	s.verify(w, r, state)
 }
 func (s PaymentServer) allowed(protocol, version, nonce string, timeout int64, cfg paymentv1.Config, state *session) bool {
-	return protocol == pluginapi.PaymentProtocol && version == s.Manifest.Version && nonce == state.nonce && timeout >= 1 && timeout <= 12000 && paymentv1.ValidateConfig(cfg) == nil && cfg.ProviderID == s.Manifest.ID && cfg.MerchantID == s.MerchantID
+	return protocol == pluginapi.PaymentProtocol && version == s.Manifest.Version && nonce == state.nonce && timeout >= 1 && timeout <= 12000 && paymentv1.ValidateConfig(cfg) == nil && cfg.ProviderID == s.Manifest.ID && cfg.MerchantID == s.MerchantID && cfg.GatewayID == s.GatewayID
 }
 func (s PaymentServer) create(w http.ResponseWriter, r *http.Request, state *session) {
 	var in pluginapi.PaymentCreateRequest
@@ -98,7 +120,7 @@ func (s PaymentServer) create(w http.ResponseWriter, r *http.Request, state *ses
 	ctx, cancel := context.WithTimeout(r.Context(), time.Duration(in.TimeoutMS)*time.Millisecond)
 	defer cancel()
 	checkout, e := s.Processor.Create(ctx, in.Config, in.Intent)
-	if e == nil && ctx.Err() == nil && paymentv1.ValidateCheckout(checkout, s.Manifest.ID, *s.Manifest.Payment, time.Now()) == nil {
+	if e == nil && ctx.Err() == nil && checkout.GatewayID == s.GatewayID && paymentv1.ValidateCheckout(checkout, s.Manifest.ID, *s.Manifest.Payment, time.Now()) == nil {
 		out.Status = "accepted"
 		out.Code = ""
 		out.Checkout = &checkout
@@ -125,12 +147,65 @@ func (s PaymentServer) verify(w http.ResponseWriter, r *http.Request, state *ses
 	ctx, cancel := context.WithTimeout(r.Context(), time.Duration(in.TimeoutMS)*time.Millisecond)
 	defer cancel()
 	event, e := s.Processor.Verify(ctx, in.Config, in.Callback)
-	if e == nil && ctx.Err() == nil && paymentv1.ValidateEvent(event, s.Manifest.ID, s.MerchantID, *s.Manifest.Payment, time.Now()) == nil {
+	if e == nil && ctx.Err() == nil && event.GatewayID == s.GatewayID && paymentv1.ValidateEvent(event, s.Manifest.ID, s.MerchantID, *s.Manifest.Payment, time.Now()) == nil {
 		out.Status = "verified"
 		out.Code = ""
 		out.Event = &event
 	} else if errors.Is(e, paymentv1.ErrRejected) || errors.Is(e, paymentv1.ErrInvalid) {
 		out.Code = "rejected"
+	}
+	reply(w, out)
+}
+
+func (s PaymentServer) query(w http.ResponseWriter, r *http.Request, state *session) {
+	var in pluginapi.PaymentQueryRequest
+	if !readJSON(w, r, &in) {
+		return
+	}
+	p, ok := s.Processor.(paymentv1.Querier)
+	if !ok || !s.Manifest.HasCapability(pluginapi.PaymentQueryCapability) || !s.allowed(in.Protocol, in.Version, in.RequestID, in.TimeoutMS, in.Config, state) || paymentv1.ValidateQuery(in.Query, *s.Manifest.Payment) != nil {
+		http.Error(w, "incompatible", 409)
+		return
+	}
+	out := pluginapi.PaymentQueryResponse{Protocol: pluginapi.PaymentProtocol, RequestID: in.RequestID, Status: "failed", Code: "unavailable"}
+	defer func() {
+		if recover() != nil {
+			reply(w, out)
+		}
+	}()
+	ctx, cancel := context.WithTimeout(r.Context(), time.Duration(in.TimeoutMS)*time.Millisecond)
+	defer cancel()
+	result, err := p.Query(ctx, in.Config, in.Query)
+	if err == nil && ctx.Err() == nil && paymentv1.ValidateQueryResult(result, in.Config, in.Query, *s.Manifest.Payment, time.Now()) == nil {
+		out.Status = "accepted"
+		out.Code = ""
+		out.Result = &result
+	}
+	reply(w, out)
+}
+func (s PaymentServer) refund(w http.ResponseWriter, r *http.Request, state *session) {
+	var in pluginapi.PaymentRefundRequest
+	if !readJSON(w, r, &in) {
+		return
+	}
+	p, ok := s.Processor.(paymentv1.Refunder)
+	if !ok || !s.Manifest.HasCapability(pluginapi.PaymentRefundCapability) || !s.allowed(in.Protocol, in.Version, in.RequestID, in.TimeoutMS, in.Config, state) || paymentv1.ValidateRefund(in.Refund, *s.Manifest.Payment) != nil {
+		http.Error(w, "incompatible", 409)
+		return
+	}
+	out := pluginapi.PaymentRefundResponse{Protocol: pluginapi.PaymentProtocol, RequestID: in.RequestID, Status: "failed", Code: "unavailable"}
+	defer func() {
+		if recover() != nil {
+			reply(w, out)
+		}
+	}()
+	ctx, cancel := context.WithTimeout(r.Context(), time.Duration(in.TimeoutMS)*time.Millisecond)
+	defer cancel()
+	result, err := p.Refund(ctx, in.Config, in.Refund)
+	if err == nil && ctx.Err() == nil && paymentv1.ValidateRefundResult(result) == nil {
+		out.Status = "accepted"
+		out.Code = ""
+		out.Result = &result
 	}
 	reply(w, out)
 }

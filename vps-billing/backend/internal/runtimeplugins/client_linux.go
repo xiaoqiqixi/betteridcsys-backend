@@ -21,6 +21,8 @@ import (
 
 type Manager struct {
 	root, policy        string
+	paymentSlot         string
+	gateways            map[string]*Manager
 	rules               trust
 	mu                  sync.Mutex
 	failures            int

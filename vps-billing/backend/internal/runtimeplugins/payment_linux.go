@@ -20,7 +20,7 @@ func (m *Manager) PaymentSelection() (pluginapi.Manifest, pluginapi.Selection, e
 		return pluginapi.Manifest{}, pluginapi.Selection{}, e
 	}
 	defer release()
-	a, e := loadApprovalKind(m.root, m.policy, "payment", m.rules)
+	a, e := loadApprovalKind(m.root, m.policy, m.paymentKind(), m.rules)
 	if e != nil {
 		return pluginapi.Manifest{}, pluginapi.Selection{}, e
 	}
@@ -37,7 +37,7 @@ func (m *Manager) PaymentState() State {
 		s.Status = "not_installed"
 		return s
 	}
-	a, e := loadApprovalKind(m.root, m.policy, "payment", m.rules)
+	a, e := loadApprovalKind(m.root, m.policy, m.paymentKind(), m.rules)
 	if errors.Is(e, ErrDisabled) {
 		s.Status = "disabled"
 		if a != nil {
@@ -61,7 +61,7 @@ func (m *Manager) PaymentCheck(ctx context.Context) (pluginapi.Identity, error) 
 		return pluginapi.Identity{}, e
 	}
 	defer release()
-	a, e := loadApprovalKind(m.root, m.policy, "payment", m.rules)
+	a, e := loadApprovalKind(m.root, m.policy, m.paymentKind(), m.rules)
 	if e != nil {
 		return pluginapi.Identity{}, e
 	}
@@ -104,12 +104,12 @@ func (m *Manager) paymentStart(cfg paymentv1.Config) (*Approval, func(), error) 
 	if e != nil {
 		return nil, nil, paymentv1.ErrUnavailable
 	}
-	a, e := loadApprovalKind(m.root, m.policy, "payment", m.rules)
+	a, e := loadApprovalKind(m.root, m.policy, m.paymentKind(), m.rules)
 	if e != nil {
 		release()
 		return nil, nil, paymentv1.ErrUnavailable
 	}
-	if a.Selection.MerchantID != cfg.MerchantID || a.Selection.ID != cfg.ProviderID || a.Selection.ManifestSHA256 != cfg.ManifestSHA256 {
+	if a.Selection.Slot != cfg.GatewayID || a.Selection.MerchantID != cfg.MerchantID || a.Selection.ID != cfg.ProviderID || a.Selection.ManifestSHA256 != cfg.ManifestSHA256 {
 		a.Close()
 		release()
 		return nil, nil, paymentv1.ErrUnavailable
@@ -163,6 +163,9 @@ func (m *Manager) paymentResult(key string, caller context.Context, ok bool) {
 // CreatePayment makes one bounded request. It never automatically retries an
 // uncertain checkout creation; the persistent attempt ID belongs to core.
 func (m *Manager) CreatePayment(ctx context.Context, cfg paymentv1.Config, in paymentv1.Intent) (paymentv1.Checkout, error) {
+	if cfg.GatewayID != "" && m != nil && m.paymentSlot == "" {
+		return m.gateway(cfg.GatewayID).CreatePayment(ctx, cfg, in)
+	}
 	if ctx == nil || ctx.Err() != nil {
 		return paymentv1.Checkout{}, paymentv1.ErrUnavailable
 	}
@@ -198,7 +201,7 @@ func (m *Manager) CreatePayment(ctx context.Context, cfg paymentv1.Config, in pa
 		m.paymentResult(key, caller, true)
 		return paymentv1.Checkout{}, paymentv1.ErrRejected
 	}
-	if out.Status != "accepted" || out.Code != "" || out.Checkout == nil || paymentv1.ValidateCheckout(*out.Checkout, a.Manifest.ID, *a.Manifest.Payment, time.Now()) != nil {
+	if out.Status != "accepted" || out.Code != "" || out.Checkout == nil || out.Checkout.GatewayID != cfg.GatewayID || paymentv1.ValidateCheckout(*out.Checkout, a.Manifest.ID, *a.Manifest.Payment, time.Now()) != nil {
 		m.paymentResult(key, caller, false)
 		return paymentv1.Checkout{}, paymentv1.ErrUnavailable
 	}
@@ -209,6 +212,9 @@ func (m *Manager) CreatePayment(ctx context.Context, cfg paymentv1.Config, in pa
 // VerifyPaymentCallback passes the original callback bytes to the approved
 // verifier. Its result is still subject to core-owned accounting checks.
 func (m *Manager) VerifyPaymentCallback(ctx context.Context, cfg paymentv1.Config, in paymentv1.Callback) (paymentv1.VerifiedEvent, error) {
+	if cfg.GatewayID != "" && m != nil && m.paymentSlot == "" {
+		return m.gateway(cfg.GatewayID).VerifyPaymentCallback(ctx, cfg, in)
+	}
 	if ctx == nil || paymentv1.ValidateCallback(in) != nil {
 		return paymentv1.VerifiedEvent{}, paymentv1.ErrInvalid
 	}
@@ -244,7 +250,7 @@ func (m *Manager) VerifyPaymentCallback(ctx context.Context, cfg paymentv1.Confi
 		m.paymentResult(key, caller, true)
 		return paymentv1.VerifiedEvent{}, paymentv1.ErrRejected
 	}
-	if out.Status != "verified" || out.Code != "" || out.Event == nil || paymentv1.ValidateEvent(*out.Event, a.Manifest.ID, cfg.MerchantID, *a.Manifest.Payment, time.Now()) != nil {
+	if out.Status != "verified" || out.Code != "" || out.Event == nil || out.Event.GatewayID != cfg.GatewayID || paymentv1.ValidateEvent(*out.Event, a.Manifest.ID, cfg.MerchantID, *a.Manifest.Payment, time.Now()) != nil {
 		m.paymentResult(key, caller, false)
 		return paymentv1.VerifiedEvent{}, paymentv1.ErrUnavailable
 	}

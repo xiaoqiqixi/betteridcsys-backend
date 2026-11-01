@@ -5,6 +5,8 @@ Production trust is fixed to root. The private _Trust object is only useful to
 unit tests invoking Python functions; the CLI has no relaxed-trust option.
 """
 import argparse
+import base64
+import xml.etree.ElementTree as ET
 import contextlib
 import ctypes
 import dataclasses
@@ -20,12 +22,13 @@ import struct
 import sys
 import zlib
 
-CORE_VERSION = "0.5.10"
+CORE_VERSION = "0.6.0"
 PAYMENT_MIN_CORE_VERSION = "0.5.3"
 RESOURCE_MIN_CORE_VERSION = "0.5.10"
 FILES = frozenset({"plugin", "manifest.json", "LICENSE", "README.md", "THIRD_PARTY_NOTICES.json", "SHA256SUMS"})
 MAX_ARCHIVE = 80 << 20
 MAX_BINARY = 64 << 20
+MAX_MANIFEST = 64 << 10
 MAX_POLICY = 128 << 10
 VERSION = re.compile(r"(?:0|[1-9][0-9]{0,5})\.(?:0|[1-9][0-9]{0,5})\.(?:0|[1-9][0-9]{0,5})\Z")
 DIGEST = re.compile(r"[a-f0-9]{64}\Z")
@@ -140,7 +143,7 @@ def strict_json(raw, maximum):
     def pairs(items):
         result = {}
         for key, value in items:
-            if not re.fullmatch(r"[a-z0-9_]{1,64}", key) or key in result or len(result) >= 64:
+            if (not re.fullmatch(r"[a-z0-9_]{1,64}", key) and key != "zh-CN") or key in result or len(result) >= 64:
                 raise Rejected("JSON contains unsupported keys.")
             result[key] = value
         return result
@@ -170,7 +173,7 @@ def validate_manifest(value, core):
     kind = plugin_kind(value["id"])
     expected_keys = MANIFEST_KEYS | ({"payment"} if kind == "payment" else set())
     capabilities = {"smtp": ["smtp.send"], "payment": ["payment.checkout", "payment.verify_callback"], "resource": ["resource.send", "resource.lookup"]}[kind]
-    if set(value) != expected_keys or type(value["schema"]) is not int or value["schema"] != 1 or value["protocol"] != "aster." + kind + "/1" or value["capabilities"] != capabilities or value["executable"] != "plugin" or not isinstance(value["sha256"], str) or not DIGEST.fullmatch(value["sha256"]):
+    if set(value) != expected_keys or type(value["schema"]) is not int or value["schema"] != 1 or value["protocol"] != "aster." + kind + "/1" or (not valid_payment_capabilities(value["capabilities"]) if kind == "payment" else value["capabilities"] != capabilities) or value["executable"] != "plugin" or not isinstance(value["sha256"], str) or not DIGEST.fullmatch(value["sha256"]):
         raise Rejected("Unsupported runtime manifest.")
     if kind == "payment":
         validate_payment(value["payment"])
@@ -185,7 +188,7 @@ def validate_manifest(value, core):
 
 
 def validate_payment(value):
-    if not isinstance(value, dict) or set(value) != {"currencies", "checkout_hosts"} or not isinstance(value["currencies"], list) or not 1 <= len(value["currencies"]) <= 32 or not isinstance(value["checkout_hosts"], list) or not 1 <= len(value["checkout_hosts"]) <= 8:
+    if not isinstance(value, dict) or not {"currencies", "checkout_hosts"} <= set(value) <= {"currencies", "checkout_hosts", "name", "description", "logo", "flow", "fee", "min", "max"} or not isinstance(value["currencies"], list) or not 1 <= len(value["currencies"]) <= 32 or not isinstance(value["checkout_hosts"], list) or not (1 if value.get("flow", "redirect") == "redirect" else 0) <= len(value["checkout_hosts"]) <= 8:
         raise Rejected("Unsupported payment declarations.")
     codes, hosts = set(), set()
     for currency in value["currencies"]:
@@ -202,7 +205,66 @@ def validate_payment(value):
         else:
             raise Rejected("Payment checkout hosts must be DNS names.")
         hosts.add(host)
+    flow = value.get("flow", "redirect")
+    if flow not in ("redirect", "qr", "instructions") or "flow" in value and not value.get("name"):
+        raise Rejected("Payment flow and localized name are required.")
+    for key in ("name", "description"):
+        localized = value.get(key, {})
+        if not isinstance(localized, dict) or any(locale not in ("en", "zh-CN") or not isinstance(text, str) or not 1 <= len(text) <= 4000 or any(ord(c) < 32 and c not in "\n\t" or ord(c) == 127 for c in text) for locale, text in localized.items()):
+            raise Rejected("Invalid localized payment text.")
+    if "logo" in value:
+        validate_logo(value["logo"])
+    groups = [value.get("min", []), value.get("max", [])]
+    if "fee" in value:
+        fee = value["fee"]
+        if not isinstance(fee, dict) or set(fee) != {"percent_bp", "fixed"} or type(fee["percent_bp"]) is not int or not 0 <= fee["percent_bp"] <= 10000:
+            raise Rejected("Invalid payment fee.")
+        groups.append(fee["fixed"])
+    for group in groups:
+        seen = set()
+        if not isinstance(group, list):
+            raise Rejected("Invalid currency amounts.")
+        for item in group:
+            if not isinstance(item, dict) or set(item) != {"currency", "amount_minor"} or item["currency"] not in codes or item["currency"] in seen or type(item["amount_minor"]) is not int or not 0 <= item["amount_minor"] <= 9007199254740991:
+                raise Rejected("Invalid currency amounts.")
+            seen.add(item["currency"])
+    for minimum in groups[0]:
+        for maximum in groups[1]:
+            if minimum["currency"] == maximum["currency"] and minimum["amount_minor"] > maximum["amount_minor"]:
+                raise Rejected("Payment minimum exceeds maximum.")
     return value
+
+
+def valid_payment_capabilities(value):
+    return isinstance(value, list) and value[:2] == ["payment.checkout", "payment.verify_callback"] and len(value) <= 4 and all(cap in ("payment.query", "payment.refund") for cap in value[2:]) and len(set(value)) == len(value)
+
+
+def validate_logo(value):
+    if not isinstance(value, str) or len(value) > 22000:
+        raise Rejected("Invalid payment logo.")
+    match = re.fullmatch(r"data:image/(png|svg\+xml);base64,([A-Za-z0-9+/=]+)", value)
+    try:
+        raw = base64.b64decode(match[2], validate=True) if match else b""
+        if not 0 < len(raw) <= 16384 or base64.b64encode(raw).decode() != match[2]:
+            raise ValueError()
+        if match[1] == "png":
+            if raw[:8] != b"\x89PNG\r\n\x1a\n" or len(raw) < 33 or raw[12:16] != b"IHDR" or not all(0 < v <= 1024 for v in struct.unpack(">II", raw[16:24])):
+                raise ValueError()
+        else:
+            if b"<!" in raw or b"<?" in raw:
+                raise ValueError()
+            root = ET.fromstring(raw)
+            elements = {"svg", "g", "path", "rect", "circle", "ellipse", "line", "polyline", "polygon", "title", "desc"}
+            attributes = set("viewBox width height x y x1 x2 y1 y2 cx cy r rx ry d points fill stroke stroke-width stroke-linecap stroke-linejoin fill-rule clip-rule opacity fill-opacity stroke-opacity transform id".split())
+            def check(node, depth):
+                tag = node.tag.removeprefix("{http://www.w3.org/2000/svg}")
+                if depth > 16 or tag not in elements or depth == 1 and tag != "svg" or any(key not in attributes or re.search(r"[\\&<>]|url", val, re.I) for key, val in node.attrib.items()):
+                    raise ValueError()
+                for child in node:
+                    check(child, depth + 1)
+            check(root, 1)
+    except (ValueError, ET.ParseError, TypeError, IndexError) as exc:
+        raise Rejected("Invalid payment logo.") from exc
 
 
 def validate_elf(raw):
@@ -283,7 +345,7 @@ def unpack_archive(compressed, raw_resources=False):
             continue
         if len(parts) != 2 or name.endswith("/") or parts[1] not in expected_files or parts[1] in files or mode != (0o755 if parts[1] == "plugin" else 0o644):
             raise Rejected("Archive inventory or file mode is invalid.")
-        maximum = {"plugin": MAX_BINARY, "manifest.json": 8192, "THIRD_PARTY_NOTICES.json": 4 << 20}.get(parts[1], 256 << 10)
+        maximum = {"plugin": MAX_BINARY, "manifest.json": MAX_MANIFEST, "THIRD_PARTY_NOTICES.json": 4 << 20}.get(parts[1], 256 << 10)
         if not 0 < size <= maximum:
             raise Rejected("Archive member exceeds its size limit.")
         files[parts[1]] = raw[data_start:data_start + size]
@@ -312,7 +374,7 @@ def verify_package(path, expected, core=CORE_VERSION, trust=_Trust(), *, binary=
             raise Rejected("Raw binary SHA-256 does not match the approved value.")
         validate_elf(raw_binary)
         files["plugin"] = raw_binary
-    manifest = validate_manifest(strict_json(files["manifest.json"], 8192), core)
+    manifest = validate_manifest(strict_json(files["manifest.json"], MAX_MANIFEST), core)
     if root != package_prefix(manifest["id"]) + "-" + manifest["version"] + "-linux-amd64" + ("-resources" if raw_resources else ""):
         raise Rejected("Manifest version does not match archive root.")
     expected_lines = {}
@@ -502,8 +564,8 @@ def installed_manifest(root, identifier, version, core, trust):
     plugin_kind(identifier)
     version_tuple(version)
     base = absolute(root) + "/" + identifier + "/" + version
-    raw = read_protected(base + "/manifest.json", 8192, trust)
-    manifest = validate_manifest(strict_json(raw, 8192), core)
+    raw = read_protected(base + "/manifest.json", MAX_MANIFEST, trust)
+    manifest = validate_manifest(strict_json(raw, MAX_MANIFEST), core)
     if manifest["id"] != identifier or manifest["version"] != version:
         raise Rejected("Installed manifest identity does not match its directory.")
     executable = read_protected(base + "/plugin", MAX_BINARY, trust)

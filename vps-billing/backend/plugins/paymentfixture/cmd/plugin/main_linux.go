@@ -73,7 +73,7 @@ func main() {
 	declarations := paymentfixture.Declarations()
 	manifest := pluginapi.Manifest{
 		Schema: 1, ID: paymentfixture.ProviderID, Version: version,
-		Protocol: pluginapi.PaymentProtocol, CoreMin: "0.5.3", CoreMaxExclusive: "0.6.0",
+		Protocol: pluginapi.PaymentProtocol, CoreMin: "0.5.3", CoreMaxExclusive: "0.7.0",
 		Capabilities: pluginapi.PaymentCapabilities(), Executable: "plugin", SHA256: hex.EncodeToString(hash.Sum(nil)),
 		Payment: &declarations,
 	}

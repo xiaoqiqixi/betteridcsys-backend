@@ -16,7 +16,7 @@ import (
 )
 
 const (
-	CoreVersion               = "0.5.10"
+	CoreVersion               = "0.6.0"
 	SMTPProtocol              = "aster.smtp/1"
 	SMTPCapability            = "smtp.send"
 	PaymentProtocol           = "aster.payment/1"
@@ -25,11 +25,13 @@ const (
 	ResourceMinCoreVersion    = "0.5.10"
 	PaymentCheckoutCapability = "payment.checkout"
 	PaymentVerifyCapability   = "payment.verify_callback"
+	PaymentQueryCapability    = "payment.query"
+	PaymentRefundCapability   = "payment.refund"
 	// JSON can expand a valid 64 KiB plain-text message up to sixfold. Include
 	// bounded configuration and envelope overhead without rejecting valid text.
 	MaxRequestBytes  = 512 << 10
-	MaxResponseBytes = 8 << 10
-	MaxManifestBytes = 8 << 10
+	MaxResponseBytes = 64 << 10
+	MaxManifestBytes = 64 << 10
 	MaxPolicyBytes   = 128 << 10
 )
 
@@ -148,7 +150,7 @@ func (m Manifest) Validate(core string) error {
 			return ErrInvalid
 		}
 	case PaymentProtocol:
-		if (!strings.HasPrefix(m.ID, "payment.") || m.ID == "payment.disabled") || m.Payment == nil || m.Payment.Validate() != nil || !EqualCapabilities(m.Capabilities, PaymentCapabilities()) {
+		if (!strings.HasPrefix(m.ID, "payment.") || m.ID == "payment.disabled") || m.Payment == nil || m.Payment.Validate() != nil || !ValidPaymentCapabilities(m.Capabilities) {
 			return ErrInvalid
 		}
 		// The protocol did not exist in earlier cores. A third-party manifest
@@ -180,6 +182,27 @@ func (m Manifest) Validate(core string) error {
 
 func PaymentCapabilities() []string {
 	return []string{PaymentCheckoutCapability, PaymentVerifyCapability}
+}
+func (m Manifest) HasCapability(cap string) bool {
+	for _, value := range m.Capabilities {
+		if value == cap {
+			return true
+		}
+	}
+	return false
+}
+func ValidPaymentCapabilities(caps []string) bool {
+	if len(caps) < 2 || len(caps) > 4 || caps[0] != PaymentCheckoutCapability || caps[1] != PaymentVerifyCapability {
+		return false
+	}
+	seen := map[string]bool{}
+	for _, cap := range caps[2:] {
+		if cap != PaymentQueryCapability && cap != PaymentRefundCapability || seen[cap] {
+			return false
+		}
+		seen[cap] = true
+	}
+	return true
 }
 func EqualCapabilities(a, b []string) bool {
 	if len(a) != len(b) {
@@ -229,6 +252,8 @@ func DecodeStrict(raw []byte, limit int, destination any) error {
 	case *PaymentCreateResponse:
 		required = []string{"protocol", "request_id", "status", "code"}
 		nested, nestedRequired = "checkout", []string{"provider_id", "session_id", "checkout_url", "expires_at"}
+	case *PaymentQueryResponse, *PaymentRefundResponse:
+		required = []string{"protocol", "request_id", "status", "code"}
 	case *PaymentVerifyResponse:
 		required = []string{"protocol", "request_id", "status", "code"}
 		nested, nestedRequired = "event", []string{"attempt_id", "provider_id", "event_id", "transaction_id", "merchant_account_id", "account_id", "order_id", "invoice_id", "amount_minor", "currency", "currency_decimal_places", "settled_at", "status"}
@@ -287,7 +312,7 @@ func scanValue(decoder *json.Decoder, depth int) error {
 				return ErrInvalid
 			}
 			for _, c := range key {
-				if !(c >= 'a' && c <= 'z') && !(c >= '0' && c <= '9') && c != '_' {
+				if !(c >= 'a' && c <= 'z') && !(c >= '0' && c <= '9') && c != '_' && key != "zh-CN" {
 					return ErrInvalid
 				}
 			}

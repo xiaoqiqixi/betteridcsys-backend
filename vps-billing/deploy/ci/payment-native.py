@@ -51,7 +51,7 @@ def fixture_package(source, scratch, version):
     require(shared.command([str(binary), "--version"]).strip() == ("Aster synthetic payment fixture " + version).encode(),
             "Independent payment fixture version differs")
     manifest = {"schema": 1, "id": "payment.fixture", "version": version, "protocol": "aster.payment/1",
-                "core_min": "0.5.3", "core_max_exclusive": "0.6.0",
+                "core_min": "0.5.3", "core_max_exclusive": "0.7.0",
                 "capabilities": ["payment.checkout", "payment.verify_callback"], "executable": "plugin",
                 "sha256": hashlib.sha256(binary.read_bytes()).hexdigest(),
                 "payment": {"currencies": [{"code": "CNY", "precision": 2}, {"code": "USD", "precision": 2},

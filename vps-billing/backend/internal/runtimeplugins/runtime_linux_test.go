@@ -66,7 +66,7 @@ func newFixture(t *testing.T) *fixture {
 	if err = os.WriteFile(f.binary, binary, 0700); err != nil {
 		t.Fatal(err)
 	}
-	f.manifest = pluginapi.Manifest{Schema: 1, ID: "email.smtp", Version: "1.1.0", Protocol: pluginapi.SMTPProtocol, CoreMin: "0.4.0", CoreMaxExclusive: "0.6.0", Capabilities: []string{pluginapi.SMTPCapability}, Executable: "plugin", SHA256: digestBytes(binary)}
+	f.manifest = pluginapi.Manifest{Schema: 1, ID: "email.smtp", Version: "1.1.0", Protocol: pluginapi.SMTPProtocol, CoreMin: "0.4.0", CoreMaxExclusive: "0.7.0", Capabilities: []string{pluginapi.SMTPCapability}, Executable: "plugin", SHA256: digestBytes(binary)}
 	raw := writeJSON(t, f.manifestPath, f.manifest)
 	f.policy = pluginapi.Policy{Schema: 1, Revision: 1, SMTP: &pluginapi.Selection{Enabled: true, ID: "email.smtp", Version: "1.1.0", ManifestSHA256: digestBytes(raw), WorkerUID: uid, ClientUID: uid, Socket: filepath.Join(base, "rpc.sock"), AllowedTargets: []pluginapi.Target{{Host: "mail.example.test", Port: 465}}}}
 	f.manager = &Manager{root: filepath.Join(base, "plugins"), policy: filepath.Join(base, "policy.json"), rules: rules}
@@ -144,7 +144,7 @@ func TestApprovalRejectsUnsafeFiles(t *testing.T) {
 		},
 		"noncanonical root": func(t *testing.T, f *fixture) { f.manager.root += "/../plugins" },
 		"incompatible": func(t *testing.T, f *fixture) {
-			f.manifest.CoreMin = "0.6.0"
+			f.manifest.CoreMin = "0.7.0"
 			raw := writeJSON(t, f.manifestPath, f.manifest)
 			f.policy.SMTP.ManifestSHA256 = digestBytes(raw)
 			writeJSON(t, f.manager.policy, f.policy)
@@ -167,7 +167,7 @@ func TestApprovalRejectsUnsafeFiles(t *testing.T) {
 func TestStateCompatibilityRequiresVerifiedApproval(t *testing.T) {
 	f := newFixture(t)
 	state := f.manager.State()
-	if state.SMTPProtocol != pluginapi.SMTPProtocol || state.SMTPCoreMin != "0.4.0" || state.SMTPCoreMaxExclusive != "0.6.0" {
+	if state.SMTPProtocol != pluginapi.SMTPProtocol || state.SMTPCoreMin != "0.4.0" || state.SMTPCoreMaxExclusive != "0.7.0" {
 		t.Fatal("approved state omitted verified compatibility", state)
 	}
 	f.policy.SMTP.Enabled = false

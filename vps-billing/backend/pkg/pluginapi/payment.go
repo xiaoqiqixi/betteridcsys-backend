@@ -35,3 +35,34 @@ type PaymentVerifyResponse struct {
 	Code      string                   `json:"code"`
 	Event     *paymentv1.VerifiedEvent `json:"event,omitempty"`
 }
+
+type PaymentQueryRequest struct {
+	Protocol  string           `json:"protocol"`
+	Version   string           `json:"version"`
+	RequestID string           `json:"request_id"`
+	TimeoutMS int64            `json:"timeout_ms"`
+	Config    paymentv1.Config `json:"config"`
+	Query     paymentv1.Query  `json:"query"`
+}
+type PaymentQueryResponse struct {
+	Protocol  string                 `json:"protocol"`
+	RequestID string                 `json:"request_id"`
+	Status    string                 `json:"status"`
+	Code      string                 `json:"code"`
+	Result    *paymentv1.QueryResult `json:"result,omitempty"`
+}
+type PaymentRefundRequest struct {
+	Protocol  string           `json:"protocol"`
+	Version   string           `json:"version"`
+	RequestID string           `json:"request_id"`
+	TimeoutMS int64            `json:"timeout_ms"`
+	Config    paymentv1.Config `json:"config"`
+	Refund    paymentv1.Refund `json:"refund"`
+}
+type PaymentRefundResponse struct {
+	Protocol  string                  `json:"protocol"`
+	RequestID string                  `json:"request_id"`
+	Status    string                  `json:"status"`
+	Code      string                  `json:"code"`
+	Result    *paymentv1.RefundResult `json:"result,omitempty"`
+}

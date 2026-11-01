@@ -14,6 +14,7 @@ import (
 )
 
 var ErrUnavailable = errors.New("runtime plugin unavailable")
+var ErrIncompatible = errors.New("runtime plugin incompatible")
 var ErrDisabled = errors.New("runtime plugin disabled")
 
 // trust is fixed to root in production. Tests can use private unprivileged
@@ -205,7 +206,7 @@ func validatePolicy(policy pluginapi.Policy, rules trust) error {
 func loadApproval(root, policyPath string, rules trust) (*Approval, error) {
 	return loadApprovalKind(root, policyPath, "smtp", rules)
 }
-func loadApprovalKind(root, policyPath, kind string, rules trust) (*Approval, error) {
+func loadApprovalKind(root, policyPath, kind string, rules trust, inspectDisabled ...bool) (*Approval, error) {
 	if root == "" && policyPath == "" {
 		return nil, ErrDisabled
 	}
@@ -225,7 +226,7 @@ func loadApprovalKind(root, policyPath, kind string, rules trust) (*Approval, er
 	if pluginapi.DecodeStrict(raw, pluginapi.MaxPolicyBytes, &policy) != nil {
 		return nil, ErrUnavailable
 	}
-	if err := validatePolicyKind(policy, kind, rules); err != nil {
+	if err := validatePolicyKind(policy, kind, rules); err != nil && !(errors.Is(err, ErrDisabled) && len(inspectDisabled) > 0 && inspectDisabled[0] && selectionFor(policy, kind) != nil) {
 		// Disabled policy metadata is useful for version/update status, but it
 		// grants no executable approval and does not read the selected binary.
 		if errors.Is(err, ErrDisabled) && selectionFor(policy, kind) != nil {
@@ -247,8 +248,11 @@ func loadApprovalKind(root, policyPath, kind string, rules trust) (*Approval, er
 		return nil, ErrUnavailable
 	}
 	var manifest pluginapi.Manifest
-	if pluginapi.DecodeStrict(raw, pluginapi.MaxManifestBytes, &manifest) != nil || manifest.Validate(pluginapi.CoreVersion) != nil || manifest.ID != s.ID || manifest.Version != s.Version || kind == "payment" && manifest.Protocol != pluginapi.PaymentProtocol || kind == "smtp" && manifest.Protocol != pluginapi.SMTPProtocol || kind == "resource" && manifest.Protocol != pluginapi.ResourceProtocol {
+	if pluginapi.DecodeStrict(raw, pluginapi.MaxManifestBytes, &manifest) != nil || manifest.ID != s.ID || manifest.Version != s.Version || kind == "payment" && manifest.Protocol != pluginapi.PaymentProtocol || kind == "smtp" && manifest.Protocol != pluginapi.SMTPProtocol || kind == "resource" && manifest.Protocol != pluginapi.ResourceProtocol {
 		return nil, ErrUnavailable
+	}
+	if manifest.Validate(pluginapi.CoreVersion) != nil {
+		return &Approval{Manifest: manifest, Selection: s, PolicyRevision: policy.Revision}, ErrIncompatible
 	}
 	file, err := protectedOpen(filepath.Join(base, manifest.Executable), false, rules)
 	if err != nil {

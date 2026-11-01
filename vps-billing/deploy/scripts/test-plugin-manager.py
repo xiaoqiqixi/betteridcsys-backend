@@ -35,7 +35,7 @@ def elf():
 
 def contents(version="1.0.0"):
     binary = elf()
-    manifest = {"schema": 1, "id": "email.smtp", "version": version, "protocol": "aster.smtp/1", "core_min": "0.4.0", "core_max_exclusive": "0.6.0", "capabilities": ["smtp.send"], "executable": "plugin", "sha256": hashlib.sha256(binary).hexdigest()}
+    manifest = {"schema": 1, "id": "email.smtp", "version": version, "protocol": "aster.smtp/1", "core_min": "0.4.0", "core_max_exclusive": "0.7.0", "capabilities": ["smtp.send"], "executable": "plugin", "sha256": hashlib.sha256(binary).hexdigest()}
     return {"plugin": binary, "manifest.json": json.dumps(manifest).encode(), "LICENSE": b"Preserved project license\n", "README.md": b"Independent SMTP plugin\n", "THIRD_PARTY_NOTICES.json": b'{"go_runtime":{"license":"Preserved runtime license"}}'}
 
 
@@ -197,13 +197,14 @@ class ManagerTest(unittest.TestCase):
         self.assertEqual(declared[1], manager.CORE_VERSION)
 
     def test_current_release_version_and_existing_smtp_compatibility_remain_independent(self):
-        self.assertEqual(manager.CORE_VERSION, "0.5.10")
+        self.assertEqual(manager.CORE_VERSION, "0.6.0")
         self.assertEqual(manager.RESOURCE_MIN_CORE_VERSION, "0.5.10")
         self.assertEqual(manager.PAYMENT_MIN_CORE_VERSION, "0.5.3")
         version = SCRIPT.parents[2] / "backend/plugins/smtp/VERSION"
         self.assertEqual(version.read_text().strip(), "1.1.0")
         manifest = json.loads(contents(version="1.1.0")["manifest.json"])
-        manager.validate_manifest(manifest, manager.CORE_VERSION)
+        manifest["core_max_exclusive"] = "0.6.0"
+        manager.validate_manifest(manifest, "0.5.10")
         self.assertEqual((manifest["core_min"], manifest["core_max_exclusive"]), ("0.4.0", "0.6.0"))
         with self.assertRaises(manager.Rejected):
             manager.validate_manifest(manifest, "0.6.0")
@@ -216,7 +217,7 @@ class ManagerTest(unittest.TestCase):
         manifest.update(id="resource.aster-cloud", protocol="aster.resource/1", core_min="0.5.10",
                         capabilities=["resource.send", "resource.lookup"])
         manager.validate_manifest(manifest, "0.5.10")
-        for core in ("0.5.8", "0.5.9", "0.6.0"):
+        for core in ("0.5.8", "0.5.9", "0.7.0"):
             with self.subTest(core=core), self.assertRaises(manager.Rejected):
                 manager.validate_manifest(manifest, core)
         for minimum in ("0.4.0", "0.5.9"):
@@ -462,7 +463,7 @@ class ManagerTest(unittest.TestCase):
                 self.verify(files=files)
 
     def test_manifest_capability_protocol_and_compatibility(self):
-        for key, value in (("id", "email.other"), ("protocol", "aster.smtp/2"), ("capabilities", ["smtp.send", "filesystem"]), ("executable", "../plugin"), ("core_min", "0.6.0"), ("core_max_exclusive", "0.4.0"), ("version", "1.0.0-rc.1")):
+        for key, value in (("id", "email.other"), ("protocol", "aster.smtp/2"), ("capabilities", ["smtp.send", "filesystem"]), ("executable", "../plugin"), ("core_min", "0.7.0"), ("core_max_exclusive", "0.4.0"), ("version", "1.0.0-rc.1")):
             files = contents()
             manifest = json.loads(files["manifest.json"])
             manifest[key] = value

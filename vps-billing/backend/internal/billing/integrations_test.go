@@ -32,7 +32,7 @@ func (p *checkoutRecorder) VerifyCallback(context.Context, integrations.Callback
 type recorderRuntime struct{ recorder *checkoutRecorder }
 
 func (p recorderRuntime) PaymentSelection() (pluginapi.Manifest, pluginapi.Selection, error) {
-	m := pluginapi.Manifest{Schema: 1, ID: "payment.test", Version: "1.0.0", Protocol: pluginapi.PaymentProtocol, CoreMin: "0.5.3", CoreMaxExclusive: "0.6.0", Capabilities: pluginapi.PaymentCapabilities(), Executable: "plugin", SHA256: strings.Repeat("a", 64), Payment: &paymentv1.Declarations{Currencies: []paymentv1.Currency{{Code: "CNY", Precision: 2}, {Code: "USD", Precision: 2}}, CheckoutHosts: []string{"checkout.example.com"}}}
+	m := pluginapi.Manifest{Schema: 1, ID: "payment.test", Version: "1.0.0", Protocol: pluginapi.PaymentProtocol, CoreMin: "0.5.3", CoreMaxExclusive: "0.7.0", Capabilities: pluginapi.PaymentCapabilities(), Executable: "plugin", SHA256: strings.Repeat("a", 64), Payment: &paymentv1.Declarations{Currencies: []paymentv1.Currency{{Code: "CNY", Precision: 2}, {Code: "USD", Precision: 2}}, CheckoutHosts: []string{"checkout.example.com"}}}
 	return m, pluginapi.Selection{Enabled: true, ID: m.ID, Version: m.Version, ManifestSHA256: strings.Repeat("b", 64), MerchantID: "test-merchant"}, nil
 }
 func (p recorderRuntime) CreatePayment(ctx context.Context, cfg paymentv1.Config, r paymentv1.Intent) (paymentv1.Checkout, error) {
