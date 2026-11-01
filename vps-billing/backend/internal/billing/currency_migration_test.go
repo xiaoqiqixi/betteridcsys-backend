@@ -225,7 +225,16 @@ func TestMySQLCurrencyRegistryMigrationResumesPartialSnapshot(t *testing.T) {
 		t.Fatal(err)
 	}
 	migrationExec(t, ctx, m.DB, "UPDATE orders SET currency_snapshot=? WHERE user_id=? AND currency='USD'", originalSnapshot, userID)
-	if err := m.Migrate(ctx); err != nil {
+	// Stop at the real migration-7 commit boundary. Running all later
+	// migrations and deleting their history manufactures an impossible crash
+	// state once a later migration changes the payment table definitions.
+	conn, err := m.DB.Conn(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	err = migrateCurrencyRegistry(ctx, conn)
+	conn.Close()
+	if err != nil {
 		t.Fatal("resume partial snapshot migration", err)
 	}
 	var snapshot migrationCurrencyFormat
@@ -245,7 +254,9 @@ func TestMySQLCurrencyRegistryMigrationResumesPartialSnapshot(t *testing.T) {
 	config, _ := readMigrationCurrencyConfiguration(t, ctx, m)
 	// Model interruption after all schema/data work but before the version is
 	// recorded. Recovery recognizes exactly the expected initial registry.
-	migrationExec(t, ctx, m.DB, "DELETE FROM schema_migrations WHERE version>=7")
+	if history := migrationHistory(t, ctx, m); len(history) != 6 {
+		t.Fatal("fixture crossed the unrecorded migration-7 boundary", history)
+	}
 	if err := m.Migrate(ctx); err != nil {
 		t.Fatal("resume completed but unrecorded migration", err)
 	}
