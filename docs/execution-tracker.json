@@ -12558,7 +12558,7 @@
             "private_data_profile_credentials_and_test_CA_removed": true,
             "system_services_changed": false,
             "native_managed_launcher": false,
-            "same_source_CI": "running 41272311114"
+            "same_source_CI": "browser job 124747421527 passed at 47b24c9; whole run not passed"
           },
           "native_managed_launcher": false,
           "migration_ready": false,
@@ -12569,7 +12569,14 @@
           "browser_contract_tests": 17,
           "original_files_unchanged": 221,
           "reserved_label": "Chinese and English verified in actual browser; resource state unchanged",
-          "source_commit": "5224b5e0e8d51a98f1ae05fbdca7ca181b7788ab"
+          "source_commit": "5224b5e0e8d51a98f1ae05fbdca7ca181b7788ab",
+          "github_browser_artifact": {
+            "id": 13070171569,
+            "bytes": 9240950,
+            "sha256": "e4c58382e434d098c3b36bcd89ff79176cf98874885b98ba39e23bbf7ebde4fb",
+            "download_verified": true,
+            "readonly_contract_validated": true
+          }
         },
         "next_record": "EXECUTION-20261101.md",
         "native_new_scenario_passed": false,
@@ -12584,9 +12591,9 @@
           "run": 41272311114,
           "state": "in_progress",
           "pushed": true,
-          "observed_passed": 6,
-          "observed_failed": 0,
-          "observed_running": 12
+          "observed_passed": 14,
+          "observed_failed": 2,
+          "observed_running": 2
         },
         "local_followup": {
           "source_sha": "276c72ace46b55923aa3ade401e0db0b7827f548",
@@ -12595,6 +12602,59 @@
           "real_browser_repeated": true,
           "product_code_changed": false,
           "private_browser_mysql_and_CA_cleaned": true
+        },
+        "parallel_static_ui": {
+          "source_sha": "369f85a73c2070f4c82f93980a189edeecc1712d",
+          "state": "committed_not_pushed",
+          "root_protected_installed_assets": true,
+          "same_origin_tls_and_lifetime": true,
+          "no_api_spa_fallback": true,
+          "actual_mysql": {
+            "private_socket_only": true,
+            "mysql": "8.4.13",
+            "system_services_changed": false,
+            "host_trust_changed": false,
+            "mysql-static-ui-verification": {
+              "exit": 0,
+              "seconds": 25.037,
+              "top_level_pass": 15,
+              "runtime_skips": 0
+            },
+            "mysql-static-ui-full": {
+              "exit": 0,
+              "seconds": 677.655,
+              "top_level_pass": 536,
+              "runtime_skips": 0
+            },
+            "leftover_fixture_databases": 0,
+            "leftover_verification_users_and_roles": 0,
+            "passed": true,
+            "process_stopped": true,
+            "private_data_and_credentials_removed": true
+          },
+          "explicit_linux_root_exclusions": 5,
+          "new_native_positive_pending": true,
+          "managed_launcher_complete": false,
+          "migration_ready": false
+        },
+        "parallel_route_fix": {
+          "source_sha": "8fa0566cb65f1e972abdcb46732c24ac0e2d2b5b",
+          "state": "committed_not_pushed",
+          "verified_failure_22_24": "VERIFICATION_PROCESS_NETWORK_ROUTES",
+          "kernel_main_table_absence_format": "source-confirmed legal zero-byte representation; actual old native bytes not exported",
+          "regression_methods": 4,
+          "old_predicate_failed_subcases": 9,
+          "native_and_workflow_contracts": 78,
+          "all_ipv4_tables_netlink_check_required": true,
+          "fast_linux_kernel_preflight_required": true,
+          "production_network_security_changed": false,
+          "native_acceptance_pending": true
+        },
+        "backend_record_ci": {
+          "source_sha": "1d5e67e853cb1bf146bc8670d4d09a52ba9c6712",
+          "run": 41271966809,
+          "state": "success",
+          "passed": 4
         }
       }
     }
