@@ -260,3 +260,40 @@ func TestTLSVerificationAndPinnedDNS(t *testing.T) {
 		t.Fatal(err)
 	}
 }
+
+func TestDNSRevalidatedOnEveryConnection(t *testing.T) {
+	r := fixtureRequest()
+	var calls atomic.Int32
+	server := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+		calls.Add(1)
+		w.Header().Set("Content-Type", "application/json")
+		_ = json.NewEncoder(w).Encode(fixtureResult(r))
+	}))
+	defer server.Close()
+	answers := []netip.Addr{netip.MustParseAddr("127.0.0.1")}
+	resolutions := 0
+	c, err := credentialClient(context.Background(), Profile{ID: "primary", Enabled: true, Endpoint: server.URL + "/api", AllowedCIDRs: []string{"127.0.0.0/8"}}, []byte("private-synthetic-credential"), pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: server.Certificate().Raw}), func(context.Context, string, string) ([]netip.Addr, error) {
+		resolutions++
+		return answers, nil
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err = c.Send(context.Background(), r); err != nil {
+		t.Fatal(err)
+	}
+	if resolutions != 2 {
+		t.Fatalf("connection reused startup DNS: %d lookups", resolutions)
+	}
+	answers = []netip.Addr{netip.MustParseAddr("127.0.0.1"), netip.MustParseAddr("192.0.2.1")}
+	if _, err = c.Lookup(context.Background(), r); err != ErrUncertain {
+		t.Fatal("mixed DNS answers accepted", err)
+	}
+	if calls.Load() != 1 || resolutions != 3 {
+		t.Fatal("unexpected request or DNS retry", calls.Load(), resolutions)
+	}
+	answers = []netip.Addr{netip.MustParseAddr("127.0.0.1")}
+	if _, err = c.Lookup(context.Background(), r); err != nil {
+		t.Fatal("new allowed resolution did not recover", err)
+	}
+}

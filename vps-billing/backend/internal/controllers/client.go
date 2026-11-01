@@ -202,13 +202,14 @@ func loadPolicy(path string, owner uint32) (Policy, error) {
 type Client struct {
 	id       string
 	endpoint *url.URL
-	address  string
+	prefixes []netip.Prefix
+	resolve  func(context.Context, string, string) ([]netip.Addr, error)
 	tls      *tls.Config
 	token    string
 }
 
-// Client resolves and pins one allowlisted destination before a database job
-// is claimed. No environment proxy, redirects, plaintext or TLS downgrade.
+// Client validates DNS before a database job is claimed, then revalidates and
+// pins one allowlisted destination for each new connection. No environment proxy, redirects, plaintext or TLS downgrade.
 func (p Policy) Client(ctx context.Context, id string) (*Client, error) {
 	return p.client(ctx, id, 0, net.DefaultResolver.LookupNetIP)
 }
@@ -282,23 +283,32 @@ func credentialClient(ctx context.Context, selected Profile, token, ca []byte, l
 		}
 		tlsConfig.RootCAs = pool
 	}
-	addresses, err := lookup(ctx, "ip", u.Hostname())
-	if err != nil || len(addresses) < 1 || len(addresses) > 16 {
-		return nil, ErrUnavailable
+	c := &Client{id: selected.ID, endpoint: u, prefixes: prefixes, resolve: lookup, tls: tlsConfig, token: credential}
+	if _, err := c.resolveAddress(ctx); err != nil {
+		return nil, err
 	}
+	return c, nil
+}
+
+func (c *Client) resolveAddress(ctx context.Context) (string, error) {
+	addresses, err := c.resolve(ctx, "ip", c.endpoint.Hostname())
+	if err != nil || len(addresses) < 1 || len(addresses) > 16 {
+		return "", ErrUnavailable
+	}
+	addresses = append([]netip.Addr(nil), addresses...)
 	for i, address := range addresses {
 		address = address.Unmap()
 		allowed := false
-		for _, prefix := range prefixes {
+		for _, prefix := range c.prefixes {
 			allowed = allowed || prefix.Contains(address)
 		}
 		if !address.IsValid() || address.Zone() != "" || address.IsUnspecified() || address.IsMulticast() || address.IsLinkLocalUnicast() || address.IsLinkLocalMulticast() || !allowed {
-			return nil, ErrUnavailable
+			return "", ErrUnavailable
 		}
 		addresses[i] = address
 	}
 	sort.Slice(addresses, func(i, j int) bool { return addresses[i].Less(addresses[j]) })
-	return &Client{id: selected.ID, endpoint: u, address: net.JoinHostPort(addresses[0].String(), portFor(u)), tls: tlsConfig, token: credential}, nil
+	return net.JoinHostPort(addresses[0].String(), portFor(c.endpoint)), nil
 }
 
 func (c *Client) Send(ctx context.Context, request Request) (Result, error) {
@@ -348,7 +358,11 @@ func (c *Client) call(ctx context.Context, request Request, lookup bool) (Result
 			if !dials.CompareAndSwap(0, 1) {
 				return nil, ErrUncertain
 			}
-			return dialer.DialContext(ctx, network, c.address)
+			address, err := c.resolveAddress(ctx)
+			if err != nil {
+				return nil, err
+			}
+			return dialer.DialContext(ctx, network, address)
 		},
 	}
 	defer transport.CloseIdleConnections()
