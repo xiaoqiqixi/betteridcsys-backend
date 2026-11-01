@@ -26,7 +26,7 @@ func TestMySQLPaymentResolutionMigrationResumesEveryDDLBoundary(t *testing.T) {
 				t.Fatal("shipped history changed")
 			}
 			status, err := m.SchemaStatus(ctx)
-			if err != nil || status.Status != "current" || status.SchemaVersion != 14 {
+			if err != nil || status.Status != "current" || status.SchemaVersion != len(schemaVersions) {
 				t.Fatal(status, err)
 			}
 		})
