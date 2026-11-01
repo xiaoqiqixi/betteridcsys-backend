@@ -5,14 +5,14 @@
 | 位置 | 用途 |
 | --- | --- |
 | `backend/**/*_test.go` | 认证、币种/精度/义务与报价快照、事务、迁移、适配器与官方插件回归 |
-| `frontend/**/*.test.ts` | 页面交互、状态管理、双语与金额格式回归 |
+| 独立 `xiaoqiqixi/betteridcsys-frontend` 仓库的测试 | 页面交互、状态管理、双语与金额格式回归 |
 | `tests/config_smoke.py` | 非法或不安全启动配置必须被拒绝 |
 | `tests/security_smoke.py` | 演示 API 的认证、权限、CSRF 和幂等边界 |
 | `deploy/ci/test_*.py` | 原生测试环境隔离、归档校验及发布权限边界 |
 | `deploy/ci/accept-native.sh` | 隔离云端 runner 上的真实 MySQL、systemd、HTTPS、备份恢复与版本切换 |
-| `deploy/ci/browser-demo.py`、`frontend/tests/e2e.mjs` | 沙箱浏览器、真实回环演示 API、桌面/手机购买与管理交互；截图仅留在 CI 证据中 |
+| `deploy/ci/browser-demo.py`、独立前端仓库的 `tests/e2e.mjs` | 沙箱浏览器、真实回环演示 API、桌面/手机购买与管理交互；截图仅留在 CI 证据中 |
 
-前端检查从 `frontend/` 执行 `npm ci`、`npm test` 和 `npm run typecheck`。后端从 `backend/` 执行 `go test -race ./...`；数据库测试需要显式提供一次性测试库的 `ASTER_MYSQL_TEST_DSN`。CI 必须运行全部数据库用例，出现跳过即失败，不能把无数据库运行当成完整验收。
+前端源码与测试位于独立 [betteridcsys-frontend](https://github.com/xiaoqiqixi/betteridcsys-frontend) 仓库，具体命令以该仓库为准；配对 CI 按根目录 `FRONTEND_PAIR.json` 固定提交检出，不使用浮动 main。后端在 Linux 上从 `backend/` 执行 `go vet ./...` 和 `go test -race ./...`（运行时插件仅支持 Linux）；数据库测试需要显式提供一次性测试库的 `ASTER_MYSQL_TEST_DSN`。CI 必须运行全部数据库用例，出现跳过即失败，不能把无数据库运行当成完整验收。
 
 原生验收脚本只用于满足其隔离条件的临时云端 runner，不在业务服务器执行。测试使用合成数据和本地替身服务，不连接真实支付、外部邮箱或客户数据库。
 

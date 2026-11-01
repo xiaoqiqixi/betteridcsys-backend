@@ -1,6 +1,6 @@
 # Aster Billing API（星屿云）
 
-Go HTTP API、MySQL 8.4/InnoDB 存储和显式 demo 内存模式。当前正式 Core 为 0.5.2，主干 0.5.3 尚未发行；支持可配置运营身份、简体中文/English、登记币种独立报价与订单/账单。全新安装仅 CNY，升级保留旧 USD。支付渠道由开发者按 [支付适配器合同](../docs/PAYMENT_PLUGINS.md)集成；官方默认关闭支付，SMTP 为单独安装的运行时插件。完整 API 约定见 [CONTRACT.md](../docs/CONTRACT.md)，实际验证见 [VALIDATION.md](../docs/VALIDATION.md)。
+Go HTTP API、MySQL 8.4/InnoDB 存储和显式 demo 内存模式。当前代码 Core 为 0.5.10；支持可配置运营身份、简体中文/English、登记币种独立报价与订单/账单。全新安装仅 CNY，升级保留旧 USD。支付渠道由开发者按 [支付适配器合同](../docs/PAYMENT_PLUGINS.md)集成；官方默认关闭支付，SMTP 为单独安装的运行时插件。完整 API 约定见 [CONTRACT.md](../docs/CONTRACT.md)，实际验证见 [VALIDATION.md](../docs/VALIDATION.md)。
 
 ## 本机演示
 
@@ -46,15 +46,15 @@ demo 无初始服务或假已付账单；创建订单只生成待付款记录，
 
 FILE 形式优先。生产拒绝弱/示例会话秘密、无 DSN、非 HTTPS 来源、无效代理 CIDR/未知模式。强制 TLS 时拒绝 skip-verify、preferred 和明文回退。不要在源码、命令行、聊天或日志中存密码/DSN。
 
-生产 cookie 是 __Host-aster_session，Secure、HttpOnly、SameSite=Strict、Path=/。API 端口不公开，可信反向代理覆盖 X-Real-IP，客户端原始转发头不可信。仅从配置的直接 peer CIDR 接受该头，IPv4/IPv6 地址归一化用于限速；不信任 X-Forwarded-For。不能使用 0.0.0.0/0 或任意私网作为代理信任。
+生产 cookie 是 __Host-aster_session，Secure、HttpOnly、SameSite=Strict、Path=/。API 端口不公开，可信反向代理覆盖 X-Real-IP，客户端原始转发头不可信。仅从配置的直接 peer CIDR 接受该头，IPv4 /32、IPv6 /64 前缀用于限速，另有邮箱与邮箱/前缀组合桶；全局最多 10,000 桶，按创建顺序淘汰，邮箱退避最高 30 秒且拒绝请求不延长退避；不信任 X-Forwarded-For。不能使用 0.0.0.0/0 或任意私网作为代理信任。
 
 ## 数据库、迁移与身份
 
 数据库更新保留历史金额和快照，并新增持久化支付尝试与结算去重记录。工具通过独占迁移锁、校验和与结构预检验证版本；MySQL DDL 无法整体回滚，升级前须停写并验证备份与隔离恢复，不能删除记录手动降级。具体步骤见 [安装](../docs/INSTALL.md)和 [升级](../docs/UPGRADE.md)。
 
-以独立 DDL 身份执行 `aster-api -migrate`，API 用只有本库 SELECT/INSERT/UPDATE/DELETE 的 DML 身份。CLI 仍需完整生产配置。以 BOOTSTRAP_* 配置执行 `aster-api -create-user` 创建测试用户；没有公开注册、密码找回、自助改密、MFA、角色修改或完整账号管理 API。详细配置和权限步骤见 [INSTALL.md](../docs/INSTALL.md)。
+以独立 DDL 身份执行 `aster-api -migrate`，API 用只有本库 SELECT/INSERT/UPDATE/DELETE 的 DML 身份。CLI 仍需完整生产配置。以 BOOTSTRAP_* 配置执行 `aster-api -create-user` 创建测试用户；管理员可通过 `/api/v1/admin/customer-accounts` 创建和编辑账户、修改角色/停用状态、重置密码及撤销会话；没有公开注册、密码找回、自助改密或 MFA。详细配置和权限步骤见 [INSTALL.md](../docs/INSTALL.md)。
 
-全新只有 CNY 注册与示例报价，默认不可售；升级保留既有 USD 价格/历史/合法默认项。下单只读取 plan_prices 的登记币种独立价格，不使用旧 plans.price_minor/currency。币种、套餐和报价均启用才能购买；后台提供现有套餐价格批量编辑，不提供套餐规格创建/修改。代码/精度/停用义务及快照规则见 [财务模型](../docs/FINANCIAL_MODEL.md)，勿用直接 SQL 绕过应用约束。
+全新只有 CNY 注册与示例报价，默认不可售；升级保留既有 USD 价格/历史/合法默认项。下单只读取 plan_prices 的登记币种独立价格，不使用旧 plans.price_minor/currency。币种、套餐和报价均启用才能购买；后台通过 `/api/v1/admin/catalog` 创建/编辑套餐规格、分类和独立报价，并支持价格批量编辑。代码/精度/停用义务及快照规则见 [财务模型](../docs/FINANCIAL_MODEL.md)，勿用直接 SQL 绕过应用约束。
 
 ## 会话与下单
 
@@ -63,7 +63,7 @@ FILE 形式优先。生产拒绝弱/示例会话秘密、无 DSN、非 HTTPS 来
 3. GET /currencies 读取币种元数据，仅选择 enabled 项；GET /plans?currency=CODE 读取独立报价和 price_revision，省略币种使用已配置默认。
 4. POST /orders 携带 plan_id、hostname、显式 currency、`quote:{price_minor,decimal_places,price_revision}` 和唯一 Idempotency-Key（8–128 个 ASCII 字母/数字/_.:-）。quote 必须来自已展示报价，变化返回 409 PRICE_CHANGED 且不创建记录。旧客户端可省略 quote，按执行时价格执行；新客户端始终提供。
 5. 浏览器变更请求均需 CSRF；支付渠道专用通知路径另行验签。存在 Origin 时必须精确匹配 APP_ORIGIN。未知 JSON 字段（含顶层价格/owner/role）拒绝，quote 仅作为服务端价格的确认条件，不允许客户端定价。
-6. 注销撤销原会话并轮换匿名 token；会话 8 小时到期，数据库保存 token 哈希。
+6. 注销撤销原会话并轮换匿名 token；会话 8 小时到期，数据库保存 token 哈希；每次创建登录会话按到期索引清理最多 256 条过期会话。
 
 请求 locale 使用受支持的语言，界面独立选择 zh-CN/en，默认中文。locale 不决定货币；报价/统计按显式 currency 查询。客户数全局，服务/账单计数和金额按币种。列表历史可以混合登记币种，每条记录自己的币种，不跨币种求和。
 
