@@ -14,6 +14,7 @@ type memoRequest struct {
 	Order       Order
 }
 type Memory struct {
+	staffPolicies              map[string]staffPolicy
 	productConfigurations      map[string]ProductConfiguration
 	orderProductConfigurations map[string]orderProductConfiguration
 	provisioningJobs           map[string]provisioningJobRecord
@@ -39,6 +40,7 @@ type Memory struct {
 
 func NewMemory() *Memory {
 	m := &Memory{users: map[string]User{}, sessions: map[string]Session{}, plans: Catalog(), orders: []Order{}, invoices: []Invoice{}, services: []Service{}, audits: []Audit{}, requests: map[string]memoRequest{}}
+	m.staffPolicies = map[string]staffPolicy{}
 	m.taxonomy = initialTaxonomy(m.plans)
 	for n := range m.plans {
 		m.plans[n].TypeID = "generic"
@@ -58,6 +60,9 @@ func NewMemory() *Memory {
 		h, _ := bcrypt.GenerateFromPassword([]byte(v.password), bcrypt.DefaultCost)
 		u := User{ID: ID(), Email: v.email, Name: v.name, Role: v.role, PasswordHash: string(h), Revision: 1}
 		m.users[u.ID] = u
+		if u.Role == "admin" {
+			m.staffPolicies[u.ID] = ownerPolicy()
+		}
 	}
 	return m
 }
@@ -90,6 +95,9 @@ func (m *Memory) AddUser(_ context.Context, u User) error {
 		}
 	}
 	m.users[u.ID] = normalizedUserRevision(u)
+	if u.Role == "admin" {
+		m.staffPolicies[u.ID] = ownerPolicy()
+	}
 	return nil
 }
 func (m *Memory) Users(context.Context) ([]User, error) {

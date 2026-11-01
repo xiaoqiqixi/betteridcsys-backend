@@ -84,7 +84,7 @@ func OpenMySQL(ctx context.Context, dsn string, allowInsecure bool) (*MySQL, err
 	return &MySQL{DB: db, transport: transport, database: cfg.DBName}, nil
 }
 
-var schemaVersions = []string{migrations.Initial, migrations.SiteSettings, migrations.Currencies, migrations.BillingSnapshots, migrations.ExactCurrencyCodes, migrations.EmailSettings, migrations.CurrencyRegistry, migrations.PaymentRuntime, migrations.AuditQueryIndexes, migrations.CustomerAccounts, migrations.CatalogTaxonomy, migrations.CatalogNodes, migrations.ProductConfigurations, migrations.PaymentResolution}
+var schemaVersions = []string{migrations.Initial, migrations.SiteSettings, migrations.Currencies, migrations.BillingSnapshots, migrations.ExactCurrencyCodes, migrations.EmailSettings, migrations.CurrencyRegistry, migrations.PaymentRuntime, migrations.AuditQueryIndexes, migrations.CustomerAccounts, migrations.CatalogTaxonomy, migrations.CatalogNodes, migrations.ProductConfigurations, migrations.PaymentResolution, migrations.StaffRoles}
 
 func (m *MySQL) Ping(ctx context.Context) error {
 	rows, err := m.DB.QueryContext(ctx, "SELECT version,checksum FROM schema_migrations ORDER BY version")
@@ -142,6 +142,15 @@ func (m *MySQL) Migrate(ctx context.Context) error {
 		}
 		if !errors.Is(err, sql.ErrNoRows) {
 			return err
+		}
+		if source == migrations.StaffRoles {
+			for _, q := range strings.Split(source, ";") {
+				if q = strings.TrimSpace(q); q != "" {
+					if _, _, err = prepareStaffMigration(ctx, conn, version, q); err != nil {
+						return err
+					}
+				}
+			}
 		}
 		if version == 3 {
 			// MySQL generated names depend on the original schema. Identify only legacy USD checks.
@@ -299,8 +308,21 @@ func (m *MySQL) UserByID(c context.Context, id string) (User, error) {
 	return scanUser(m.DB.QueryRowContext(c, "SELECT "+userColumns+" FROM users WHERE id=?", id))
 }
 func (m *MySQL) AddUser(c context.Context, u User) error {
-	_, e := m.DB.ExecContext(c, "INSERT INTO users(id,email,name,role,password_hash,disabled,revision) VALUES(?,?,?,?,?,?,?)", u.ID, u.Email, u.Name, u.Role, u.PasswordHash, u.Disabled, normalizedUserRevision(u).Revision)
-	return e
+	tx, err := m.DB.BeginTx(c, nil)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+	_, err = tx.ExecContext(c, "INSERT INTO users(id,email,name,role,password_hash,disabled,revision) VALUES(?,?,?,?,?,?,?)", u.ID, u.Email, u.Name, u.Role, u.PasswordHash, u.Disabled, normalizedUserRevision(u).Revision)
+	if err != nil {
+		return err
+	}
+	if u.Role == "admin" {
+		if _, err = tx.ExecContext(c, "INSERT INTO staff_members(user_id,role_id) VALUES(?,'owner')", u.ID); err != nil {
+			return err
+		}
+	}
+	return tx.Commit()
 }
 func (m *MySQL) Users(c context.Context) ([]User, error) {
 	r, e := m.DB.QueryContext(c, "SELECT "+userColumns+" FROM users ORDER BY created_at DESC LIMIT 1000")

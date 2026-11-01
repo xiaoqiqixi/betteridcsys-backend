@@ -239,8 +239,9 @@ func (m *Memory) WriteCustomerAccount(ctx context.Context, actorID string, input
 			return User{}, ErrNotFound
 		}
 		admins := 0
+		owner := m.staffPolicies[current.ID].RoleID == "owner"
 		for _, u := range m.users {
-			if !u.Disabled && u.Role == "admin" {
+			if !u.Disabled && u.Role == "admin" && (!owner || m.staffPolicies[u.ID].RoleID == "owner") {
 				admins++
 			}
 		}
@@ -250,6 +251,13 @@ func (m *Memory) WriteCustomerAccount(ctx context.Context, actorID string, input
 		}
 	}
 	m.users[next.ID] = next
+	if next.Role == "admin" {
+		if _, ok := m.staffPolicies[next.ID]; !ok {
+			m.staffPolicies[next.ID] = ownerPolicy()
+		}
+	} else {
+		delete(m.staffPolicies, next.ID)
+	}
 	if revoke {
 		for k, s := range m.sessions {
 			if s.UserID == next.ID {
@@ -386,6 +394,16 @@ func (m *MySQL) WriteCustomerAccount(ctx context.Context, actorID string, input 
 		if err = tx.QueryRowContext(ctx, "SELECT COUNT(*) FROM users WHERE role='admin' AND disabled=FALSE").Scan(&admins); err != nil {
 			return User{}, err
 		}
+		var roleID string
+		e = tx.QueryRowContext(ctx, "SELECT role_id FROM staff_members WHERE user_id=?", current.ID).Scan(&roleID)
+		if e != nil && !errors.Is(e, sql.ErrNoRows) {
+			return User{}, e
+		}
+		if roleID == "owner" {
+			if err = tx.QueryRowContext(ctx, "SELECT COUNT(*) FROM users u JOIN staff_members s ON s.user_id=u.id WHERE u.role='admin' AND u.disabled=FALSE AND s.role_id='owner'").Scan(&admins); err != nil {
+				return User{}, err
+			}
+		}
 		next, revoke, err = accountMutation(actor, current, w, hash, admins)
 		if err != nil {
 			return User{}, err
@@ -395,6 +413,15 @@ func (m *MySQL) WriteCustomerAccount(ctx context.Context, actorID string, input 
 			return User{}, err
 		}
 	}
+	if next.Role == "admin" {
+		_, err = tx.ExecContext(ctx, "INSERT IGNORE INTO staff_members(user_id,role_id) VALUES(?,'owner')", next.ID)
+	} else {
+		_, err = tx.ExecContext(ctx, "DELETE FROM staff_members WHERE user_id=?", next.ID)
+	}
+	if err != nil {
+		return User{}, err
+	}
+
 	if revoke {
 		if _, err = tx.ExecContext(ctx, "DELETE FROM sessions WHERE user_id=?", next.ID); err != nil {
 			return User{}, err

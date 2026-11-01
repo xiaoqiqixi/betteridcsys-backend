@@ -1,6 +1,7 @@
 package billing
 
 import (
+	"aster/billing/migrations"
 	"context"
 	"database/sql"
 	"errors"
@@ -69,6 +70,7 @@ func preflightColumns(version int) map[string]map[string]string {
 		specs["payment_settlements"] += " disposition:enum('settled','duplicate','cancelled')!"
 		specs["invoices"] += " settlement_review:tinyint(1)!"
 	}
+	staffSchemaColumns(version, specs)
 	result := make(map[string]map[string]string, len(specs))
 	for table, spec := range specs {
 		result[table] = map[string]string{}
@@ -153,6 +155,9 @@ func preflightChecks(version int) map[string]map[string]string {
 	}
 	if version >= 14 {
 		checks["invoices"]["invoices_settlement_review_boolean"] = "settlement_review IN (0,1)"
+	}
+	if schemaIncludes(version, migrations.StaffRoles) {
+		checks["staff_roles"] = map[string]string{"staff_role_revision": "revision >= 1 AND revision <= 9007199254740991", "staff_role_builtin": "builtin IN (0,1)"}
 	}
 	return checks
 }
@@ -388,6 +393,11 @@ func validatePreflightTableKeys(ctx context.Context, conn *sql.Conn, version int
 			required[key] = true
 		}
 	}
+	if schemaIncludes(version, migrations.StaffRoles) {
+		required["staff_roles:id"] = true
+		required["staff_members:user_id"] = true
+	}
+
 	if partial {
 		for key := range required {
 			table, _, _ := strings.Cut(key, ":")
@@ -497,6 +507,11 @@ func validatePreflightTableKeys(ctx context.Context, conn *sql.Conn, version int
 			fks[key] = true
 		}
 	}
+	if schemaIncludes(version, migrations.StaffRoles) {
+		fks["staff_members:user_id:users:id:CASCADE"] = true
+		fks["staff_members:role_id:staff_roles:id:RESTRICT"] = true
+	}
+
 	if partial {
 		for key := range fks {
 			table, _, _ := strings.Cut(key, ":")

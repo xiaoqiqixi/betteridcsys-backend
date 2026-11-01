@@ -43,3 +43,6 @@ var ProductConfigurations string
 
 //go:embed 014_payment_resolution.sql
 var PaymentResolution string
+
+//go:embed 015_staff_roles.sql
+var StaffRoles string

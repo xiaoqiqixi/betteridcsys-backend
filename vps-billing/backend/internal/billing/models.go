@@ -153,6 +153,7 @@ type Summary struct {
 const recentOrderLimit = 5
 
 type Store interface {
+	StaffPolicy(context.Context, string) (staffPolicy, error)
 	Currencies(context.Context, bool) (CurrencyConfiguration, error)
 	UpdateCurrencies(context.Context, User, CurrencyUpdate) (CurrencyConfiguration, error)
 	PlanPrices(context.Context, string) (PlanPricesView, error)

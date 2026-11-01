@@ -302,10 +302,13 @@ func (a *App) serve(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	admin := strings.HasPrefix(p, "/admin/")
-	if admin && u.Role != "admin" {
-		fail(w, r, 403, "FORBIDDEN", "没有权限执行此操作")
+	if admin {
+		a.staff(adminPermission(p, r.Method), func(w http.ResponseWriter, r *http.Request) { a.serveAuthorized(w, r, u, p, true) })(w, r)
 		return
 	}
+	a.serveAuthorized(w, r, u, p, false)
+}
+func (a *App) serveAuthorized(w http.ResponseWriter, r *http.Request, u User, p string, admin bool) {
 	uid := u.ID
 	if admin {
 		uid = ""
@@ -508,7 +511,11 @@ func (a *App) serve(w http.ResponseWriter, r *http.Request) {
 		a.auditEventsHTTP(w, r, u, uid)
 	case "/audit":
 		if u.Role == "admin" {
-			uid = ""
+			a.staff("audit.read", func(w http.ResponseWriter, r *http.Request) {
+				v, e := a.Store.Audits(r.Context(), "")
+				a.result(w, r, v, e)
+			})(w, r)
+			return
 		}
 		v, e := a.Store.Audits(r.Context(), uid)
 		if u.Role != "admin" {
