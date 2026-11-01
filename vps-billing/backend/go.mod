@@ -10,5 +10,6 @@ require (
 
 require (
 	filippo.io/edwards25519 v1.1.1 // indirect
+	github.com/dlclark/regexp2 v1.11.0 // indirect
 	golang.org/x/text v0.41.0 // indirect
 )

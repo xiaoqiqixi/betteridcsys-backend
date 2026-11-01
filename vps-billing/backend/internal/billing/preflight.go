@@ -164,7 +164,7 @@ func (m *MySQL) SchemaStatus(ctx context.Context) (report SchemaStatus, err erro
 		return report, err
 	}
 	report.TableVisibilityVerified = true
-	rows, err := conn.QueryContext(ctx, "SELECT TABLE_NAME,TABLE_TYPE,COALESCE(ENGINE,'') FROM information_schema.TABLES WHERE TABLE_SCHEMA=DATABASE() ORDER BY TABLE_NAME LIMIT 33")
+	rows, err := conn.QueryContext(ctx, "SELECT TABLE_NAME,TABLE_TYPE,COALESCE(ENGINE,'') FROM information_schema.TABLES WHERE TABLE_SCHEMA=DATABASE() ORDER BY TABLE_NAME LIMIT 129")
 	if err != nil {
 		return report, err
 	}
@@ -175,7 +175,7 @@ func (m *MySQL) SchemaStatus(ctx context.Context) (report SchemaStatus, err erro
 			rows.Close()
 			return report, err
 		}
-		if len(tables) >= 32 || kind != "BASE TABLE" || engine != "InnoDB" {
+		if len(tables) >= 128 || kind != "BASE TABLE" || engine != "InnoDB" {
 			rows.Close()
 			return report, errors.New("unexpected database objects")
 		}

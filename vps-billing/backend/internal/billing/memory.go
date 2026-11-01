@@ -15,6 +15,7 @@ type memoRequest struct {
 }
 type Memory struct {
 	staffRoles                 map[string]StaffRole
+	commerceCatalog            *memoryCommerceCatalog
 	staffPolicies              map[string]staffPolicy
 	productConfigurations      map[string]ProductConfiguration
 	orderProductConfigurations map[string]orderProductConfiguration

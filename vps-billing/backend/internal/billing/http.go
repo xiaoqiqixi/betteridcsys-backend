@@ -259,6 +259,9 @@ func (a *App) serve(w http.ResponseWriter, r *http.Request) {
 		jsonOut(w, 200, map[string]any{"user": nil, "csrf_token": a.csrf(t)})
 		return
 	}
+	if (p == "/products" || strings.HasPrefix(p, "/products/")) && a.commerceCatalogHTTP(w, r, p, User{}) {
+		return
+	}
 	if p == "/catalog-taxonomy" && r.Method == "GET" {
 		a.taxonomyHTTP(w, r, User{}, false)
 		return
@@ -311,6 +314,9 @@ func (a *App) serve(w http.ResponseWriter, r *http.Request) {
 func (a *App) serveAuthorized(w http.ResponseWriter, r *http.Request, u User, p string, admin bool) {
 	if p == "/admin/roles" || p == "/admin/staff" || strings.HasPrefix(p, "/admin/staff/") {
 		a.staffHTTP(w, r, u, p)
+		return
+	}
+	if a.commerceCatalogHTTP(w, r, p, u) {
 		return
 	}
 	uid := u.ID

@@ -46,3 +46,6 @@ var PaymentResolution string
 
 //go:embed 015_staff_roles.sql
 var StaffRoles string
+
+//go:embed 016_commerce_catalog.sql
+var CommerceCatalog string

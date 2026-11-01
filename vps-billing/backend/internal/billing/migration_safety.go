@@ -37,6 +37,9 @@ func prepareMigrationStatement(ctx context.Context, conn *sql.Conn, version int,
 	if version > 0 && version <= len(schemaVersions) && schemaVersions[version-1] == migrations.StaffRoles {
 		return prepareStaffMigration(ctx, conn, version, q)
 	}
+	if schemaVersions[version-1] == migrations.CommerceCatalog {
+		return prepareCommerceCatalogMigration(ctx, conn, version, q)
+	}
 	if version == 14 {
 		return preparePaymentResolutionMigration(ctx, conn, q)
 	}

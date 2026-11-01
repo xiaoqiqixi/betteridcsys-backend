@@ -71,6 +71,7 @@ func preflightColumns(version int) map[string]map[string]string {
 		specs["invoices"] += " settlement_review:tinyint(1)!"
 	}
 	staffSchemaColumns(version, specs)
+	commerceSchemaColumns(version, specs)
 	result := make(map[string]map[string]string, len(specs))
 	for table, spec := range specs {
 		result[table] = map[string]string{}
@@ -159,6 +160,7 @@ func preflightChecks(version int) map[string]map[string]string {
 	if schemaIncludes(version, migrations.StaffRoles) {
 		checks["staff_roles"] = map[string]string{"staff_role_revision": "revision >= 1 AND revision <= 9007199254740991", "staff_role_builtin": "builtin IN (0,1)"}
 	}
+	commerceSchemaChecks(version, checks)
 	return checks
 }
 
@@ -188,6 +190,8 @@ func preflightColumnMatches(table, name, spec, kind, nullable, extra, generated 
 	if strings.HasPrefix(kind, "char(") || strings.HasPrefix(kind, "varchar(") || strings.HasPrefix(kind, "enum(") {
 		wantCharset, wantCollation := "utf8mb4", databaseCollation
 		switch table + "." + name {
+		case "products.node_id", "commerce_requests.operation", "commerce_requests.request_key":
+			wantCharset, wantCollation = "ascii", "ascii_bin"
 		case "users.email":
 			wantCharset, wantCollation = "ascii", "ascii_general_ci"
 		case "order_requests.request_key", "plan_prices.currency", "product_configurations.configuration_sha256", "order_product_configurations.configuration_sha256", "provisioning_jobs.request_sha256", "provisioning_jobs.claim_token":
@@ -227,7 +231,7 @@ func validatePreflightTableShape(ctx context.Context, conn *sql.Conn, version in
 			return errors.New("schema requires the expected InnoDB base tables")
 		}
 	}
-	rows, err := conn.QueryContext(ctx, "SELECT TABLE_NAME,COLUMN_NAME,COLUMN_TYPE,IS_NULLABLE,EXTRA,GENERATION_EXPRESSION,COLUMN_DEFAULT,CHARACTER_SET_NAME,COLLATION_NAME FROM information_schema.COLUMNS WHERE TABLE_SCHEMA=DATABASE() ORDER BY TABLE_NAME,ORDINAL_POSITION LIMIT 257")
+	rows, err := conn.QueryContext(ctx, "SELECT TABLE_NAME,COLUMN_NAME,COLUMN_TYPE,IS_NULLABLE,EXTRA,GENERATION_EXPRESSION,COLUMN_DEFAULT,CHARACTER_SET_NAME,COLLATION_NAME FROM information_schema.COLUMNS WHERE TABLE_SCHEMA=DATABASE() ORDER BY TABLE_NAME,ORDINAL_POSITION LIMIT 1025")
 	if err != nil {
 		return err
 	}
@@ -243,7 +247,7 @@ func validatePreflightTableShape(ctx context.Context, conn *sql.Conn, version in
 			continue
 		}
 		spec := want[table][name]
-		if seen >= 256 || spec == "" || !preflightColumnMatches(table, name, spec, kind, nullable, extra, generated, def, charset, collation, databaseCollation) {
+		if seen >= 1024 || spec == "" || !preflightColumnMatches(table, name, spec, kind, nullable, extra, generated, def, charset, collation, databaseCollation) {
 			rows.Close()
 			return errors.New("schema columns differ from applied migrations")
 		}
@@ -279,7 +283,7 @@ func validatePreflightTableShape(ctx context.Context, conn *sql.Conn, version in
 			}
 		}
 	}
-	rows, err = conn.QueryContext(ctx, "SELECT tc.TABLE_NAME,tc.CONSTRAINT_NAME,tc.ENFORCED,cc.CHECK_CLAUSE FROM information_schema.TABLE_CONSTRAINTS tc JOIN information_schema.CHECK_CONSTRAINTS cc ON tc.CONSTRAINT_SCHEMA=cc.CONSTRAINT_SCHEMA AND tc.CONSTRAINT_NAME=cc.CONSTRAINT_NAME WHERE tc.TABLE_SCHEMA=DATABASE() AND tc.CONSTRAINT_TYPE='CHECK' ORDER BY tc.TABLE_NAME,tc.CONSTRAINT_NAME LIMIT 257")
+	rows, err = conn.QueryContext(ctx, "SELECT tc.TABLE_NAME,tc.CONSTRAINT_NAME,tc.ENFORCED,cc.CHECK_CLAUSE FROM information_schema.TABLE_CONSTRAINTS tc JOIN information_schema.CHECK_CONSTRAINTS cc ON tc.CONSTRAINT_SCHEMA=cc.CONSTRAINT_SCHEMA AND tc.CONSTRAINT_NAME=cc.CONSTRAINT_NAME WHERE tc.TABLE_SCHEMA=DATABASE() AND tc.CONSTRAINT_TYPE='CHECK' ORDER BY tc.TABLE_NAME,tc.CONSTRAINT_NAME LIMIT 1025")
 	if err != nil {
 		return err
 	}
@@ -290,7 +294,7 @@ func validatePreflightTableShape(ctx context.Context, conn *sql.Conn, version in
 			rows.Close()
 			return err
 		}
-		if seen >= 256 {
+		if seen >= 1024 {
 			rows.Close()
 			return errors.New("too many schema checks")
 		}
@@ -398,6 +402,11 @@ func validatePreflightTableKeys(ctx context.Context, conn *sql.Conn, version int
 		required["staff_members:user_id"] = true
 	}
 
+	if schemaIncludes(version, migrations.CommerceCatalog) {
+		for _, key := range commerceCatalogKeys {
+			required[key] = true
+		}
+	}
 	if partial {
 		for key := range required {
 			table, _, _ := strings.Cut(key, ":")
@@ -512,6 +521,11 @@ func validatePreflightTableKeys(ctx context.Context, conn *sql.Conn, version int
 		fks["staff_members:role_id:staff_roles:id:RESTRICT"] = true
 	}
 
+	if schemaIncludes(version, migrations.CommerceCatalog) {
+		for _, key := range commerceCatalogFKs {
+			fks[key] = true
+		}
+	}
 	if partial {
 		for key := range fks {
 			table, _, _ := strings.Cut(key, ":")
