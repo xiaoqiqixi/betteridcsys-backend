@@ -41,7 +41,6 @@ type Config struct {
 type bucket struct {
 	Count int
 	Start time.Time
-	Entry *list.Element
 }
 type App struct {
 	SMTP         *SMTPService
@@ -552,7 +551,7 @@ func (a *App) allowLogin(key string) bool {
 			delete(a.attempts, oldest.Value.(string))
 			a.loginOrder.Remove(oldest)
 		}
-		b.Entry = a.loginOrder.PushBack(key)
+		a.loginOrder.PushBack(key)
 	}
 	if now.Sub(b.Start) > 15*time.Minute {
 		b.Count, b.Start = 0, now
@@ -582,11 +581,9 @@ func loginIPPrefix(ip string) string {
 		return "unknown"
 	}
 	address = address.Unmap()
-	bits := 128
+	bits := 64
 	if address.Is4() {
 		bits = 32
-	} else {
-		bits = 64
 	}
 	return netip.PrefixFrom(address, bits).Masked().String()
 }
@@ -621,10 +618,6 @@ func (a *App) login(w http.ResponseWriter, r *http.Request) {
 	if !a.allowLogin("ip:"+ip) || !a.allowLogin("pair:"+v.Email+":"+loginIPPrefix(ip)) || !a.allowLogin("email:"+v.Email) {
 		w.Header().Set("Retry-After", "30")
 		fail(w, r, 429, "RATE_LIMITED", "尝试次数过多，请稍后再试")
-		return
-	}
-	if len(v.Email) > 254 || len(v.Password) > 72 {
-		fail(w, r, 401, "INVALID_CREDENTIALS", "邮箱或密码不正确")
 		return
 	}
 	u, e := a.Store.UserByEmail(r.Context(), v.Email)
