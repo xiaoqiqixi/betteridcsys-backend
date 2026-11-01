@@ -269,7 +269,7 @@ func (s *SMTPService) Summary(ctx context.Context) (integrations.Summary, error)
 			status = "ready"
 		}
 	}
-	return integrations.Summary{Manifest: integrations.Manifest{ID: "email.smtp", Kind: integrations.Email, Name: "SMTP 邮件插件", Description: "通过独立运行时插件发送管理员测试邮件", Capabilities: []string{"admin_test_email"}, ConfigurationFields: []integrations.ConfigurationField{}, SupportedCurrencies: []string{}, Limitations: []string{"需要单独安装、批准并运行兼容插件；配置保存不会执行未知文件", "仅提供管理员测试发送；未接入通知、邮箱验证或密码找回", "接受表示 SMTP 服务器接受，不保证收件箱投递"}}, ConfigurationMode: "admin_api", Enabled: r.Enabled && configured && pluginReady, Configured: configured, Status: status}, nil
+	return integrations.Summary{Manifest: integrations.Manifest{ID: "email.smtp", Kind: integrations.Email, Name: "SMTP 邮件插件", Description: "通过独立运行时插件发送测试邮件和账户通知", Capabilities: []string{"admin_test_email", "transactional_email"}, ConfigurationFields: []integrations.ConfigurationField{}, SupportedCurrencies: []string{}, Limitations: []string{"需要单独安装、批准并运行兼容插件；配置保存不会执行未知文件", "接受表示 SMTP 服务器接受，不保证收件箱投递"}}, ConfigurationMode: "admin_api", Enabled: r.Enabled && configured && pluginReady, Configured: configured, Status: status}, nil
 }
 
 func (s *SMTPService) Test(ctx context.Context, registry *integrations.Registry, actor User, revision int64, to string) error {

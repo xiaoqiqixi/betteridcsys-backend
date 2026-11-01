@@ -315,15 +315,10 @@ func (a *App) serve(w http.ResponseWriter, r *http.Request) {
 		}
 		return
 	}
-	if p == "/site-settings" && r.Method == "GET" {
-		settings, err := a.Store.Settings(r.Context())
-		if err != nil {
-			a.internal(w, r, err)
-			return
-		}
-		jsonOut(w, 200, settings.Public())
+	if p == "/site-settings" && a.accountSettingsHTTP(w, r, User{}, p) {
 		return
 	}
+
 	u, e := a.current(r)
 	if errors.Is(e, ErrNotFound) {
 		fail(w, r, 401, "AUTH_REQUIRED", "请先登录")
@@ -341,6 +336,9 @@ func (a *App) serve(w http.ResponseWriter, r *http.Request) {
 	a.serveAuthorized(w, r, u, p, false)
 }
 func (a *App) serveAuthorized(w http.ResponseWriter, r *http.Request, u User, p string, admin bool) {
+	if a.accountSettingsHTTP(w, r, u, p) {
+		return
+	}
 	if a.announcementsHTTP(w, r, u, p) {
 		return
 	}

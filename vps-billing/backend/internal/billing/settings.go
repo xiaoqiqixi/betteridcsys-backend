@@ -50,7 +50,7 @@ func (s SiteSettings) Identity() *InvoiceIdentity {
 }
 
 func validText(s string, max int, multiline bool) bool {
-	if !utf8.ValidString(s) || len(s) > max {
+	if !utf8.ValidString(s) || utf8.RuneCountInString(s) > max {
 		return false
 	}
 	for _, r := range s {

@@ -400,7 +400,6 @@ func (a *App) readSiteSettings6(ctx context.Context, q accountQueryer) (financea
 	if err = json.Unmarshal(raw, &old); err != nil {
 		return v, err
 	}
-	v.SiteName, v.Logo, v.Theme, v.Accent, v.DefaultLocale, v.EnabledLocales = old.SiteName, old.Logo, "system", "blue", old.DefaultLocale, []string{"zh-CN", "en"}
-	v.SupportEmail, v.CompanyName, v.CompanyAddress, v.RegistrationOpen, v.Revision = old.SupportEmail, old.CompanyName, old.InvoiceAddress, true, 1
+	v = siteSettingsFromLegacy(old)
 	return v, nil
 }

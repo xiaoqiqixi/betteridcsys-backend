@@ -167,6 +167,21 @@ func (a *App) openAccount(purpose, value string, v any) error {
 // accountTransaction commits the mutation and its replay result together. Each
 // principal/key is serialized by the unique key; errors roll back reservations.
 func (a *App) accountTransaction(r *http.Request, principal, operation string, input any, idempotent bool, fn func(*sql.Tx) (any, error)) (any, error) {
+	for attempt := 0; attempt < 3; attempt++ {
+		out, err := a.accountTransactionOnce(r, principal, operation, input, idempotent, fn)
+		var databaseErr *mysql.MySQLError
+		if !errors.As(err, &databaseErr) || (databaseErr.Number != 1213 && databaseErr.Number != 1205) {
+			return out, err
+		}
+		select {
+		case <-r.Context().Done():
+			return nil, r.Context().Err()
+		case <-time.After(time.Duration(attempt+1) * 30 * time.Millisecond):
+		}
+	}
+	return nil, problem(409, "TRANSACTION_CONFLICT", "Retry the request with the same idempotency key")
+}
+func (a *App) accountTransactionOnce(r *http.Request, principal, operation string, input any, idempotent bool, fn func(*sql.Tx) (any, error)) (any, error) {
 	m, err := a.accountDB()
 	if err != nil {
 		return nil, err
