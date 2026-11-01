@@ -15,10 +15,9 @@ jobs:
         image: mysql:8.4
         env:
           MYSQL_ROOT_PASSWORD: accounts_test_only
-          MYSQL_ROOT_HOST: '%'
           MYSQL_DATABASE: aster_accounts_test
-        ports:
-          - 13306:3306
+        volumes:
+          - /var/run/aster-accounts-mysql:/var/run/mysqld
         options: >-
           --health-cmd="mysqladmin ping -h localhost -uroot -paccounts_test_only"
           --health-interval=10s
@@ -38,9 +37,11 @@ jobs:
       - name: Real MySQL account and support acceptance
         working-directory: vps-billing/backend
         env:
-          ASTER_MYSQL_TEST_DSN: root:accounts_test_only@tcp(127.0.0.1:13306)/aster_accounts_test?parseTime=true
+          ASTER_MYSQL_TEST_DSN: root:accounts_test_only@unix(/var/run/aster-accounts-mysql/mysqld.sock)/aster_accounts_test?parseTime=true
         run: |
-          go test -race -count=1 -timeout=18m -json ./internal/billing -run 'Test(MySQL)?(Staff|Account|Registration|Recovery|Profile|SSH|API|Support|Ticket|EmailTemplate|Outbox|ConcurrentVerification|ConcurrentLastOwner|EveryContract|LoginLimiter|RejectedIP|Automation|Announcement|Affiliate|SecuritySettings|SiteSettings|ClientAdmin|SMTPContract)' > account-tests.jsonl
+          test -S /var/run/aster-accounts-mysql/mysqld.sock
+          set -o pipefail
+          go test -race -count=1 -timeout=18m -json ./internal/billing -run 'Test(MySQL)?(Staff|Account|Registration|Recovery|Profile|SSH|API|Support|Ticket|EmailTemplate|Outbox|ConcurrentVerification|ConcurrentLastOwner|EveryContract|LoginLimiter|RejectedIP|Automation|Announcement|Affiliate|SecuritySettings|SiteSettings|ClientAdmin|SMTPContract)' | tee account-tests.jsonl
           python3 - <<'PY'
           import json
           from pathlib import Path
