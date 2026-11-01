@@ -259,7 +259,7 @@ class PluginNativeGuardTests(unittest.TestCase):
         for value in ("", "../other", "1;false", "arbitrary"):
             with self.subTest(value=value):
                 self.assertIn("Missing run identity", self.guard({"GITHUB_ACTIONS": "true",
-                    "RUNNER_ENVIRONMENT": "github-hosted", "GITHUB_REPOSITORY": "xiaoqiqixi/betteridcsys",
+                    "RUNNER_ENVIRONMENT": "github-hosted", "GITHUB_REPOSITORY": "xiaoqiqixi/betteridcsys-backend", "GITHUB_REPOSITORY_ID": "1435344087",
                     "GITHUB_RUN_ID": value, "GITHUB_RUN_ATTEMPT": "1"}))
 
 

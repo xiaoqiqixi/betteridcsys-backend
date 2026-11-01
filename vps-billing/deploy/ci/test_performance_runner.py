@@ -30,7 +30,7 @@ class PerformanceRunnerGuards(unittest.TestCase):
             go.chmod(0o700)
             output = scratch / "must-not-exist"
             environment = dict(os.environ, GITHUB_ACTIONS="true", RUNNER_ENVIRONMENT="github-hosted",
-                GITHUB_REPOSITORY="xiaoqiqixi/betteridcsys", GITHUB_REF="refs/heads/main",
+                GITHUB_REPOSITORY="xiaoqiqixi/betteridcsys-backend", GITHUB_REPOSITORY_ID="1435344087", GITHUB_REF="refs/heads/main",
                 GITHUB_EVENT_NAME="push", GITHUB_RUN_ID="123", GITHUB_RUN_ATTEMPT="1",
                 GITHUB_SHA="a" * 40, ASTER_MYSQL_TEST_DSN="fixture-private-dsn-must-not-escape",
                 PERF_GUARD_MARKER=str(marker), PATH=str(tools) + os.pathsep + os.environ["PATH"])

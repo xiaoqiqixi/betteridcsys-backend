@@ -15,7 +15,7 @@ step() { printf '\n== %s ==\n' "$*"; }
 
 [[ $# -le 1 ]] || fail 'Usage: check.sh [source-repository-root]'
 [[ -n ${ASTER_MYSQL_TEST_DSN:-} ]] || fail 'ASTER_MYSQL_TEST_DSN is required; real MySQL tests must not silently skip.'
-for tool in git go node npm python3 bash sh mktemp tee grep; do
+for tool in git go python3 bash sh mktemp tee grep; do
   command -v "$tool" >/dev/null 2>&1 || fail "Required command unavailable: $tool"
 done
 [[ $(uname -s) == Linux && $(uname -m) == x86_64 ]] || fail 'This check requires a Linux amd64 runner to execute the built API.'
@@ -28,7 +28,7 @@ else
 fi
 source_root=$(cd -- "$source_path" && pwd -P)
 project_root="$source_root/vps-billing"
-for required in backend/go.mod frontend/package-lock.json tests/config_smoke.py tests/security_smoke.py deploy/scripts/test-release-manifest.py deploy/scripts/test-plugin-manager.py deploy/scripts/test-update-manager.py deploy/scripts/test-core-manager.py deploy/scripts/test-core-operation.py deploy/scripts/test-backup-native.sh deploy/ci/test_release_pipeline.py deploy/ci/check-resource-package.sh deploy/ci/resource_package_gate.py; do
+for required in backend/go.mod tests/config_smoke.py tests/security_smoke.py deploy/scripts/test-release-manifest.py deploy/scripts/test-plugin-manager.py deploy/scripts/test-update-manager.py deploy/scripts/test-core-manager.py deploy/scripts/test-core-operation.py deploy/scripts/test-backup-native.sh deploy/ci/test_release_pipeline.py deploy/ci/check-resource-package.sh deploy/ci/resource_package_gate.py; do
   [[ -f "$project_root/$required" ]] || fail "Source checkout is missing $required"
 done
 
@@ -105,15 +105,8 @@ PYDEPS
 step 'Resource static package and protected production manager verification'
 bash "$project_root/deploy/ci/check-resource-package.sh" "$source_root" | tee "$check_tmp/resource-package-verification.log"
 
-step 'Frontend locked dependencies, types, tests, production build and formatting'
-(
-  cd -- "$project_root/frontend"
-  npm ci --include=dev --no-audit --no-fund
-  npm run typecheck
-  npm test
-  npm run build
-  npm run format:check
-)
+step 'Verify the separate frontend checkout and its exact successful CI bundle'
+bash "$source_root/scripts/check-paired-frontend.sh"
 
 step 'Release pipeline and dependency notice generator tests'
 (

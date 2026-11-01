@@ -85,7 +85,9 @@ systemctl() { [[ $# == 1 && $1 == --help ]] || exit 80; printf '%s' "$HELP"; }
         self.assertIn('ASTER_CORE_BASELINE_RELEASE="$baseline_target"', source)
         self.assertNotIn('ASTER_CORE_BASELINE_RELEASE="$public_target"', source)
         self.assertIn('$ASTER_CORE_FIXTURE_OPT/core-upgrade/releases/0.5.2', CORE_SCRIPT.read_text())
-        self.assertEqual(source.count('core-manager.py" prepare --version'), 1)
+        self.assertEqual(source.count('--clone-installed-baseline'), 1)
+        self.assertNotIn('core-manager.py" prepare --version', source)
+        self.assertIn('ASTER_INSTALLED_LEGACY_BASELINE', source)
         self.assertIn('emit_json_fact PUBLISHED_CORE_BASELINE_PREPARE_JSON public-core-prepare.json', source)
 
     def test_baseline_requires_the_surviving_published_release_and_exact_six_asset_names(self):
@@ -294,7 +296,7 @@ class NativeAcceptanceGuardTests(unittest.TestCase):
             with self.subTest(identity=identity):
                 self.assertIn("Missing run identity", self.run_guard({
                     "GITHUB_ACTIONS": "true", "RUNNER_ENVIRONMENT": "github-hosted",
-                    "GITHUB_REPOSITORY": "xiaoqiqixi/betteridcsys",
+                    "GITHUB_REPOSITORY": "xiaoqiqixi/betteridcsys-backend", "GITHUB_REPOSITORY_ID": "1435344087",
                     "GITHUB_RUN_ID": identity, "GITHUB_RUN_ATTEMPT": "1",
                 }))
 
@@ -340,9 +342,9 @@ class NativePreparationSmokeGuardTests(unittest.TestCase):
             sudo.write_text("#!/bin/sh\n: > '" + str(marker) + "'\nexit 99\n")
             sudo.chmod(0o755)
             for settings, reason in (({}, "isolated_runner_required"),
-                ({"GITHUB_ACTIONS": "true", "RUNNER_ENVIRONMENT": "self-hosted", "GITHUB_REPOSITORY": "xiaoqiqixi/betteridcsys"}, "isolated_runner_required"),
+                ({"GITHUB_ACTIONS": "true", "RUNNER_ENVIRONMENT": "self-hosted", "GITHUB_REPOSITORY": "xiaoqiqixi/betteridcsys-backend"}, "isolated_runner_required"),
                 ({"GITHUB_ACTIONS": "true", "RUNNER_ENVIRONMENT": "github-hosted", "GITHUB_REPOSITORY": "another/project"}, "isolated_runner_required"),
-                ({"GITHUB_ACTIONS": "true", "RUNNER_ENVIRONMENT": "github-hosted", "GITHUB_REPOSITORY": "xiaoqiqixi/betteridcsys", "GITHUB_RUN_ID": "../other", "GITHUB_RUN_ATTEMPT": "1"}, "run_identity_required")):
+                ({"GITHUB_ACTIONS": "true", "RUNNER_ENVIRONMENT": "github-hosted", "GITHUB_REPOSITORY": "xiaoqiqixi/betteridcsys-backend", "GITHUB_REPOSITORY_ID": "1435344087", "GITHUB_RUN_ID": "../other", "GITHUB_RUN_ATTEMPT": "1"}, "run_identity_required")):
                 with self.subTest(settings=settings):
                     result = subprocess.run(["python3", "-I", "-", "/nonexistent/source.py", str(root)], input=source,
                         env={"PATH": str(root) + ":" + os.environ["PATH"], **settings}, capture_output=True, text=True, timeout=5)

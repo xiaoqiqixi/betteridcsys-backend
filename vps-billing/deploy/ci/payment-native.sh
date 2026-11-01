@@ -3,10 +3,14 @@
 set +x
 set -euo pipefail
 umask 077
+# Local policy/transport regression only; this never opts into privileged acceptance.
+if [[ $# == 1 && $1 == --check ]]; then
+  exec python3 -B "$(dirname -- "${BASH_SOURCE[0]}")/test_payment_native.py"
+fi
 fail() { printf 'FAIL payment acceptance: %s\n' "$*" >&2; exit 1; }
 [[ $# == 3 && $1 == --allow-isolated-runner ]] || fail 'Explicit isolated-runner opt-in, source root and new evidence directory required.'
 [[ ${GITHUB_ACTIONS:-} == true && ${RUNNER_ENVIRONMENT:-} == github-hosted ]] || fail 'Only disposable GitHub-hosted runners are accepted.'
-[[ ${GITHUB_REPOSITORY:-} == xiaoqiqixi/betteridcsys ]] || fail 'Unexpected repository; no privileged actions permitted.'
+[[ ${GITHUB_REPOSITORY:-} == xiaoqiqixi/betteridcsys-backend && ${GITHUB_REPOSITORY_ID:-} == 1435344087 ]] || fail 'Unexpected repository; no privileged actions permitted.'
 [[ ${GITHUB_RUN_ID:-} =~ ^[0-9]+$ && ${GITHUB_RUN_ATTEMPT:-} =~ ^[0-9]+$ ]] || fail 'Missing run identity.'
 [[ $EUID != 0 && $(uname -s) == Linux && $(uname -m) == x86_64 ]] || fail 'Start as the ordinary Linux amd64 runner account.'
 [[ $(cat /proc/1/comm) == systemd ]] || fail 'PID 1 must be systemd; no simulated service acceptance.'

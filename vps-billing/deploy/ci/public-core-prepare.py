@@ -36,7 +36,7 @@ def verify(controls, work, source_sha, token):
     metadata, public = updater.Official(token), updater.Official()
     descriptor = manager.release_descriptor(metadata, VERSION)
     updater.require(descriptor["source_sha"] == source_sha, "RELEASE_SOURCE_MISMATCH")
-    inventory = updater.asset_inventory(descriptor["assets"], "core", VERSION, "raw-binaries-v1")
+    inventory = updater.asset_inventory(descriptor["assets"], "core", VERSION, descriptor["distribution_format"])
     assets = work / "assets"
     assets.mkdir(mode=0o700)
     for name, item in sorted(inventory.items()):
@@ -56,7 +56,7 @@ def verify(controls, work, source_sha, token):
     updater.require(receipt["receipt_kind"] == "local_operator_preparation_receipt" and receipt["status"] == "prepared" and
                     receipt["source_sha"] == source_sha and receipt["version"] == VERSION and
                     receipt["release_id"] == descriptor["release_id"] and receipt["official_release_inventory"] is False and
-                    updater.asset_inventory(receipt["assets"], "core", VERSION, "raw-binaries-v1") == inventory and
+                    updater.asset_inventory(receipt["assets"], "core", VERSION, descriptor["distribution_format"]) == inventory and
                     updater.positive(receipt["run_id"]) and updater.positive(receipt["run_attempt"]) and
                     prepared["receipt_sha256"] == hashlib.sha256(receipt_raw).hexdigest() and
                     prepared["version"] == VERSION and prepared["source_sha"] == source_sha, "LOCAL_RECEIPT_REJECTED")
@@ -69,7 +69,7 @@ def verify(controls, work, source_sha, token):
             "local_receipt_verified": True, "prepared_file_count": len(prepared["files_sha256"]),
             "migration_files": 13, "program_executed": False,
             "service_action": "none", "database_action": "none", "host_install": False,
-            "independent_publisher_signature": False,
+            "independent_publisher_signature": result["independent_publisher_signature"],
             "scope": "Public assets, source verification and fresh protected preparation only; not installation, activation or production acceptance."}
 
 

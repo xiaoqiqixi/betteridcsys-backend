@@ -4,6 +4,10 @@
 set +x
 set -euo pipefail
 umask 077
+# Local policy/transport regression only; this never opts into privileged acceptance.
+if [[ $# == 1 && $1 == --check ]]; then
+  exec python3 -B "$(dirname -- "${BASH_SOURCE[0]}")/test_performance_runner.py"
+fi
 
 fail() { printf 'FAIL: %s\n' "$*" >&2; exit 1; }
 report_failure_phase() {
@@ -54,7 +58,7 @@ done
 # creating output. The ordinary Go test suite never enables this benchmark.
 [[ $perf_allowed == true && ${GITHUB_ACTIONS:-} == true && ${RUNNER_ENVIRONMENT:-} == github-hosted ]] \
   || fail 'Performance measurement requires an explicitly opted-in disposable GitHub-hosted runner.'
-[[ ${GITHUB_REPOSITORY:-} == xiaoqiqixi/betteridcsys && ${GITHUB_REF:-} == refs/heads/main ]] \
+[[ ${GITHUB_REPOSITORY:-} == xiaoqiqixi/betteridcsys-backend && ${GITHUB_REPOSITORY_ID:-} == 1435344087 && ${GITHUB_REF:-} == refs/heads/main ]] \
   || fail 'Performance measurement is restricted to the public main checkout.'
 [[ ${GITHUB_EVENT_NAME:-} == push || ${GITHUB_EVENT_NAME:-} == workflow_dispatch ]] \
   || fail 'Unsupported performance event.'
