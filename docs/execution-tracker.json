@@ -12587,15 +12587,13 @@
           "source_commit": "47b24c9dc33009f00a88769f49c8ba1b9300da0b"
         },
         "successor_ci": {
-          "source_sha": "785ea5da445de4d90711cf690e0cdeff9069ee7e",
-          "run": 41287022975,
+          "source_sha": "24ef139b8dfdfcd758b80ea5cd8f276d559564c9",
           "state": "in_progress",
-          "conclusion": "",
           "pushed": true,
-          "observed_passed": 6,
+          "observed_passed": 4,
           "observed_failed": 0,
-          "observed_cancelled": 0,
-          "observed_running": 12
+          "observed_running": 14,
+          "run": 41291111028
         },
         "local_followup": {
           "source_sha": "276c72ace46b55923aa3ade401e0db0b7827f548",
@@ -12683,8 +12681,8 @@
           }
         },
         "backend_record_ci": {
-          "source_sha": "d8d9fa4e6c0205340163420d526c83a4b38c3a5b",
-          "run": 41284761546,
+          "source_sha": "2b66bd33a580dc1d55be08414a08572cab56e3d4",
+          "run": 41287963910,
           "state": "success",
           "passed": 4
         },
@@ -12796,11 +12794,11 @@
         },
         "parallel_system_identity": {
           "source_sha": "785ea5da445de4d90711cf690e0cdeff9069ee7e",
-          "state": "pushed_main_native_acceptance_running",
+          "state": "native_failed_22_24_unnecessary_expiration_policy_replaced_by_24ef139",
           "pushed": true,
           "ci_run": 41287022975,
           "implementation": [
-            "fixed operation-owned locked expired nologin account without home",
+            "historical 785ea5d enforced expired OS identity; corrected in 24ef139, never a customer subscription expiry",
             "NSS files/systemd only with complete numeric uniqueness and group checks",
             "original plan/data intent bound nonce and immutable account fingerprints",
             "foreign same-name group refusal before side effects",
@@ -12818,8 +12816,8 @@
         },
         "parallel_root_manager": {
           "source_sha": "093ee93902a6aaf891de1962893bfe001b629c74",
-          "state": "committed_local_main_native_positive_pending",
-          "pushed": false,
+          "state": "pushed_main_native_positive_pending",
+          "pushed": true,
           "new_lines": 304,
           "deleted_lines": 24,
           "files": 8,
@@ -12856,8 +12854,92 @@
           "financial_logic_changed": false
         },
         "next_actions": [
-          "Continue non-restarting systemd lifecycle, current exact-SHA native results, restored-account browser acceptance and stop/revocation closure; do not cancel running 785ea5d CI or shrink 269-item scope."
-        ]
+          "Observe 24ef139 same-source Ubuntu22/24 fast OS probe and full installed/root/systemd verification; fix actual failures without cancelling the run.",
+          "Continue restored-account browser and stop/revocation/owned-resource retirement closure while CI runs; source export, single-active takeover, rollback and all 269 requirements remain in scope."
+        ],
+        "completed_system_identity_policy_ci": {
+          "source_sha": "785ea5da445de4d90711cf690e0cdeff9069ee7e",
+          "run": 41287022975,
+          "state": "completed",
+          "conclusion": "failure",
+          "pushed": true,
+          "observed_passed": 16,
+          "observed_failed": 2,
+          "observed_cancelled": 0,
+          "observed_running": 0,
+          "failed_phase": "target-verification-system-account",
+          "failed_code": "TARGET_VERIFICATION_SYSTEM_IDENTITY_REJECTED",
+          "raw_shadow_exported": false,
+          "artifacts": [
+            {
+              "ubuntu": "22.04",
+              "id": 13076398334,
+              "bytes": 2310,
+              "sha256": "43f4238b591dd883dce96c56fee66e10f230f075a1af53f1231cf10e0c5c9516",
+              "download_source_and_failure_verified": true
+            },
+            {
+              "ubuntu": "24.04",
+              "id": 13076722662,
+              "bytes": 2312,
+              "sha256": "61f84ed7ed7e8742f1c7446db225acfbb5265282d0cac987c6533ffa700fe3f2",
+              "download_source_and_failure_verified": true
+            }
+          ]
+        },
+        "parallel_systemd": {
+          "source_sha": "bd02f889bda5b288977426d7611d76eb77bc53e2",
+          "state": "pushed_main_native_positive_pending",
+          "pushed": true,
+          "scope": [
+            "fixed runtime-only operation-owned systemd unit, no enable or automatic restart",
+            "boot/install/phase/account-bound private receipt and exact effective unit settings",
+            "fixed start/status/stop; original root manager reapproves startup",
+            "actual cgroup emptiness and full original data/SQL drain after stop",
+            "native foreign unit, inactive unit drift, explicit restart and killed-parent cases"
+          ],
+          "local_unit_format_tests": 3,
+          "native_evidence_required": "verification_systemd_lifecycle",
+          "native_positive_executed": false,
+          "restored_account_browser_login_verified": false,
+          "migration_ready": false
+        },
+        "parallel_no_account_expiry": {
+          "source_sha": "24ef139b8dfdfcd758b80ea5cd8f276d559564c9",
+          "pushed": true,
+          "state": "local_regression_passed_native_pending",
+          "scope": "Linux non-login process identity only; customer login and instance subscription lifecycle unchanged",
+          "system_account_expiry": false,
+          "locked_password_and_nologin": true,
+          "original_verification_absolute_deadline_unchanged": true,
+          "regression_red": "8 format tests: 1 failure and 2 errors against expired-only policy; new actual-OS CI gate red before implementation",
+          "local_tests": {
+            "cli": 12,
+            "systemd_formats": 3,
+            "system_identity_formats": 8,
+            "native_workflow_contracts": 79,
+            "package": 26,
+            "installer": 19,
+            "installer_contract": 111,
+            "total": 258,
+            "actionlint_with_shellcheck": true,
+            "python_ast": true,
+            "mac_native_probe_refused_before_effects": true
+          },
+          "actual_linux_fast_probe": {
+            "ubuntu22_step": "passed",
+            "ubuntu24_step": "passed",
+            "run": 41291111028,
+            "source_sha": "24ef139b8dfdfcd758b80ea5cd8f276d559564c9",
+            "full_installation_acceptance": false,
+            "artifact_download_verified": false
+          },
+          "full_installed_native_positive_passed": false,
+          "go_component_files_unchanged": 327,
+          "financial_logic_changed": false,
+          "original_non_finder_files_preserved": 221,
+          "migration_ready": false
+        }
       }
     }
   },
