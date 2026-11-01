@@ -505,7 +505,7 @@ class CorePaymentSchemaMigrationTests(unittest.TestCase):
 
         def sql(query, *, database=None):
             if query.startswith("SELECT COUNT(*) FROM information_schema.TABLES"):
-                return str({6: 13, 7: 14, CORE.CANDIDATE_SCHEMA: 58}[state["schema"]])
+                return str({6: 13, 7: 14, CORE.CANDIDATE_SCHEMA: 62}[state["schema"]])
             if query.startswith("SELECT SUM(amount_minor)"):
                 return "1500"
             if query.startswith("SELECT TABLE_NAME"):
@@ -541,23 +541,33 @@ class CorePaymentSchemaMigrationTests(unittest.TestCase):
         queries, dumps = [], []
         def sql(query, *, database=None):
             queries.append(query)
-            return "original-plan-bytes" if "FROM plans" in query else "original-invoice-bytes" if "FROM invoices" in query else "original-user-bytes"
+            return "original-plan-bytes" if "FROM plans" in query else "original-invoice-bytes" if "FROM invoices" in query else "original-order-bytes" if "FROM orders" in query else "original-user-bytes"
         fixture = SimpleNamespace(resources=SimpleNamespace(sql=sql), full_data_hash=lambda database, tables: dumps.append(list(tables)) or "original-other-bytes")
         result = CORE.Fixture.legacy_business_hash(fixture, "owned", ["users", "plans", "invoices", "orders", "plan_prices"])
-        self.assertEqual(dumps, [["orders", "plan_prices"]])
-        self.assertEqual(result, CORE.sha256(b"original-other-bytes\noriginal-user-bytes\noriginal-plan-bytes\noriginal-invoice-bytes"))
+        self.assertEqual(dumps, [["plan_prices"]])
+        self.assertEqual(result, CORE.sha256(b"original-other-bytes\noriginal-user-bytes\noriginal-plan-bytes\noriginal-invoice-bytes\noriginal-order-bytes"))
         self.assertIn("SELECT HEX(id),HEX(name),HEX(description),cpu,memory_gb,disk_gb,transfer_tb,HEX(region),price_minor,HEX(currency),available FROM plans ORDER BY BINARY id;", queries)
         self.assertFalse(any("type_id" in query or "region_id" in query or "SELECT *" in query for query in queries))
         self.assertTrue(any("HEX(password_hash)" in query and "created_at" in query for query in queries))
         self.assertIn("SELECT HEX(id),HEX(number),HEX(user_id),HEX(order_id),HEX(status),amount_minor,HEX(currency),DATE_FORMAT(issued_at,'%Y-%m-%d %H:%i:%s.%f'),DATE_FORMAT(due_at,'%Y-%m-%d %H:%i:%s.%f'),DATE_FORMAT(paid_at,'%Y-%m-%d %H:%i:%s.%f'),HEX(issuer_snapshot),HEX(currency_snapshot) FROM invoices ORDER BY id;", queries)
         self.assertFalse(any('settlement_review' in query for query in queries))
+        self.assertIn("SELECT HEX(id),HEX(number),HEX(user_id),HEX(plan_id),HEX(plan_name),HEX(hostname),HEX(status),total_minor,HEX(currency),DATE_FORMAT(created_at,'%Y-%m-%d %H:%i:%s.%f'),HEX(issuer_snapshot),HEX(currency_snapshot),HEX(plan_snapshot) FROM orders ORDER BY id;", queries)
+
+    def test_legacy_hash_includes_order_business_bytes_and_requires_the_order_table(self):
+        tables = ["users", "plans", "invoices", "orders", "plan_prices"]
+        def fingerprint(order_bytes, inventory=tables):
+            fixture = SimpleNamespace(resources=SimpleNamespace(sql=lambda query, **kwargs: order_bytes if "FROM orders" in query else "unchanged"), full_data_hash=lambda *args: "unchanged")
+            return CORE.Fixture.legacy_business_hash(fixture, "owned", inventory)
+        self.assertNotEqual(fingerprint("original-order"), fingerprint("changed-order"))
+        with self.assertRaisesRegex(CORE.AcceptanceFailure, "inventory is missing"):
+            fingerprint("original-order", [table for table in tables if table != "orders"])
 
     def test_historical_prefix_uses_actual_published_then_candidate_migration_order(self):
         report, calls, candidate, published = self.scenario()
         self.assertEqual([call for call in calls if call[1] == "-migrate"],
             [(published, "-migrate"), (candidate, "-migrate"), (candidate, "-migrate")])
         self.assertEqual((report["schema_before"], report["published_schema"], report["schema_after"]), (6, 7, CORE.CANDIDATE_SCHEMA))
-        self.assertEqual((report["tables_before"], report["tables_published"], report["tables_after"]), (13, 14, 58))
+        self.assertEqual((report["tables_before"], report["tables_published"], report["tables_after"]), (13, 14, 62))
         self.assertEqual(report["published_baseline_preflight_after_payment_migration"], "incompatible")
         self.assertTrue(report["additive_payment_migration_preserved_existing_data"])
         self.assertTrue(report["new_payment_tables_empty"])
@@ -586,11 +596,11 @@ class CorePaymentSchemaMigrationTests(unittest.TestCase):
     def test_native_expectations_match_the_reviewed_source_migration_inventory(self):
         migrations = sorted((SCRIPT.parents[2] / 'backend/migrations').glob('*.sql'))
         self.assertEqual(len(migrations), CORE.CANDIDATE_SCHEMA)
-        self.assertEqual(migrations[-1].name, '023_credit_precision.sql')
+        self.assertEqual(migrations[-1].name, '024_commerce_billing.sql')
         tables = set(re.findall(r'CREATE TABLE IF NOT EXISTS ([a-z_]+)', '\n'.join(path.read_text() for path in migrations)))
-        self.assertEqual(len(tables) + 1, 58)  # schema_migrations is maintained by Go.
-        self.assertIn('[[ $migration_count == 23 ]]', SCRIPT.read_text())
-        self.assertIn('[[ $source_tables == 58 ]]', SCRIPT.read_text())
+        self.assertEqual(len(tables) + 1, 62)  # schema_migrations is maintained by Go.
+        self.assertIn('[[ $migration_count == 24 ]]', SCRIPT.read_text())
+        self.assertIn('[[ $source_tables == 62 ]]', SCRIPT.read_text())
 
 
 class CoreExecutorEvidenceSafetyTests(unittest.TestCase):

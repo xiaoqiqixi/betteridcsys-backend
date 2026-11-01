@@ -26,10 +26,10 @@ func TestMySQLHTTPPerformanceSeedUsesLiveStaffMembershipAndCurrentSchema(t *test
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(before.Counts) != 58 {
-		t.Fatalf("performance fixture has %d tables, want 58", len(before.Counts))
+	if len(before.Counts) != 62 {
+		t.Fatalf("performance fixture has %d tables, want 62", len(before.Counts))
 	}
-	for name, count := range map[string]int64{"schema_migrations": 23, "staff_roles": 1, "staff_members": 1, "products": 3, "product_prices": 0, "users": 3, "orders": 4, "invoices": 4, "sessions": 2, "account_sessions": 0, "account_settings": 1, "email_outbox": 0, "automation_settings": 1, "automation_runs": 0, "support_departments": 2, "tickets": 0, "ticket_messages": 0, "announcements": 0, "api_tokens": 0, "ssh_keys": 0} {
+	for name, count := range map[string]int64{"schema_migrations": 24, "staff_roles": 1, "staff_members": 1, "products": 3, "product_prices": 0, "users": 3, "orders": 4, "invoices": 4, "sessions": 2, "account_sessions": 0, "account_settings": 1, "email_outbox": 0, "automation_settings": 1, "automation_runs": 0, "support_departments": 2, "tickets": 0, "ticket_messages": 0, "announcements": 0, "api_tokens": 0, "ssh_keys": 0, "order_items": 0, "invoice_lines": 0, "invoice_payments": 0, "invoice_refunds": 0} {
 		if before.Counts[name] != count {
 			t.Fatalf("performance fixture table %s has %d rows, want %d", name, before.Counts[name], count)
 		}
