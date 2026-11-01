@@ -48,6 +48,10 @@ PUBLISHED_ASSETS = frozenset({
 STAGE = "initializing"
 NATIVE_TRACES = {}
 SAFE_REJECTIONS = {
+    "Signed paired preparation is required.": "paired_preparation_signature_required",
+    "Migrations must form a complete prefix.": "paired_migration_prefix_invalid",
+    "Paired runtime must include migrations and web assets.": "paired_runtime_resources_missing",
+    "Prepared paired inventory differs from signed manifests.": "paired_prepared_inventory_mismatch",
     "Public status ancestors must be traversable by the non-root API.": "public_status_parent_not_traversable",
     "Public status ancestors cannot be shared writable or privileged directories.": "public_status_parent_unsafe_mode",
     "A fixed native operation failed; raw diagnostics were suppressed.": "fixed_native_command_failed",
