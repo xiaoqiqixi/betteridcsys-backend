@@ -51,12 +51,15 @@ func (a *App) checkout(w http.ResponseWriter, r *http.Request, actor User, invoi
 }
 func (a *App) checkoutWithGateway(w http.ResponseWriter, r *http.Request, actor User, invoice Invoice, gateway string, modern bool) {
 	if m, ok := a.Store.(*MySQL); ok {
-		current, err := m.Invoice06(r.Context(), actor.ID, invoice.ID)
+		// One statement is enough for the limits preview. The first transaction
+		// committed by checkout must remain the durable attempt reservation.
+		var remaining int64
+		err := m.DB.QueryRowContext(r.Context(), "SELECT IF(commerce_version=0,amount_minor,amount_minor-amount_paid_minor-credit_applied_minor) FROM invoices WHERE id=? AND user_id=?", invoice.ID, actor.ID).Scan(&remaining)
 		if err != nil {
 			a.paymentStoreError(w, r, err)
 			return
 		}
-		invoice.AmountMinor = current.BalanceDue.AmountMinor
+		invoice.AmountMinor = remaining
 	}
 
 	if invoice.Status != "unpaid" || invoice.PaidAt != nil || !validAmount(invoice.AmountMinor) || !validCurrencyFormat(invoice.CurrencyFormat) || invoice.CurrencyFormat.Code != invoice.Currency {

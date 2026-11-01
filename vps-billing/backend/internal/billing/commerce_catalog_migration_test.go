@@ -2,6 +2,7 @@ package billing
 
 import (
 	"aster/billing/migrations"
+	"encoding/json"
 	"fmt"
 	"strings"
 	"testing"
@@ -22,7 +23,14 @@ func TestMySQLCommerceCatalogMigrationResumesAndPreservesPlans(t *testing.T) {
 		t.Run(fmt.Sprint(cut), func(t *testing.T) {
 			m, ctx := migrationTestDatabase(t)
 			migrationHistoricalPrefix(t, ctx, m, before)
-			migrationExec(t, ctx, m.DB, "UPDATE plans SET available=TRUE WHERE id='starter'")
+			// The immutable SQL prefix creates the registry table; the historical
+			// Go migration also wrote its document. Reproduce that metadata here.
+			registry, err := json.Marshal(DefaultCurrencyConfiguration())
+			if err != nil {
+				t.Fatal(err)
+			}
+			migrationExec(t, ctx, m.DB, "INSERT INTO currency_settings(id,document,prices_revision) VALUES(1,?,1)", registry)
+			migrationExec(t, ctx, m.DB, "UPDATE plans SET available=TRUE,memory_gb=2 WHERE id='starter'")
 			migrationExec(t, ctx, m.DB, "UPDATE plan_prices SET available=TRUE WHERE plan_id='starter' AND currency='CNY'")
 			statements := migrationStatements(migrations.CommerceCatalog)
 			for _, statement := range statements[:cut] {
