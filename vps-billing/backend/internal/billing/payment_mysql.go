@@ -11,7 +11,9 @@ import (
 	"github.com/go-sql-driver/mysql"
 )
 
-const paymentAttemptColumns = "id,request_key,user_id,invoice_id,order_id,provider_id,merchant_account_id,amount_minor,currency,currency_decimal_places,state,checkout,created_at,updated_at"
+const paymentAttemptColumns = "id,request_key,user_id,invoice_id,COALESCE(order_id,invoice_id),provider_id,merchant_account_id,amount_minor,currency,currency_decimal_places,state,checkout,created_at,updated_at"
+
+var errInvoiceTransition06 = errors.New("invoice entered commerce accounting")
 
 func readPaymentAttempt(row interface{ Scan(...any) error }) (PaymentAttempt, error) {
 	var a PaymentAttempt
@@ -62,17 +64,28 @@ func lockPaymentPair(ctx context.Context, tx *sql.Tx, actor User, invoiceID stri
 	if e != nil {
 		return Order{}, Invoice{}, e
 	}
-	var orderID string
-	query := "SELECT order_id FROM invoices WHERE id=?"
+	var orderID, ownerID string
+	query := "SELECT order_id,user_id FROM invoices WHERE id=?"
 	args := []any{invoiceID}
 	if actor.Role != "admin" {
 		query += " AND user_id=?"
 		args = append(args, actor.ID)
 	}
-	if e = tx.QueryRowContext(ctx, query, args...).Scan(&orderID); errors.Is(e, sql.ErrNoRows) {
+	if e = tx.QueryRowContext(ctx, query, args...).Scan(&orderID, &ownerID); errors.Is(e, sql.ErrNoRows) {
 		return Order{}, Invoice{}, ErrNotFound
 	} else if e != nil {
 		return Order{}, Invoice{}, e
+	}
+	var lockedUser string
+	if e = tx.QueryRowContext(ctx, "SELECT id FROM users WHERE id=? FOR UPDATE", ownerID).Scan(&lockedUser); e != nil {
+		return Order{}, Invoice{}, e
+	}
+	var version int
+	if e = tx.QueryRowContext(ctx, "SELECT commerce_version FROM invoices WHERE id=?", invoiceID).Scan(&version); e != nil {
+		return Order{}, Invoice{}, e
+	}
+	if version != 0 {
+		return Order{}, Invoice{}, errInvoiceTransition06
 	}
 	o, e := readCancellationOrder(tx.QueryRowContext(ctx, "SELECT "+orderColumns+" FROM orders WHERE id=? FOR UPDATE", orderID))
 	if errors.Is(e, sql.ErrNoRows) || errors.Is(e, ErrCancellationState) {
@@ -106,6 +119,13 @@ func (m *MySQL) ReservePayment(ctx context.Context, actor User, invoiceID, key, 
 	if e := validatePaymentInput(actor, invoiceID, key, provider, merchant); e != nil {
 		return PaymentAttempt{}, false, e
 	}
+	modern, err := m.invoiceUsesCommerce06(ctx, invoiceID)
+	if err != nil {
+		return PaymentAttempt{}, false, err
+	}
+	if modern {
+		return reserveInvoicePayment06(ctx, m, actor, invoiceID, key, provider, merchant)
+	}
 	type reserved struct {
 		a      PaymentAttempt
 		replay bool
@@ -118,6 +138,9 @@ func (m *MySQL) ReservePayment(ctx context.Context, actor User, invoiceID, key, 
 		defer tx.Rollback()
 		o, i, e := lockPaymentPair(ctx, tx, actor, invoiceID, true)
 		if e != nil {
+			return reserved{}, e
+		}
+		if e = reserveInvoicePayKey06(ctx, tx, i.UserID, invoiceID, key, provider); e != nil {
 			return reserved{}, e
 		}
 		if e = expirePaymentsSQL(ctx, tx, invoiceID); e != nil {
@@ -163,6 +186,9 @@ func (m *MySQL) ReservePayment(ctx context.Context, actor User, invoiceID, key, 
 		}
 		return reserved{a, false}, nil
 	})
+	if errors.Is(e, errInvoiceTransition06) {
+		return reserveInvoicePayment06(ctx, m, actor, invoiceID, key, provider, merchant)
+	}
 	return out.a, out.replay, e
 }
 
@@ -170,7 +196,14 @@ func (m *MySQL) PaymentAttempt(ctx context.Context, actor User, id string) (Paym
 	if !paymentActor(actor) || !validCancellationID(id) {
 		return PaymentAttempt{}, ErrNotFound
 	}
-	return retryPayment(ctx, func() (PaymentAttempt, error) {
+	modern, err := m.attemptUsesCommerce06(ctx, id)
+	if err != nil {
+		return PaymentAttempt{}, err
+	}
+	if modern {
+		return m.invoicePaymentAttempt06(ctx, actor, id)
+	}
+	out, err := retryPayment(ctx, func() (PaymentAttempt, error) {
 		tx, e := m.DB.BeginTx(ctx, &sql.TxOptions{Isolation: sql.LevelReadCommitted})
 		if e != nil {
 			return PaymentAttempt{}, e
@@ -202,6 +235,10 @@ func (m *MySQL) PaymentAttempt(ctx context.Context, actor User, id string) (Paym
 		}
 		return a, nil
 	})
+	if errors.Is(err, errInvoiceTransition06) {
+		return m.invoicePaymentAttempt06(ctx, actor, id)
+	}
+	return out, err
 }
 
 func (m *MySQL) CompletePaymentCheckout(ctx context.Context, id string, c integrations.Checkout, failed bool) (PaymentAttempt, error) {
@@ -264,7 +301,14 @@ func (m *MySQL) CompletePaymentCheckout(ctx context.Context, id string, c integr
 }
 
 func (m *MySQL) SettlePayment(ctx context.Context, id string, v integrations.VerifiedPayment) (PaymentSettlement, error) {
-	return retryPayment(ctx, func() (PaymentSettlement, error) {
+	modern, err := m.attemptUsesCommerce06(ctx, id)
+	if err != nil {
+		return PaymentSettlement{}, err
+	}
+	if modern {
+		return m.settleInvoicePayment06(ctx, id, v)
+	}
+	out, err := retryPayment(ctx, func() (PaymentSettlement, error) {
 		tx, e := m.DB.BeginTx(ctx, &sql.TxOptions{Isolation: sql.LevelReadCommitted})
 		if e != nil {
 			return PaymentSettlement{}, e
@@ -368,6 +412,10 @@ func (m *MySQL) SettlePayment(ctx context.Context, id string, v integrations.Ver
 		}
 		return PaymentSettlement{AttemptID: id, Invoice: i, Order: o, Disposition: disposition}, nil
 	})
+	if errors.Is(err, errInvoiceTransition06) {
+		return m.settleInvoicePayment06(ctx, id, v)
+	}
+	return out, err
 }
 
 func paymentUpdateResult(result sql.Result, e error) error {

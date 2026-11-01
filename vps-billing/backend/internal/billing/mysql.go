@@ -585,7 +585,7 @@ func (m *MySQL) RecentOrders(ctx context.Context, uid string) ([]Order, error) {
 
 func (m *MySQL) Invoices(c context.Context, uid string) ([]Invoice, error) {
 	w, a := filter(uid)
-	r, e := m.DB.QueryContext(c, "SELECT id,number,user_id,order_id,status,amount_minor,currency,issued_at,due_at,paid_at,issuer_snapshot,currency_snapshot,settlement_review FROM invoices"+w+" ORDER BY issued_at DESC LIMIT 1000", a...)
+	r, e := m.DB.QueryContext(c, "SELECT id,number,user_id,COALESCE(order_id,''),status,amount_minor,currency,issued_at,due_at,paid_at,issuer_snapshot,currency_snapshot,settlement_review FROM invoices"+w+" ORDER BY issued_at DESC LIMIT 1000", a...)
 	if e != nil {
 		return nil, e
 	}
@@ -760,7 +760,7 @@ func (m *MySQL) createOrderOnce(c context.Context, u User, pid, host, key, curre
 func (m *MySQL) Invoice(c context.Context, uid, id string) (Invoice, error) {
 	var i Invoice
 	var issuerRaw, currencyRaw []byte
-	query := "SELECT id,number,user_id,order_id,status,amount_minor,currency,issued_at,due_at,paid_at,issuer_snapshot,currency_snapshot,settlement_review FROM invoices WHERE id=?"
+	query := "SELECT id,number,user_id,COALESCE(order_id,''),status,amount_minor,currency,issued_at,due_at,paid_at,issuer_snapshot,currency_snapshot,settlement_review FROM invoices WHERE id=?"
 	args := []any{id}
 	if uid != "" {
 		query += " AND user_id=?"

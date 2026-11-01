@@ -7,3 +7,7 @@ Domain rules, lifecycle transitions, integer money arithmetic and automation are
 Handler tests use `internal/contracttest.Data` for named response schemas and `internal/contracttest.Response` for operation responses (including arrays and pagination). The helper verifies the pinned digest and validates JSON Schema 2020-12, including required properties, additional properties, unions, formats and safe integer bounds. Real MySQL handler tests run in CI using `ASTER_MYSQL_TEST_DSN`.
 
 The [Core 0.5 compatibility reference](LEGACY_CONTRACT_0.5.md) documents deprecated endpoints retained for one release, including `/plans` and `/admin/catalog`. It is historical documentation, not the Core 0.6 schema. New capabilities are implemented against the vendored contract.
+
+During the commerce rollout, send `X-Aster-API-Version: 0.6` on overlapping invoice reads (`/invoices` and `/admin/invoices`, including detail). Without this selector, those reads retain the 0.5 response. New paths such as `/credit/top-up` and `/invoices/{id}/pay` always use the 0.6 contract. Responses vary on the version header.
+
+Original-channel refunds require the gateway's `payment.refund` capability. Core reserves each refund before dispatch. A pending or ambiguous provider result stays reserved for operator reconciliation and is never automatically dispatched again. Credit refunds and manual payments commit their ledger, invoice, audit and idempotency response together.

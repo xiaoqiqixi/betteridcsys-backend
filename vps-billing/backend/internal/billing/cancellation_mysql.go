@@ -51,6 +51,22 @@ func (m *MySQL) cancelOrderOnce(ctx context.Context, actor User, orderID, reason
 		query += " AND user_id=?"
 		args = append(args, actor.ID)
 	}
+	var ownerID string
+	lookup := "SELECT user_id FROM orders WHERE id=?"
+	values := []any{orderID}
+	if actor.Role == "customer" {
+		lookup += " AND user_id=?"
+		values = append(values, actor.ID)
+	}
+	if err = tx.QueryRowContext(ctx, lookup, values...).Scan(&ownerID); errors.Is(err, sql.ErrNoRows) {
+		return OrderCancellation{}, ErrNotFound
+	} else if err != nil {
+		return OrderCancellation{}, err
+	}
+	var lockedUser string
+	if err = tx.QueryRowContext(ctx, "SELECT id FROM users WHERE id=? FOR UPDATE", ownerID).Scan(&lockedUser); err != nil {
+		return OrderCancellation{}, err
+	}
 	order, err := readCancellationOrder(tx.QueryRowContext(ctx, query+" FOR UPDATE", args...))
 	if errors.Is(err, sql.ErrNoRows) {
 		return OrderCancellation{}, ErrNotFound
@@ -64,6 +80,13 @@ func (m *MySQL) cancelOrderOnce(ctx context.Context, actor User, orderID, reason
 	invoice, err := readCancellationInvoice(ctx, tx, order.ID)
 	if err != nil {
 		return OrderCancellation{}, err
+	}
+	var received int64
+	if err = tx.QueryRowContext(ctx, "SELECT credit_applied_minor+amount_paid_minor FROM invoices WHERE id=? AND commerce_version<>0", invoice.ID).Scan(&received); err != nil && !errors.Is(err, sql.ErrNoRows) {
+		return OrderCancellation{}, err
+	}
+	if received != 0 {
+		return OrderCancellation{}, ErrCancellationState
 	}
 	replay, err := validateCancellationPair(actor, order, invoice)
 	if err != nil {

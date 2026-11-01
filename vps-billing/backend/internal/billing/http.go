@@ -26,17 +26,18 @@ import (
 )
 
 type Config struct {
-	Logger            *slog.Logger
-	Updates           UpdateService
-	HostOperations    HostOperationSource
-	Plugins           *runtimeplugins.Manager
-	PaymentRuntime    PaymentRuntime
-	SMTPKey           *SMTPCipher
-	Demo              bool
-	Origin            string
-	Secret            string
-	SecureCookie      bool
-	TrustedProxyCIDRs []string
+	CommerceContractVersion string
+	Logger                  *slog.Logger
+	Updates                 UpdateService
+	HostOperations          HostOperationSource
+	Plugins                 *runtimeplugins.Manager
+	PaymentRuntime          PaymentRuntime
+	SMTPKey                 *SMTPCipher
+	Demo                    bool
+	Origin                  string
+	Secret                  string
+	SecureCookie            bool
+	TrustedProxyCIDRs       []string
 }
 type bucket struct {
 	Count int
@@ -168,6 +169,7 @@ func (a *App) Handler() http.Handler {
 	return a.observeHTTP(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Cache-Control", "no-store")
 		w.Header().Add("Vary", "Accept-Language")
+		w.Header().Add("Vary", "X-Aster-API-Version")
 		w.Header().Set("X-Content-Type-Options", "nosniff")
 		w.Header().Set("Referrer-Policy", "no-referrer")
 		w.Header().Set("Content-Security-Policy", "default-src 'none'; frame-ancestors 'none'")
@@ -337,6 +339,9 @@ func (a *App) serve(w http.ResponseWriter, r *http.Request) {
 }
 func (a *App) serveAuthorized(w http.ResponseWriter, r *http.Request, u User, p string, admin bool) {
 	if !admin && p == "/orders" && r.Method == "POST" && !a.orderEmailVerified(w, r, u) {
+		return
+	}
+	if a.commerceInvoiceHTTP(w, r, u, p) {
 		return
 	}
 	if !admin && a.affiliateHTTP(w, r, u, p) {

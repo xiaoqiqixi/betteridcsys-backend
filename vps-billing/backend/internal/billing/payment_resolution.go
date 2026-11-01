@@ -103,11 +103,18 @@ func (m *Memory) VoidPayment(ctx context.Context, actor User, id, reason string)
 	return clonePaymentAttempt(a), nil
 }
 func (m *MySQL) VoidPayment(ctx context.Context, actor User, id, reason string) (PaymentAttempt, error) {
+	modern, lookupErr := m.attemptUsesCommerce06(ctx, id)
+	if lookupErr != nil {
+		return PaymentAttempt{}, lookupErr
+	}
+	if modern {
+		return m.voidInvoiceAttempt06(ctx, actor, id, reason)
+	}
 	reason, err := voidPaymentInput(actor, id, reason)
 	if err != nil {
 		return PaymentAttempt{}, err
 	}
-	return retryPayment(ctx, func() (PaymentAttempt, error) {
+	out, err := retryPayment(ctx, func() (PaymentAttempt, error) {
 		tx, err := m.DB.BeginTx(ctx, &sql.TxOptions{Isolation: sql.LevelReadCommitted})
 		if err != nil {
 			return PaymentAttempt{}, err
@@ -144,6 +151,10 @@ func (m *MySQL) VoidPayment(ctx context.Context, actor User, id, reason string) 
 		}
 		return a, nil
 	})
+	if errors.Is(err, errInvoiceTransition06) {
+		return m.voidInvoiceAttempt06(ctx, actor, id, reason)
+	}
+	return out, err
 }
 func (a *App) voidPaymentHTTP(w http.ResponseWriter, r *http.Request, actor User, id string) {
 	if r.Method != "POST" {

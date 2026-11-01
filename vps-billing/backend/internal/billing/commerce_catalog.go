@@ -31,7 +31,7 @@ func commerceBody(w http.ResponseWriter, r *http.Request, operation string, out 
 		return false
 	}
 	raw, err := io.ReadAll(http.MaxBytesReader(w, r.Body, 2<<20))
-	if err != nil || api.ValidateInput(operation, raw) != nil {
+	if err != nil || uniqueJSON(raw) != nil || api.ValidateInput(operation, raw) != nil {
 		fail(w, r, 400, "VALIDATION_ERROR", "Request does not match the API contract")
 		return false
 	}
@@ -44,7 +44,18 @@ func commerceBody(w http.ResponseWriter, r *http.Request, operation string, out 
 	return true
 }
 func (a *App) commerceError(w http.ResponseWriter, r *http.Request, err error) {
+	var apiError *apiProblem
+	if errors.As(err, &apiError) {
+		fail(w, r, apiError.status, apiError.code, apiError.message)
+		return
+	}
 	switch {
+	case errors.Is(err, ErrPaymentState):
+		fail(w, r, 409, "INVOICE_NOT_PAYABLE", "Invoice state does not permit this operation")
+	case errors.Is(err, ErrPaymentConflict), errors.Is(err, ErrPaymentUncertain):
+		fail(w, r, 409, "PAYMENT_PENDING", "Resolve the existing payment before changing this invoice")
+	case errors.Is(err, ErrCurrency):
+		fail(w, r, 409, "CURRENCY_MISMATCH", "Use the account currency and its enabled price")
 	case errors.Is(err, ErrInsufficientCredit):
 		fail(w, r, 409, "INSUFFICIENT_CREDIT", "Insufficient account credit")
 	case errors.Is(err, ErrNotFound):

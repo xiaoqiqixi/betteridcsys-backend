@@ -31,7 +31,7 @@ func accountMoney06(ctx context.Context, q currencyQuerier, uid, lock string) (a
 	var currency string
 	var disabled bool
 	err = q.QueryRowContext(ctx, "SELECT currency,disabled FROM users WHERE id=?"+lock, uid).Scan(&currency, &disabled)
-	if errors.Is(err, sql.ErrNoRows) || disabled {
+	if errors.Is(err, sql.ErrNoRows) {
 		return api.Money{}, ErrNotFound
 	}
 	if err != nil {

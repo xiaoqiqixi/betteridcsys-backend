@@ -50,6 +50,15 @@ func (a *App) checkout(w http.ResponseWriter, r *http.Request, actor User, invoi
 	a.checkoutWithGateway(w, r, actor, invoice, "", false)
 }
 func (a *App) checkoutWithGateway(w http.ResponseWriter, r *http.Request, actor User, invoice Invoice, gateway string, modern bool) {
+	if m, ok := a.Store.(*MySQL); ok {
+		current, err := m.Invoice06(r.Context(), actor.ID, invoice.ID)
+		if err != nil {
+			a.paymentStoreError(w, r, err)
+			return
+		}
+		invoice.AmountMinor = current.BalanceDue.AmountMinor
+	}
+
 	if invoice.Status != "unpaid" || invoice.PaidAt != nil || !validAmount(invoice.AmountMinor) || !validCurrencyFormat(invoice.CurrencyFormat) || invoice.CurrencyFormat.Code != invoice.Currency {
 		fail(w, r, 409, "INVOICE_NOT_PAYABLE", "当前账单不可支付")
 		return
