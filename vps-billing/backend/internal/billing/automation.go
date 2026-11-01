@@ -212,6 +212,7 @@ func (a *App) RunAutomation(ctx context.Context) {
 	}
 }
 func (a *App) registerCommerceAutomation() {
+	a.registerBillingAutomation06()
 	_ = a.RegisterAutomationJob("purge_sessions", func(ctx context.Context, _ api.AutomationSettings, at time.Time) (AutomationResult, error) {
 		m, ok := a.Store.(*MySQL)
 		if !ok {

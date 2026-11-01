@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+	"time"
 )
 
 func (a *App) commerceServicesHTTP(w http.ResponseWriter, r *http.Request, u User, p string) bool {
@@ -18,7 +19,7 @@ func (a *App) commerceServicesHTTP(w http.ResponseWriter, r *http.Request, u Use
 	if len(parts) == 1 && !a.commerceContract06(r) {
 		return false
 	}
-	if len(parts) > 2 && parts[2] != "cancellation" {
+	if len(parts) > 2 && parts[2] != "cancellation" && parts[2] != "renew" {
 		return false
 	}
 	m, ok := a.Store.(*MySQL)
@@ -122,6 +123,23 @@ func (a *App) commerceServicesHTTP(w http.ResponseWriter, r *http.Request, u Use
 			return true
 		}
 		out, err := m.CancelService06(r.Context(), u, id, in)
+		if err != nil {
+			a.commerceError(w, r, err)
+		} else {
+			jsonOut(w, 200, out)
+		}
+		return true
+	}
+	if len(parts) == 3 && parts[2] == "renew" && !admin && r.Method == "POST" {
+		key := commerceKey06(w, r)
+		if key == "" {
+			return true
+		}
+		var in api.RenewServiceInput
+		if !commerceBody(w, r, "renewService", &in) {
+			return true
+		}
+		out, err := m.RenewService06(r.Context(), u, id, in.Cycle, key, time.Now().UTC())
 		if err != nil {
 			a.commerceError(w, r, err)
 		} else {

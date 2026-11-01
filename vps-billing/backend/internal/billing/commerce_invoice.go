@@ -592,13 +592,21 @@ func completeInvoice06(ctx context.Context, tx *sql.Tx, record invoiceRecord06, 
 	if v.BalanceDue.AmountMinor != 0 || v.Status != "unpaid" {
 		return v, ErrPaymentState
 	}
-	if v.Kind != "manual" && v.Kind != "top_up" {
-		if v.Kind != "order" || v.OrderID == nil {
+	switch v.Kind {
+	case "order":
+		if v.OrderID == nil {
 			return v, ErrCommerceUnavailable
 		}
 		if err := fulfillPaidOrder06(ctx, tx, v, paid); err != nil {
 			return v, err
 		}
+	case "renewal":
+		if err := fulfillRenewal06(ctx, tx, v, paid); err != nil {
+			return v, err
+		}
+	case "manual", "top_up":
+	default:
+		return v, ErrCommerceUnavailable
 	}
 	if _, err := tx.ExecContext(ctx, "UPDATE invoices SET status='paid',paid_at=? WHERE id=? AND status='unpaid'", paid, v.ID); err != nil {
 		return v, err

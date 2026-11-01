@@ -178,6 +178,11 @@ func reserveInvoicePayment06(ctx context.Context, m *MySQL, actor User, id, key,
 		if v.Status != "unpaid" || v.BalanceDue.AmountMinor <= 0 {
 			return out, ErrPaymentState
 		}
+		if payable, err := serviceInvoicePayable06(ctx, tx, v); err != nil {
+			return out, err
+		} else if !payable {
+			return out, ErrPaymentState
+		}
 		if err = invoiceAttemptBarrier06(ctx, tx, id, false); err != nil {
 			return out, err
 		}
@@ -217,6 +222,11 @@ func invoiceAttemptBarrier06(ctx context.Context, tx *sql.Tx, id string, offline
 func invoicePayment06(ctx context.Context, tx *sql.Tx, record invoiceRecord06, payment api.InvoicePayment, method string, attemptID *string, at time.Time) (api.AdminInvoice, error) {
 	v := record.Invoice
 	if v.Status != "unpaid" || payment.Amount.AmountMinor <= 0 || payment.Amount.AmountMinor > v.BalanceDue.AmountMinor {
+		return v, ErrPaymentState
+	}
+	if payable, err := serviceInvoicePayable06(ctx, tx, v); err != nil {
+		return v, err
+	} else if !payable {
 		return v, ErrPaymentState
 	}
 	if _, err := tx.ExecContext(ctx, "INSERT INTO invoice_payments(id,invoice_id,attempt_id,method,gateway,reference,amount_minor,refunded_minor,status,created_at) VALUES(?,?,?,?,?,?,?,0,'succeeded',?)", payment.ID, v.ID, attemptID, method, payment.Gateway, payment.Reference, payment.Amount.AmountMinor, at); err != nil {
@@ -453,6 +463,15 @@ func (m *MySQL) settleInvoicePayment06(ctx context.Context, id string, payment i
 			disposition = "cancelled"
 		} else if v.Status != "unpaid" || attempt.Expectation.AmountMinor > v.BalanceDue.AmountMinor {
 			disposition = "duplicate"
+		}
+		if disposition == "settled" {
+			payable, err := serviceInvoicePayable06(ctx, tx, v)
+			if err != nil {
+				return out, err
+			}
+			if !payable {
+				disposition = "duplicate"
+			}
 		}
 		now := time.Now().UTC().Truncate(time.Microsecond)
 		paid := payment.SettledAt.UTC().Truncate(time.Microsecond)

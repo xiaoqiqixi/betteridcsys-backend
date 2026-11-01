@@ -11,7 +11,9 @@ import (
 func paidService06(t *testing.T, f catalogFixture) (string, api.AdminProduct) {
 	t.Helper()
 	m := f.store.(*MySQL)
-	p, err := m.SaveProduct06(t.Context(), f.admin, "", product06Fixture(t, f), ID(), false)
+	input := product06Fixture(t, f)
+	input.Slug = "service-" + ID()
+	p, err := m.SaveProduct06(t.Context(), f.admin, "", input, ID(), false)
 	if err != nil {
 		t.Fatal(err)
 	}
