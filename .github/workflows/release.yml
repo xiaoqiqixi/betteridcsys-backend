@@ -1,0 +1,78 @@
+name: Finance backend release
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+# Manual runs are always dry runs. There is no publish input.
+permissions:
+  contents: read
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+jobs:
+  release:
+    name: release
+    if: github.repository_id == '1435344087' && github.repository == 'xiaoqiqixi/betteridcsys-backend'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    permissions:
+      contents: write
+      actions: read
+      id-token: write
+      attestations: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e
+        with:
+          go-version: '1.27.3'
+          cache: false
+      - name: Test release policy and consumers
+        run: bash scripts/check-release-tooling.sh
+      - name: Build twice and compare every backend byte
+        run: |
+          set -euo pipefail
+          python3 -I scripts/backend_bundle.py build --source-sha "$GITHUB_SHA" --output "$RUNNER_TEMP/release"
+          python3 -I scripts/backend_bundle.py build --source-sha "$GITHUB_SHA" --output "$RUNNER_TEMP/reproduction"
+          diff -qr "$RUNNER_TEMP/release" "$RUNNER_TEMP/reproduction"
+      - name: Fetch the pinned frontend CI artifact and inspect its exact bytes
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          python3 -I vps-billing/deploy/ci/release_pipeline.py paired fetch-frontend --output "$RUNNER_TEMP/frontend"
+          cp "$RUNNER_TEMP/frontend/FRONTEND.json" "$RUNNER_TEMP/frontend/"*.tar.gz "$RUNNER_TEMP/release/"
+      - name: Check source, successful independent CI, pair and release identities
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python3 -I vps-billing/deploy/ci/release_pipeline.py paired seal --directory "$RUNNER_TEMP/release" --source "$GITHUB_SHA"
+      - name: Attest all seven release assets with the exact release workflow identity
+        if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
+        uses: actions/attest-build-provenance@43d14bc2b83dec42d39ecae14e916627a18bb661
+        with:
+          subject-path: ${{ runner.temp }}/release/*
+      - name: Publish only a validated version tag, never a dispatch candidate
+        if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          python3 - "$RUNNER_TEMP/release/PROVENANCE.json" "$RUNNER_TEMP/release-notes.md" <<'PY'
+          import json, sys
+          from pathlib import Path
+          p = json.loads(Path(sys.argv[1]).read_text())
+          assert p['dry_run'] is False and p['event'] == 'push'
+          Path(sys.argv[2]).write_text('财务后端 ' + p['version'] + '。\n\n后端源码：`' + p['source_sha'] + '`；前端仓库 ID：1435344023，源码：`' + p['frontend_pair']['source_sha'] + '`。\n\n附件包含配对归档、清单、SHA256 和 GitHub artifact attestations。安装前必须使用本版本受保护的工具验证签名；原生安装与旧实例回归状态见迁移门禁文档。\n')
+          PY
+          gh release create "$GITHUB_REF_NAME" "$RUNNER_TEMP/release/"* \
+            --repo xiaoqiqixi/betteridcsys-backend --verify-tag --target "$GITHUB_SHA" \
+            --title "Finance backend $GITHUB_REF_NAME" --notes-file "$RUNNER_TEMP/release-notes.md"
+      - name: Retain dry-run content only
+        if: github.event_name == 'workflow_dispatch'
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        with:
+          name: release-dry-run-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/release/*
+          if-no-files-found: error
+          retention-days: 7

@@ -22,8 +22,8 @@ SPEC = importlib.util.spec_from_file_location(
 pipeline = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(pipeline)
 
-REPOSITORY = "xiaoqiqixi/betteridcsys"
-REPOSITORY_ID = 1418618420
+REPOSITORY = "xiaoqiqixi/betteridcsys-backend"
+REPOSITORY_ID = 1435344087
 SHA = "a" * 40
 OTHER_SHA = "b" * 40
 VERSION = "1.2.3-rc.1"
@@ -213,7 +213,7 @@ def flow_fixture():
         ("GET", PREFIX + f"/compare/{DEFAULT_SHA}...{DEFAULT_SHA}"): {"status": "identical", "merge_base_commit": {"sha": DEFAULT_SHA}},
         ("GET", PREFIX + f"/git/trees/{SHA}?recursive=1"): copy.deepcopy(tree),
         ("GET", PREFIX + f"/git/trees/{DEFAULT_SHA}?recursive=1"): copy.deepcopy(tree),
-        ("GET", PREFIX + "/actions/workflows/release-build.yml"): {"id": WORKFLOW_ID, "path": pipeline.BUILD_WORKFLOW, "state": "active"},
+        ("GET", PREFIX + "/actions/workflows/release.yml"): {"id": WORKFLOW_ID, "path": pipeline.BUILD_WORKFLOW, "state": "active"},
         ("GET", PREFIX + f"/actions/runs/{RUN_ID}"): run,
         ("GET", PREFIX + f"/actions/runs/{RUN_ID}/artifacts?per_page=100&page=1"): {"artifacts": [artifact]},
         ("GET", PREFIX + "/releases?per_page=100&page=1"): [],
