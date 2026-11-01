@@ -64,3 +64,6 @@ var CommerceLedger string
 
 //go:embed 021_automation.sql
 var Automation string
+
+//go:embed 022_account_features.sql
+var AccountFeatures string

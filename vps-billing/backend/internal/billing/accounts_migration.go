@@ -22,7 +22,23 @@ var accountSchema = map[string]string{
 	"email_outbox":        "id:char(32)! user_id:char(32)! template_key:varchar(32)! variables:json! protected_variables:mediumtext? attempts:int! next_attempt_at:datetime(6)! sent_at:datetime(6)? failed_at:datetime(6)? last_error:varchar(64)! created_at:datetime(6)!",
 }
 
+var accountFeatureSchema = map[string]string{
+	"ssh_keys":            "id:char(32)! user_id:char(32)! name:varchar(80)! public_key:text! algorithm:varchar(40)! fingerprint:varchar(100)! created_at:datetime(6)!",
+	"api_tokens":          "id:char(32)! user_id:char(32)! token_hash:char(64)! name:varchar(60)! prefix:varchar(16)! scopes:json! ip_allowlist:json! created_at:datetime(6)! last_used_at:datetime(6)? expires_at:datetime(6)?",
+	"support_departments": "id:varchar(64)! document:json! visible:tinyint(1)! sort_order:bigint!",
+	"tickets":             "id:char(32)! number:varchar(64)! user_id:char(32)! department_id:varchar(64)! subject:varchar(200)! status:varchar(20)! priority:varchar(6)! service_id:char(32)? assignee_id:char(32)? created_at:datetime(6)! last_reply_at:datetime(6)!",
+	"ticket_messages":     "id:char(32)! ticket_id:char(32)! author_id:char(32)? author_type:varchar(6)! author_name:varchar(120)! body:mediumtext! internal:tinyint(1)! created_at:datetime(6)!",
+	"announcements":       "id:char(32)! title:json! body:json! pinned:tinyint(1)! published:tinyint(1)! published_at:datetime(6)!",
+}
+var accountFeatureKeys = []string{"ssh_keys:id", "ssh_keys:user_id,fingerprint", "api_tokens:id", "api_tokens:token_hash", "support_departments:id", "tickets:id", "tickets:number", "ticket_messages:id", "announcements:id"}
+var accountFeatureFKs = []string{"ssh_keys:user_id:users:id:CASCADE", "api_tokens:user_id:users:id:CASCADE", "tickets:user_id:users:id:RESTRICT", "tickets:department_id:support_departments:id:RESTRICT", "tickets:service_id:services:id:RESTRICT", "tickets:assignee_id:users:id:RESTRICT", "ticket_messages:ticket_id:tickets:id:CASCADE", "ticket_messages:author_id:users:id:RESTRICT"}
+
 func accountSchemaColumns(version int, specs map[string]string) {
+	if schemaIncludes(version, migrations.AccountFeatures) {
+		for k, v := range accountFeatureSchema {
+			specs[k] = v
+		}
+	}
 	if !schemaIncludes(version, migrations.AccountSecurity) {
 		return
 	}
@@ -32,7 +48,11 @@ func accountSchemaColumns(version int, specs map[string]string) {
 	specs["users"] += " currency:char(3)! currency_locked:tinyint(1)!"
 }
 func prepareAccountMigration(ctx context.Context, conn *sql.Conn, version int, q string) (string, bool, error) {
-	for table := range accountSchema {
+	tables := accountSchema
+	if version > 0 && version <= len(schemaVersions) && schemaVersions[version-1] == migrations.AccountFeatures {
+		tables = accountFeatureSchema
+	}
+	for table := range tables {
 		if strings.HasPrefix(q, "CREATE TABLE IF NOT EXISTS "+table+" (") {
 			var kind, engine, collation string
 			err := conn.QueryRowContext(ctx, "SELECT TABLE_TYPE,COALESCE(ENGINE,''),@@collation_database FROM information_schema.TABLES WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME=?", table).Scan(&kind, &engine, &collation)

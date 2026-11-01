@@ -102,6 +102,9 @@ func (a *App) token(r *http.Request) string {
 	return c.Value
 }
 func (a *App) current(r *http.Request) (User, error) {
+	if u, ok := bearerUser(r); ok {
+		return u, nil
+	}
 	t := a.token(r)
 	if t == "" {
 		return User{}, ErrNotFound
@@ -217,13 +220,21 @@ func (a *App) serve(w http.ResponseWriter, r *http.Request) {
 		fail(w, r, 405, "METHOD_NOT_ALLOWED", "不支持此请求方式")
 		return
 	}
+	if r.Header.Get("Authorization") != "" {
+		var ok bool
+		r, ok = a.bearerRequest(w, r, p)
+		if !ok {
+			return
+		}
+	}
 	// Only the dedicated provider callback bypasses browser CSRF. It still
 	// requires canonical Host, bounded input and plugin signature verification.
 	if strings.HasPrefix(p, "/payment-callbacks/") {
 		a.paymentCallbackHTTP(w, r, strings.TrimPrefix(p, "/payment-callbacks/"))
 		return
 	}
-	if r.Method != "GET" {
+	_, bearer := bearerUser(r)
+	if r.Method != "GET" && !bearer {
 		t := a.token(r)
 		origin := r.Header.Get("Origin")
 		if t == "" || !hmac.Equal([]byte(r.Header.Get("X-CSRF-Token")), []byte(a.csrf(t))) || (origin != "" && origin != a.Config.Origin) {
@@ -326,6 +337,9 @@ func (a *App) serve(w http.ResponseWriter, r *http.Request) {
 	a.serveAuthorized(w, r, u, p, false)
 }
 func (a *App) serveAuthorized(w http.ResponseWriter, r *http.Request, u User, p string, admin bool) {
+	if !admin && a.accountCredentialsHTTP(w, r, u, p) {
+		return
+	}
 	if a.gatewayRoutes(w, r, u, p) {
 		return
 	}

@@ -444,6 +444,11 @@ func validatePreflightTableKeys(ctx context.Context, conn *sql.Conn, version int
 			required[key] = true
 		}
 	}
+	if schemaIncludes(version, migrations.AccountFeatures) {
+		for _, k := range accountFeatureKeys {
+			required[k] = true
+		}
+	}
 	if schemaIncludes(version, migrations.AccountSecurity) {
 		for _, k := range []string{"affiliates:user_id", "affiliates:code", "affiliate_referrals:client_id", "account_profiles:user_id", "account_sessions:id", "account_sessions:token_hash", "email_tokens:token_hash", "login_events:id", "notification_prefs:user_id", "account_settings:name", "account_requests:principal,operation,request_key", "email_templates:template_key", "email_outbox:id"} {
 			required[k] = true
@@ -582,6 +587,11 @@ func validatePreflightTableKeys(ctx context.Context, conn *sql.Conn, version int
 	if schemaIncludes(version, migrations.CommerceCatalog) {
 		for _, key := range commerceCatalogFKs {
 			fks[key] = true
+		}
+	}
+	if schemaIncludes(version, migrations.AccountFeatures) {
+		for _, k := range accountFeatureFKs {
+			fks[k] = true
 		}
 	}
 	if schemaIncludes(version, migrations.AccountSecurity) {

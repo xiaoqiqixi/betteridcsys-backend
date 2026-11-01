@@ -320,7 +320,7 @@ func insertAccountAudit(ctx context.Context, tx *sql.Tx, owner, actor, action, t
 }
 
 func accountBody(w http.ResponseWriter, r *http.Request, operation string, v any) bool {
-	r.Body = http.MaxBytesReader(w, r.Body, 96<<10)
+	r.Body = http.MaxBytesReader(w, r.Body, 512<<10)
 	media, _, err := mime.ParseMediaType(r.Header.Get("Content-Type"))
 	if err != nil || media != "application/json" {
 		fail(w, r, 415, "JSON_REQUIRED", "Use JSON")
