@@ -26,7 +26,7 @@ import zipfile
 REPOSITORY = "xiaoqiqixi/betteridcsys-backend"
 REPOSITORY_ID = 1435344087
 BUILD_WORKFLOW = ".github/workflows/release.yml"
-PUBLISH_WORKFLOW = ".github/workflows/release-publish.yml"
+PUBLISH_WORKFLOW = BUILD_WORKFLOW
 FINANCIAL_CI_JOBS = frozenset({
     "checks", "Native financial acceptance (ubuntu-22.04)", "go-vulnerability",
     "official-release-metadata", "Real MySQL financial browser acceptance",

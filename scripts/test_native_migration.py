@@ -38,6 +38,9 @@ class NativeMigration(unittest.TestCase):
         self.assertNotIn('executor.manager.prepare(PUBLISHED_VERSION', controller)
         self.assertIn('executor.prepared_release(str(source))', controller)
         self.assertIn('verify_published_baseline(source)', controller)
+        self.assertIn('Clone destination must belong to the current disposable fixture', controller)
+        self.assertIn('policy = executor.updater.paired_policy()', controller)
+        self.assertNotIn('source / "scripts/release_bundle.py"', controller)
         self.assertIn('assemble-candidate', acceptance)
         packaging = (ROOT / 'vps-billing/deploy/scripts/package-release.sh').read_text()
         core = packaging.split('if [[ $kind == core ]]; then',1)[1].split('exit 0',1)[0]
@@ -45,6 +48,19 @@ class NativeMigration(unittest.TestCase):
         self.assertIn('fetch-frontend', core)
         self.assertNotIn('npm', core)
         self.assertNotIn('/frontend/', core.replace('$output/frontend/', ''))
+
+    def test_documented_release_jobs_match_the_actual_publish_gate(self):
+        import ast
+        tree = ast.parse((ROOT / 'scripts/release_bundle.py').read_text())
+        gate = next(node for node in tree.body if isinstance(node, ast.FunctionDef) and node.name == 'release_gate')
+        required = next(node.value for node in gate.body if isinstance(node, ast.Assign) and any(
+            isinstance(target, ast.Name) and target.id == 'required' for target in node.targets))
+        docs = (ROOT / 'docs/development/RELEASE_TOOLING.md').read_text()
+        for name in ast.literal_eval(required):
+            self.assertIn('`' + name + '`', docs)
+        status = (ROOT / 'docs/development/REPOSITORY_MIGRATION.md').read_text()
+        self.assertIn('门禁 3、5、6', status)
+        self.assertIn('未完成', status)
 
     def test_check_uses_paired_checkout_policy_without_frontend_source_layout(self):
         check = (CI / 'check.sh').read_text()

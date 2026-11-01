@@ -254,7 +254,7 @@ public_target="$opt/core-upgrade/releases/$public_version"
 sudo -n python3 -I "$opt/tools/deploy/scripts/core-manager.py" doctor --release-directory "$public_target" --socket "$mysql_socket" --listen-address 127.0.0.1:18080 > "$evidence/host-doctor.json"
 [[ ! -e $public_target && ! -L $public_target ]] || fail 'Read-only host doctor changed the target.'
 emit_json_fact HOST_DOCTOR_JSON host-doctor.json
-sudo -n env GITHUB_REPOSITORY_ID=1435344087 RUNNER_ENVIRONMENT=github-hosted python3 -I "$opt/tools/deploy/scripts/core-native.py" --clone-installed-baseline "$ASTER_INSTALLED_LEGACY_BASELINE" "$public_target" > "$evidence/public-core-prepare.json"
+sudo -n env GITHUB_ACTIONS=true GITHUB_REPOSITORY=xiaoqiqixi/betteridcsys-backend GITHUB_REPOSITORY_ID=1435344087 RUNNER_ENVIRONMENT=github-hosted "GITHUB_RUN_ID=$GITHUB_RUN_ID" "GITHUB_RUN_ATTEMPT=$GITHUB_RUN_ATTEMPT" python3 -I "$opt/tools/deploy/scripts/core-native.py" --clone-installed-baseline "$ASTER_INSTALLED_LEGACY_BASELINE" "$public_target" > "$evidence/public-core-prepare.json"
 python3 - "$evidence/public-core-prepare.json" "$public_version" <<'PYPREPARED'
 import json
 from pathlib import Path
