@@ -1,7 +1,6 @@
 package billing
 
 import (
-	"aster/billing/internal/integrations"
 	"errors"
 	"net/http"
 	"strings"
@@ -21,25 +20,6 @@ func cancellationPath(path string, admin bool) (string, bool) {
 
 // This is a core policy check over immutable registry metadata. It never invokes
 // an adapter: unpaid local flags cannot prove absence of in-flight settlement.
-func cancellationPaymentsDisabled(registry *integrations.Registry) bool {
-	if registry == nil {
-		return false
-	}
-	disabled := false
-	for _, s := range registry.Summaries() {
-		if s.Kind != integrations.Payment {
-			continue
-		}
-		if s.Enabled {
-			return false
-		}
-		if s.ID == "payment.disabled" {
-			disabled = true
-		}
-	}
-	return disabled
-}
-
 func (a *App) cancelOrderHTTP(w http.ResponseWriter, r *http.Request, actor User, orderID string) {
 	if r.Method != "POST" {
 		fail(w, r, 405, "METHOD_NOT_ALLOWED", "不支持此请求方式")
@@ -56,10 +36,8 @@ func (a *App) cancelOrderHTTP(w http.ResponseWriter, r *http.Request, actor User
 		a.cancellationError(w, r, err)
 		return
 	}
-	if !cancellationPaymentsDisabled(a.Integrations) {
-		a.cancellationError(w, r, ErrCancellationUnavailable)
-		return
-	}
+	// The transaction locks the actual attempts and invoice. Plugin selection
+	// cannot prove that an existing external checkout is safe to cancel.
 	out, err := a.Store.CancelOrder(r.Context(), actor, orderID, input.Reason)
 	if err != nil {
 		a.cancellationError(w, r, err)
