@@ -19,7 +19,10 @@ jobs:
           cache: false
       - name: Prepare isolated native runner
         run: bash vps-billing/deploy/ci/prepare-native-runner.sh
+      - name: Gateway isolation, flows and settlement on real MySQL
+        run: RUNNER_TEMP="$ASTER_NATIVE_FIXTURE_ROOT" bash vps-billing/deploy/ci/mysql-native.sh -- bash scripts/check-payment-gateways.sh
       - name: Payment settlement, gateway contracts and all MySQL regressions
+        if: ${{ !cancelled() }}
         run: RUNNER_TEMP="$ASTER_NATIVE_FIXTURE_ROOT" bash vps-billing/deploy/ci/mysql-native.sh -- bash scripts/check-backend.sh
   slots-linux:
     runs-on: ubuntu-24.04

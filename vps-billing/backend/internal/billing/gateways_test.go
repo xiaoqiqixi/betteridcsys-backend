@@ -205,16 +205,24 @@ func gatewayHTTPContract(t *testing.T, f catalogFixture, adminPassword, customer
 	if status, _ := customer.request("PATCH", "/api/v1/admin/integrations/gateways/gateway-a", map[string]any{"revision": 1, "enabled": false}, ""); status != 403 {
 		t.Fatal("customer changed gateway", status)
 	}
-	status, out := admin.request("PATCH", "/api/v1/admin/integrations/gateways/gateway-a", map[string]any{"revision": 1, "name": map[string]string{"en": "Card A"}, "display_order": -1}, "")
+	status, out := admin.request("PATCH", "/api/v1/admin/integrations/gateways/gateway-a", map[string]any{"revision": 1, "name": map[string]string{"en": "Card A", "zh-CN": "银行卡 A"}, "display_order": -1}, "")
 	if status != 200 {
 		t.Fatal(status, out)
 	}
 	contracttest.Response(t, "PATCH", "/admin/integrations/gateways/{id}", out)
+	if out["data"].(map[string]any)["name"].(map[string]any)["zh-CN"] != "银行卡 A" {
+		t.Fatal("localized gateway name lost", out)
+	}
 	if status, _ := admin.request("PATCH", "/api/v1/admin/integrations/gateways/gateway-a", map[string]any{"revision": 1, "enabled": false}, ""); status != 409 {
 		t.Fatal("stale revision", status)
 	}
 	if status, _ := admin.request("PATCH", "/api/v1/admin/integrations/gateways/gateway-a", map[string]any{"revision": 2, "credentials": "forbidden"}, ""); status != 400 {
 		t.Fatal("credentials accepted", status)
+	}
+	for _, input := range []map[string]any{{"enabled": false}, {"revision": nil, "enabled": false}, {"revision": 2, "name": nil}, {"revision": 2, "enabled": nil}} {
+		if status, _ := admin.request("PATCH", "/api/v1/admin/integrations/gateways/gateway-a", input, ""); status != 400 {
+			t.Fatal("invalid optional field or revision accepted", status, input)
+		}
 	}
 	p := paymentFixture{store: f.store, owner: f.customer, ctx: t.Context()}
 	for _, id := range []string{"gateway-a", "gateway-b"} {

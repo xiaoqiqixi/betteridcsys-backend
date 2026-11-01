@@ -166,7 +166,7 @@ func (a *App) gatewayAdminHTTP(w http.ResponseWriter, r *http.Request, u User, p
 		if v.ID == id {
 			var input GatewayPatch
 			r.Body = http.MaxBytesReader(w, r.Body, 32<<10)
-			if !financeBody(w, r, &input) {
+			if !accountBody(w, r, "adminUpdateGateway", &input) {
 				return
 			}
 			s, err := a.Store.(gatewayStore).UpdateGateway(r.Context(), u, id, input)
