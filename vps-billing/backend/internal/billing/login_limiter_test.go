@@ -2,18 +2,28 @@ package billing
 
 import (
 	"fmt"
+	"net/http/httptest"
+	"strings"
 	"testing"
 	"time"
 )
 
 func TestLoginLimiterEvictsOldestInsteadOfLockingEveryone(t *testing.T) {
-	a := &App{attempts: map[string]bucket{}}
+	a := NewApp(NewMemory(), Config{Demo: true, Origin: "http://localhost", Secret: ID() + ID()})
 	for n := 0; n < 20000; n++ {
 		a.allowLogin(fmt.Sprintf("ip:10.%d.%d.%d", n>>16, n>>8&255, n&255))
 		a.allowLogin(fmt.Sprintf("email:attack-%d@example.invalid", n))
 	}
 	if !a.allowLogin("ip:192.0.2.123") || !a.allowLogin("email:legitimate@example.invalid") {
 		t.Fatal("attacker cardinality locked out a fresh customer")
+	}
+	r := httptest.NewRequest("POST", "http://localhost/api/v1/auth/login", strings.NewReader(`{"email":"demo@aster.local","password":"DemoCustomer!2026"}`))
+	r.Header.Set("Content-Type", "application/json")
+	r.RemoteAddr = "192.0.2.124:12345"
+	w := httptest.NewRecorder()
+	a.login(w, r)
+	if w.Code != 200 {
+		t.Fatal("fresh legitimate login rejected", w.Code)
 	}
 	if len(a.attempts) > 10000 {
 		t.Fatal("unbounded limiter", len(a.attempts))
