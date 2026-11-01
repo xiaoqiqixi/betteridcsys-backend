@@ -73,12 +73,16 @@ func TestMySQLAutomationHandlersAndRegistration(t *testing.T) {
 	f := mysqlCatalogFixture(t)
 	m := f.store.(*MySQL)
 	app := NewApp(m, Config{Demo: true, Origin: "http://localhost", Secret: ID() + ID()})
-	if err := app.RegisterAutomationJob("close_tickets", func(context.Context, api.AutomationSettings, time.Time) (AutomationResult, error) {
+	if app.Automation.jobs["close_tickets"] == nil || app.Automation.jobs["email_outbox"] == nil {
+		t.Fatal("account jobs were not registered")
+	}
+	registry := &App{Automation: &AutomationRegistry{jobs: map[string]AutomationJob{}}}
+	if err := registry.RegisterAutomationJob("close_tickets", func(context.Context, api.AutomationSettings, time.Time) (AutomationResult, error) {
 		return AutomationResult{}, nil
 	}); err != nil {
 		t.Fatal(err)
 	}
-	if err := app.RegisterAutomationJob("close_tickets", func(context.Context, api.AutomationSettings, time.Time) (AutomationResult, error) {
+	if err := registry.RegisterAutomationJob("close_tickets", func(context.Context, api.AutomationSettings, time.Time) (AutomationResult, error) {
 		return AutomationResult{}, nil
 	}); !errors.Is(err, ErrConflict) {
 		t.Fatal("duplicate registration", err)

@@ -77,6 +77,7 @@ func NewAppWithIntegrations(s Store, c Config, registry *integrations.Registry) 
 	}
 	a := &App{Automation: &AutomationRegistry{jobs: map[string]AutomationJob{}}, SMTP: smtpService, Integrations: registry.WithManagedEmail(smtpService), Store: s, Config: c, attempts: map[string]bucket{}, dummyHash: h}
 	a.registerCommerceAutomation()
+	a.registerAccountAutomation()
 	return a
 }
 func (a *App) cookieName() string {
@@ -337,6 +338,9 @@ func (a *App) serve(w http.ResponseWriter, r *http.Request) {
 	a.serveAuthorized(w, r, u, p, false)
 }
 func (a *App) serveAuthorized(w http.ResponseWriter, r *http.Request, u User, p string, admin bool) {
+	if a.supportHTTP(w, r, u, p) {
+		return
+	}
 	if !admin && a.accountCredentialsHTTP(w, r, u, p) {
 		return
 	}

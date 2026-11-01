@@ -227,13 +227,10 @@ func main() {
 	}
 	stop, stopSignals := signal.NotifyContext(context.Background(), syscall.SIGTERM, syscall.SIGINT)
 	defer stopSignals()
-	accountJobsDone := make(chan struct{})
 	if !demo {
-		go func() { defer close(accountJobsDone); app.RunAccountJobs(stop) }()
 		automationDone := make(chan struct{})
 		go func() { defer close(automationDone); app.RunAutomation(stop) }()
 		defer func() { stopSignals(); <-automationDone }()
-		defer func() { stopSignals(); <-accountJobsDone }()
 	}
 	slog.Info("billing API listening", "event", "server.started", "address", listen, "demo_mode", demo)
 	// Wait for active handlers before main's deferred DB.Close. Serve returning

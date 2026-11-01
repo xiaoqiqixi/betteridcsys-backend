@@ -32,7 +32,7 @@ var automationJobNames = map[string]bool{"generate_renewals": true, "send_remind
 // RegisterAutomationJob is shared with account/support jobs. Duplicate names
 // are rejected so a later integration cannot silently replace a billing job.
 func (a *App) RegisterAutomationJob(name string, job AutomationJob) error {
-	if !automationJobNames[name] || job == nil {
+	if (!automationJobNames[name] && name != "email_outbox") || job == nil {
 		return ErrCommerceInput
 	}
 	a.Automation.mu.Lock()
@@ -92,7 +92,7 @@ func (m *MySQL) UpdateAutomation(ctx context.Context, actor User, in api.Automat
 // RunAutomationJob holds a dedicated connection for the advisory lock. A unique
 // minute key also prevents sequential duplicate execution after lock release.
 func (m *MySQL) RunAutomationJob(ctx context.Context, name string, at time.Time, job AutomationJob) (bool, error) {
-	if !automationJobNames[name] || job == nil {
+	if (!automationJobNames[name] && name != "email_outbox") || job == nil {
 		return false, ErrCommerceInput
 	}
 	conn, err := m.DB.Conn(ctx)
@@ -320,7 +320,7 @@ func (a *App) automationHTTP(w http.ResponseWriter, r *http.Request, u User, p s
 }
 func (m *MySQL) AutomationRuns(ctx context.Context, cursor, job string, limit int) (api.AdminListAutomationRunsResponse, error) {
 	out := api.AdminListAutomationRunsResponse{Items: []api.AutomationRun{}}
-	query := "SELECT id,job,status,started_at,finished_at,processed,failed,message FROM automation_runs WHERE 1=1"
+	query := "SELECT id,job,status,started_at,finished_at,processed,failed,message FROM automation_runs WHERE job<>'email_outbox'"
 	args := []any{}
 	if job != "" {
 		if !automationJobNames[job] {

@@ -367,22 +367,15 @@ func (a *App) finishQueuedEmail(ctx context.Context, m *MySQL, item queuedEmail,
 	}
 	return tx.Commit()
 }
-func (a *App) RunAccountJobs(ctx context.Context) {
-	ticker := time.NewTicker(time.Minute)
-	defer ticker.Stop()
-	for {
-		select {
-		case <-ctx.Done():
-			return
-		case <-ticker.C:
-			jobCtx, cancel := context.WithTimeout(ctx, 50*time.Second)
-			_, _, err := a.DrainEmailOutbox(jobCtx)
-			cancel()
-			if err != nil {
-				a.Config.Logger.Error("email outbox job failed", "event", "email.outbox_failed")
-			}
-		}
-	}
+
+// The outbox uses the shared scheduler's leases and shutdown lifecycle. Its
+// private job name is excluded from the contract's fixed public job enum.
+func (a *App) registerAccountAutomation() {
+	_ = a.RegisterAutomationJob("email_outbox", func(ctx context.Context, _ financeapi.AutomationSettings, _ time.Time) (AutomationResult, error) {
+		processed, failed, err := a.DrainEmailOutbox(ctx)
+		return AutomationResult{Processed: int64(processed), Failed: int64(failed)}, err
+	})
+	_ = a.RegisterAutomationJob("close_tickets", a.closeInactiveTickets)
 }
 
 func (a *App) emailTemplatesHTTP(w http.ResponseWriter, r *http.Request, u User, path string) {

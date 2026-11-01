@@ -1,0 +1,61 @@
+name: Accounts and support
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: read
+# Every pushed revision receives its own result while maintainers share main.
+jobs:
+  accounts-mysql:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    services:
+      mysql:
+        image: mysql:8.4
+        env:
+          MYSQL_ROOT_PASSWORD: accounts_test_only
+          MYSQL_ROOT_HOST: '%'
+          MYSQL_DATABASE: aster_accounts_test
+        ports:
+          - 13306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h localhost -uroot -paccounts_test_only"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=12
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e
+        with:
+          go-version: '1.27.3'
+          cache: false
+      - name: Permission and contract validators
+        working-directory: vps-billing/backend
+        run: go test -race -count=1 ./internal/staffaccess ./internal/contracttest ./internal/financeapi
+      - name: Real MySQL account and support acceptance
+        working-directory: vps-billing/backend
+        env:
+          ASTER_MYSQL_TEST_DSN: root:accounts_test_only@tcp(127.0.0.1:13306)/aster_accounts_test?parseTime=true
+        run: |
+          go test -race -count=1 -timeout=18m -json ./internal/billing -run 'Test(MySQL)?(Staff|Account|Registration|Recovery|Profile|SSH|API|Support|Ticket|EmailTemplate|Outbox|ConcurrentVerification|ConcurrentLastOwner|EveryContract|LoginLimiter|RejectedIP|Automation|Announcement|Affiliate|SecuritySettings|SiteSettings|ClientAdmin|SMTPContract)' > account-tests.jsonl
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          events = [json.loads(line) for line in Path('account-tests.jsonl').read_text().splitlines()]
+          skipped = [event.get('Test') for event in events if event.get('Action') == 'skip']
+          passed = [event.get('Test') for event in events if event.get('Action') == 'pass' and event.get('Test')]
+          assert not skipped, f'Account acceptance skipped tests: {skipped}'
+          assert len(passed) >= 30, f'Expected account acceptance tests, got {len(passed)}'
+          print(f'{len(passed)} account/support tests passed without skips')
+          PY
+      - name: Retain account test results
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        with:
+          name: accounts-${{ github.sha }}-${{ github.run_attempt }}
+          path: vps-billing/backend/account-tests.jsonl
+          if-no-files-found: warn
+          retention-days: 7

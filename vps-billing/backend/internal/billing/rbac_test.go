@@ -5,9 +5,40 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"os"
+	"strings"
 	"testing"
 	"time"
 )
+
+func TestEveryContractStaffRouteHasItsDeclaredPermission(t *testing.T) {
+	raw, err := os.ReadFile("../../../contract/openapi.json")
+	if err != nil {
+		t.Fatal(err)
+	}
+	var document struct {
+		Paths map[string]map[string]json.RawMessage `json:"paths"`
+	}
+	if err = json.Unmarshal(raw, &document); err != nil {
+		t.Fatal(err)
+	}
+	for path, methods := range document.Paths {
+		for method, operation := range methods {
+			if method != "get" && method != "post" && method != "patch" && method != "delete" {
+				continue
+			}
+			var v struct {
+				Permission string `json:"x-permission"`
+			}
+			if err = json.Unmarshal(operation, &v); err != nil {
+				t.Fatal(err)
+			}
+			if v.Permission != "" && adminPermission(path, strings.ToUpper(method)) != v.Permission {
+				t.Errorf("%s %s must require %s", method, path, v.Permission)
+			}
+		}
+	}
+}
 
 func runStaffPermissionContract(t *testing.T, f accountFixture) {
 	t.Helper()

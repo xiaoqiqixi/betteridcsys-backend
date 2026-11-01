@@ -104,6 +104,7 @@ func validPassword(s string, min int64) bool {
 }
 
 var accountEmailPattern = regexp.MustCompile("^(?:[A-Za-z0-9_'+\\-]+\\.)*[A-Za-z0-9_'+\\-]*[A-Za-z0-9_+-]@(?:[A-Za-z0-9][A-Za-z0-9\\-]*\\.)+[A-Za-z]{2,}$")
+var accountIDPattern = regexp.MustCompile(`^[A-Za-z0-9_-]{1,64}$`)
 var countryCodePattern = regexp.MustCompile(`^[A-Z]{2}$`)
 
 func validAccountEmail(s string) bool { return len(s) <= 254 && accountEmailPattern.MatchString(s) }
