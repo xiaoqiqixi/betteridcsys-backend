@@ -12,7 +12,7 @@ import (
 
 // CancelOrder changes only an unfulfilled local order and its paired invoice.
 // Reservation and settlement take the same order/invoice locks. Payment
-// attempts remain reservations even when an adapter times out or expires.
+// uncertain attempts stay reserved; confirmed checkout expiry uses a grace period.
 func (m *MySQL) CancelOrder(ctx context.Context, actor User, orderID, reason string) (OrderCancellation, error) {
 	reason, err := normalizeCancellationInput(actor, orderID, reason)
 	if err != nil {
