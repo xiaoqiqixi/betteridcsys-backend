@@ -90,15 +90,15 @@ def fixture(baseline=False):
                        "currency_settings": 1, "email_settings": 1,
                        "invoices": 10000, "order_requests": 10000, "orders": 10000,
                        "outbox_events": 10000, "payment_attempts": 0, "payment_settlements": 0,
-                       "plan_prices": 3, "plans": 3, "schema_migrations": 24, "services": 1000,
+                       "plan_prices": 3, "plans": 3, "schema_migrations": 25, "services": 1000,
                        "product_configurations": 0, "order_product_configurations": 0, "provisioning_jobs": 0,
                        "sessions": 2, "site_settings": 1, "users": 101,
                        "staff_roles": 1, "staff_members": 1, "products": 3, "product_prices": 0,
                        "product_options": 0, "product_option_choices": 0, "option_prices": 0,
                        "os_images": 0, "product_os_images": 0, "commerce_requests": 0, "commerce_taxonomy": 0,
                        "account_profiles": 0, "account_sessions": 0, "email_tokens": 0, "login_events": 0,
-                       "notification_prefs": 0, "account_settings": 1, "account_requests": 0,
-                       "email_templates": 0, "email_outbox": 0, "affiliates": 0, "affiliate_referrals": 0,
+                       "notification_prefs": 0, "account_settings": 2, "account_requests": 0,
+                       "email_templates": 0, "email_outbox": 0, "affiliates": 0, "affiliate_referrals": 0, "affiliate_commissions": 0,
                        "coupons": 0, "coupon_redemptions": 0, "payment_gateway_settings": 0,
                        "credit_ledger": 0, "credit_limits": 0,
                        "order_items": 0, "invoice_lines": 0, "invoice_payments": 0, "invoice_refunds": 0,
@@ -226,12 +226,12 @@ class PerformanceReportTest(unittest.TestCase):
     def test_current_inventory_requires_exact_empty_product_configuration_tables(self):
         value = fixture()
         expected = {"catalog_nodes": 2, "catalog_types": 1, "catalog_regions": 2,
-                    "catalog_taxonomy_settings": 1, "schema_migrations": 24,
+                    "catalog_taxonomy_settings": 1, "schema_migrations": 25,
                     "product_configurations": 0, "order_product_configurations": 0, "provisioning_jobs": 0,
                     "staff_roles": 1, "staff_members": 1, "products": 3, "product_prices": 0}
         self.assertEqual({key: value["dataset"]["counts"][key] for key in expected}, expected)
         self.assertEqual(value["dataset"]["counts"], REPORT.COUNTS)
-        self.assertEqual(len(value["dataset"]["counts"]), 62)
+        self.assertEqual(len(value["dataset"]["counts"]), 63)
 
         legacy = copy.deepcopy(value)
         for key in ("catalog_nodes", "catalog_types", "catalog_regions", "catalog_taxonomy_settings",

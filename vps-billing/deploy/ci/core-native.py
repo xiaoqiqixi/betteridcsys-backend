@@ -36,7 +36,7 @@ class AcceptanceFailure(RuntimeError):
 
 
 PUBLISHED_VERSION = "0.5.2"
-CANDIDATE_SCHEMA = 24
+CANDIDATE_SCHEMA = 25
 PUBLISHED_SOURCE = "9ed610a283020f50e2cfc529f8b5145b4a9c8fc3"
 PUBLISHED_RELEASE_ID = 413559379
 PUBLISHED_BUILD_RUN_ID = 38702170922
@@ -1110,7 +1110,7 @@ def legacy_schema_migration(resources, executor, fresh, baseline):
             old["exit_code"] != 0 and old["database"]["status"] == "incompatible",
             "Payment schema migration must be current for the candidate and rejected by the published old program")
     count_after = resources.sql("SELECT COUNT(*) FROM information_schema.TABLES WHERE TABLE_SCHEMA=DATABASE();", database=database)
-    require(count_before == "13" and count_prefix7 == "14" and count_after == "62", "Actual migrations did not add the currency, payment, commerce, catalog, product configuration and staff tables")
+    require(count_before == "13" and count_prefix7 == "14" and count_after == "63", "Actual migrations did not add the currency, payment, commerce, catalog, product configuration and staff tables")
     require(fresh.legacy_business_hash(database, historical_tables) == historical_hash,
             "Additive payment migration changed existing business records")
     require(resources.sql("SELECT COUNT(*) FROM users WHERE disabled<>0 OR revision<>1;", database=database) == "0",
@@ -1131,7 +1131,7 @@ def legacy_schema_migration(resources, executor, fresh, baseline):
     stage("legacy-repeat-migration")
     native.api(fresh.candidate, environment, "-migrate")
     require(fresh.full_data_hash(database) == digest_before, "Repeated migration changed actual database data")
-    return {"schema_before": 6, "published_schema": 7, "schema_after": CANDIDATE_SCHEMA, "tables_before": 13, "tables_published": 14, "tables_after": 62,
+    return {"schema_before": 6, "published_schema": 7, "schema_after": CANDIDATE_SCHEMA, "tables_before": 13, "tables_published": 14, "tables_after": 63,
             "actual_candidate_binary_migrate": True, "unchanged_selected_sql_prefix": True,
             "actual_published_binary_migrate_6_to_7": True, "actual_candidate_binary_migrate_7_to_current": True,
             "audit_query_indexes_added": CANDIDATE_SCHEMA >= 9,
