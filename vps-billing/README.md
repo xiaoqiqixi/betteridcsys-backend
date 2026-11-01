@@ -9,4 +9,4 @@
 - `docs/`：安装、运营、接口与插件手册。
 - `tests/`：跨组件回归工具。
 
-[安装](docs/INSTALL.md) · [首次使用](docs/GETTING_STARTED.md) · [API](docs/CONTRACT.md) · [开发指南](../docs/development/README.md)
+[独立发行与安装入口](../docs/development/RELEASE_TOOLING.md) · [主机配置与历史安装记录](docs/INSTALL.md) · [首次使用](docs/GETTING_STARTED.md) · [API](docs/CONTRACT.md) · [开发指南](../docs/development/README.md)
