@@ -3,6 +3,10 @@
 set -euo pipefail
 root=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd -P)
 export PYTHONDONTWRITEBYTECODE=1
+python3 -B "$root/.github/tests/test_native_workflow.py"
+python3 -B "$root/scripts/test_native_fixture_report.py"
+python3 -B "$root/vps-billing/deploy/ci/test_performance_runner.py"
+python3 -B "$root/vps-billing/deploy/ci/test_performance_report.py"
 python3 -B "$root/scripts/test_frontend_pair.py"
 python3 -B "$root/scripts/test_backend_bundle.py"
 python3 -B "$root/scripts/test_pair_runtime.py"

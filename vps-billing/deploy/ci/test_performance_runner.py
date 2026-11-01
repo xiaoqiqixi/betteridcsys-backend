@@ -9,7 +9,7 @@ import unittest
 
 HERE = Path(__file__).resolve().parent
 RUNNER = HERE / "performance-native.sh"
-WORKFLOW = HERE.parents[2] / ".github/workflows/performance.yml"
+WORKFLOW = HERE.parents[2] / ".github/workflows/ci.yml"
 
 
 class PerformanceRunnerGuards(unittest.TestCase):
@@ -64,7 +64,8 @@ class PerformanceRunnerGuards(unittest.TestCase):
                 self.check_rejected({key: value})
 
     def test_workflow_retains_only_metrics_and_cleanup_receipts(self):
-        source = WORKFLOW.read_text()
+        workflow = WORKFLOW.read_text()
+        source = workflow.split("\n  financial-performance:\n", 1)[1].split("\n  backend-mysql:\n", 1)[0]
         start = source.index("      - name: Retain validated synthetic performance evidence")
         end = source.index("      - name: Remove owned native runner scratch", start)
         artifact = source[start:end]
@@ -76,9 +77,10 @@ class PerformanceRunnerGuards(unittest.TestCase):
         ])
         self.assertNotIn(".log", artifact)
         self.assertIn("timeout-minutes: 25", source)
-        self.assertIn("contents: read", source)
-        self.assertNotIn("contents: write", source)
+        self.assertIn("contents: read", workflow)
+        self.assertNotIn("contents: write", workflow)
         self.assertNotIn("pull_request:", source)
+        self.assertIn("github.event_name == 'push' && github.ref == 'refs/heads/main'", source)
 
     def test_failure_diagnostics_project_only_the_last_exact_known_stage(self):
         with tempfile.TemporaryDirectory() as temporary:

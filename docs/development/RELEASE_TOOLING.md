@@ -20,7 +20,7 @@
 
 `.github/workflows/release.yml` 仅接受 `v*` 标签和 `workflow_dispatch`。标签必须是源码 Core 版本对应的稳定版本；手动运行始终是 dry-run，没有发布开关。PR 使用独立只读 `release-tooling.yml`，不签名、不创建 Release。后台包构建两次，逐文件比较，再配对前端。
 
-标签发布要求该源码已保留在 main，并且 `.github/workflows/ci.yml` 的同一成功运行包含以下成功 job。原生 job 尚未接入，所以当前正式发布会被阻止：
+标签发布要求该源码已保留在 main，并且 `.github/workflows/ci.yml` 的同一成功运行包含以下成功 job。原生 jobs 已接入主干 push；未提供既有安装基线或验收失败时仍阻止正式发布：
 
 | 必须成功的 job 名称 | 当前接入状态 |
 | --- | --- |
@@ -28,12 +28,12 @@
 | `Go and real MySQL (ubuntu-24.04)` | 已有 |
 | `vulnerability` | 已有 |
 | `Real MySQL financial browser acceptance` | 已有 |
-| `Native financial acceptance (ubuntu-22.04)` | 待 CI 负责人添加 |
-| `Native financial acceptance (ubuntu-24.04)` | 待 CI 负责人添加 |
+| `Native financial acceptance (ubuntu-22.04)` | 已接入；既有安装基线待提供 |
+| `Native financial acceptance (ubuntu-24.04)` | 已接入；既有安装基线待提供 |
 
-原生矩阵应依次准备隔离 runner、使用 `scripts/frontend_pair.py pin/verify` 获取并验证独立前端 checkout、提供受保护的既有 `0.5.2` 基线（`ASTER_INSTALLED_LEGACY_BASELINE`）、在 `mysql-native.sh` 的真实 MySQL fixture 内调用 `accept-native.sh --allow-isolated-runner`。后者继续调用 Core、payment、plugin 验收。遗留基线需来自已备份并验证的现有安装；不会从旧仓库下载，也不能以复制附件或本地候选冒充门禁 6 的实际升级证明。
+原生矩阵使用 `scripts/frontend_pair.py pin/verify` 获取并验证独立前端 checkout、准备隔离 runner，在 `mysql-native.sh` 的真实 MySQL fixture 内调用 `accept-native.sh --allow-isolated-runner`。后者继续调用 Core、payment、plugin 验收。必须先在 runner 上还原已审核的既有 `0.5.2` 安装，仓库变量 `ASTER_INSTALLED_LEGACY_BASELINE` 指向该受保护目录；仅设置路径不会创建基线。目前仓库没有该备份或还原来源，job 会明确失败，不跳过升级断言。该外部输入和安全还原接线待维护者提供固定摘要的备份后完成；不会从旧仓库下载，也不能以复制附件或本地候选冒充门禁 6 的实际升级证明。
 
-另应添加 `Synthetic financial performance (ubuntu-24.04)`，使用同一受控 MySQL fixture 调用 `performance-native.sh --allow-isolated-runner --repo-root ... --output ...`；保留性能报告和 cleanup receipt。性能结果独立记录，不替代原生或生产容量验收。
+`Synthetic financial performance (ubuntu-24.04)` 已接入主干 push，使用同一受控 MySQL fixture 调用 `performance-native.sh --allow-isolated-runner --repo-root ... --output ...`。只保留校验后的性能报告、runner 清理收据和独立的 MySQL/benchmark 临时目录清理证明；命令失败或残留目录都会使 job 失败。性能结果独立记录，不替代原生或生产容量验收。两个特权 jobs 均只接受固定仓库 ID 的主干 push；fork/PR 和手动运行不启动它们。只读发行回归则同时覆盖主干 push、PR 和手动运行。
 
 ## 主机升级
 
@@ -52,4 +52,4 @@ sudo python3 -I /protected/backend/vps-billing/deploy/scripts/core-manager.py pr
 
 `bash scripts/check-release-tooling.sh` 在 Linux 普通用户下运行配对、真实 Git/Go 打包、攻击输入、主机准备与 executor、旧格式安装回归，以及 `go test -race -count=1 ./internal/updates/...`。它不启动宿主服务或生产数据库。`check.sh` 保留完整旧回归入口，前端部分改为验证独立 checkout 和配对 CI bundle。各 native wrapper 的 `--check` 运行其非特权测试；真正的 systemd/用户/数据库变更仍限制为显式选择的 GitHub-hosted Ubuntu fixture。
 
-本机 macOS 的全量旧测试不能代替 Linux 结果：`renameat2`、Linux xattr、pidfd、`/proc` 和 Linux Go runtimeplugins 无法在该平台运行。此外，旧跨组件测试仍引用已移走的 `aster-cloud/**`、旧前端浏览器/路由源码、缺失的 `performance.yml` / `core-public-prepare.yml`；这些失败保留并单独报告，未删除或跳过断言。新增发行检查的通过不代表这些旧跨仓库测试或门禁 2/3/5/6 全部完成。
+本机 macOS 的全量旧测试不能代替 Linux 结果：`renameat2`、Linux xattr、pidfd、`/proc` 和 Linux Go runtimeplugins 无法在该平台运行。此外，旧跨组件测试仍引用已移走的 `aster-cloud/**`、旧前端浏览器/路由源码、缺失的 `core-public-prepare.yml`；这些失败保留并单独报告，未删除或跳过断言。性能工作流断言已迁到 `ci.yml` 的实际 job，保留证据范围、事件限制及测量时限检查。新增发行检查的通过不代表这些旧跨仓库测试或门禁 2/3/5/6 全部完成。

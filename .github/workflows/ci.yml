@@ -12,6 +12,132 @@ concurrency:
 # Fork PRs use public checkouts and synthetic fixtures. No repository secrets
 # are required; github.token keeps the read-only permissions declared above.
 jobs:
+  native-financial:
+    name: Native financial acceptance (${{ matrix.os }})
+    if: github.repository == 'xiaoqiqixi/betteridcsys-backend' && github.repository_id == '1435344087' && github.event_name == 'push' && github.ref == 'refs/heads/main'
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-22.04, ubuntu-24.04]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 90
+    permissions:
+      contents: read
+      actions: read
+    env:
+      # The existing legacy controller verifies protected installed bytes and
+      # their original receipt. No release download or generated baseline.
+      ASTER_INSTALLED_LEGACY_BASELINE: ${{ vars.ASTER_INSTALLED_LEGACY_BASELINE }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - name: Native workflow contracts
+        run: python3 -B .github/tests/test_native_workflow.py
+      - name: Require the protected existing installation for legacy upgrade acceptance
+        run: |
+          if [[ -z $ASTER_INSTALLED_LEGACY_BASELINE || $ASTER_INSTALLED_LEGACY_BASELINE != /* || ! -d $ASTER_INSTALLED_LEGACY_BASELINE || -L $ASTER_INSTALLED_LEGACY_BASELINE ]]; then
+            echo '::error::Missing protected existing 0.5.2 installation. Provision the reviewed backup and ASTER_INSTALLED_LEGACY_BASELINE; legacy upgrade acceptance cannot use a generated candidate or fetch the old repository.'
+            exit 1
+          fi
+      - name: Resolve the reviewed immutable frontend source
+        id: pair
+        run: python3 -I scripts/frontend_pair.py pin >> "$GITHUB_OUTPUT"
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          repository: xiaoqiqixi/betteridcsys-frontend
+          ref: ${{ steps.pair.outputs.source_sha }}
+          path: vps-billing/frontend
+          persist-credentials: false
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e
+        with:
+          go-version: '1.27.3'
+          cache: false
+      - name: Verify frontend identity and the pinned bundle contract
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: bash scripts/check-paired-frontend.sh
+      - name: Prepare isolated native runner
+        run: bash vps-billing/deploy/ci/prepare-native-runner.sh
+      - name: Install, exercise payments and plugins, upgrade, restore and roll back
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: RUNNER_TEMP="$ASTER_NATIVE_FIXTURE_ROOT" bash vps-billing/deploy/ci/mysql-native.sh -- bash vps-billing/deploy/ci/accept-native.sh --allow-isolated-runner "$GITHUB_WORKSPACE" "$ASTER_NATIVE_FIXTURE_ROOT/native-acceptance"
+      - name: Retain only bounded native evidence and cleanup receipts
+        if: always() && env.ASTER_NATIVE_FIXTURE_ROOT != ''
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        with:
+          name: native-financial-${{ matrix.os }}-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            ${{ env.ASTER_NATIVE_FIXTURE_ROOT }}/native-acceptance/native-acceptance.json
+            ${{ env.ASTER_NATIVE_FIXTURE_ROOT }}/native-acceptance/cleanup.json
+            ${{ env.ASTER_NATIVE_FIXTURE_ROOT }}/native-acceptance/core-native/core-native.json
+            ${{ env.ASTER_NATIVE_FIXTURE_ROOT }}/native-acceptance/core-native/cleanup.json
+            ${{ env.ASTER_NATIVE_FIXTURE_ROOT }}/native-acceptance/plugin-native/plugin-native.json
+            ${{ env.ASTER_NATIVE_FIXTURE_ROOT }}/native-acceptance/payment-native/payment-native.json
+          if-no-files-found: warn
+          retention-days: 7
+          overwrite: false
+      - name: Remove owned native runner scratch
+        if: always()
+        run: |
+          if [[ -n ${ASTER_NATIVE_FIXTURE_ROOT:-} ]]; then
+            [[ $ASTER_NATIVE_FIXTURE_ROOT =~ ^/run/aster-native\.[A-Za-z0-9]{8}$ ]]
+            [[ -d $ASTER_NATIVE_FIXTURE_ROOT && ! -L $ASTER_NATIVE_FIXTURE_ROOT ]]
+            [[ $(stat -c %u "$ASTER_NATIVE_FIXTURE_ROOT") == "$(id -u)" ]]
+            sudo rm -rf --one-file-system -- "$ASTER_NATIVE_FIXTURE_ROOT"
+          fi
+
+  financial-performance:
+    name: Synthetic financial performance (ubuntu-24.04)
+    if: github.repository == 'xiaoqiqixi/betteridcsys-backend' && github.repository_id == '1435344087' && github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e
+        with:
+          go-version: '1.27.3'
+          cache: false
+      - name: Native workflow and performance contracts
+        run: |
+          python3 -B .github/tests/test_native_workflow.py
+          python3 -B vps-billing/deploy/ci/test_performance_runner.py
+          python3 -B vps-billing/deploy/ci/test_performance_report.py
+      - name: Prepare isolated native runner
+        run: bash vps-billing/deploy/ci/prepare-native-runner.sh
+      - name: Measure synthetic HTTP with real disposable MySQL
+        timeout-minutes: 25
+        run: |
+          set +e
+          RUNNER_TEMP="$ASTER_NATIVE_FIXTURE_ROOT" bash vps-billing/deploy/ci/mysql-native.sh -- bash vps-billing/deploy/ci/performance-native.sh --allow-isolated-runner --repo-root "$GITHUB_WORKSPACE" --output "$RUNNER_TEMP/http-performance"
+          result=$?
+          set -e
+          python3 -I scripts/native_fixture_report.py --root "$ASTER_NATIVE_FIXTURE_ROOT" --output "$RUNNER_TEMP/http-performance/fixture-cleanup.json" --source "$GITHUB_SHA" --exit-code "$result"
+      - name: Retain validated synthetic performance evidence
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        with:
+          name: synthetic-performance-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            ${{ runner.temp }}/http-performance/performance.json
+            ${{ runner.temp }}/http-performance/runner-cleanup.json
+            ${{ runner.temp }}/http-performance/fixture-cleanup.json
+          if-no-files-found: warn
+          retention-days: 7
+          overwrite: false
+      - name: Remove owned native runner scratch
+        if: always()
+        run: |
+          if [[ -n ${ASTER_NATIVE_FIXTURE_ROOT:-} ]]; then
+            [[ $ASTER_NATIVE_FIXTURE_ROOT =~ ^/run/aster-native\.[A-Za-z0-9]{8}$ ]]
+            [[ -d $ASTER_NATIVE_FIXTURE_ROOT && ! -L $ASTER_NATIVE_FIXTURE_ROOT ]]
+            [[ $(stat -c %u "$ASTER_NATIVE_FIXTURE_ROOT") == "$(id -u)" ]]
+            sudo rm -rf --one-file-system -- "$ASTER_NATIVE_FIXTURE_ROOT"
+          fi
+
   backend-mysql:
     name: Go and real MySQL (${{ matrix.os }})
     strategy:
