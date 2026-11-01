@@ -41,3 +41,15 @@ func TestCustomerAuditHidesStaffAcrossAllViews(t *testing.T) {
 		t.Fatal("stored audit mutated")
 	}
 }
+
+func TestAuditProjectionOmitsFieldsOnlyForCustomerStaffEvents(t *testing.T) {
+	raw, err := json.Marshal(Audit{})
+	if err != nil || !strings.Contains(string(raw), `"actor_email":""`) || !strings.Contains(string(raw), `"detail":""`) {
+		t.Fatal("admin response shape changed", string(raw), err)
+	}
+	rows := customerAudits([]Audit{{ActorEmail: "private@example.invalid", Detail: "private reason"}}, "customer@example.invalid")
+	raw, err = json.Marshal(rows)
+	if err != nil || strings.Contains(string(raw), "actor_email") || strings.Contains(string(raw), "detail") || !strings.Contains(string(raw), `"actor_type":"staff"`) {
+		t.Fatal("staff fields still emitted", string(raw), err)
+	}
+}

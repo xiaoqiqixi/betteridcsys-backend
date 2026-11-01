@@ -5,6 +5,7 @@ import (
 	"context"
 	"crypto/rand"
 	"encoding/hex"
+	"encoding/json"
 	"errors"
 	"time"
 )
@@ -114,9 +115,24 @@ type Audit struct {
 	Action     string    `json:"action"`
 	Target     string    `json:"target"`
 	CreatedAt  time.Time `json:"created_at"`
-	ActorEmail string    `json:"actor_email,omitempty"`
-	Detail     string    `json:"detail,omitempty"`
+	ActorEmail string    `json:"actor_email"`
+	Detail     string    `json:"detail"`
 }
+
+// Omit staff-only fields only in explicitly projected customer events. Admin
+// serialization, including historical empty fields, retains its original shape.
+func (a Audit) MarshalJSON() ([]byte, error) {
+	type storedAudit Audit
+	if a.ActorType == "staff" || a.ActorType == "system" {
+		return json.Marshal(struct {
+			storedAudit
+			ActorEmail *string `json:"actor_email,omitempty"`
+			Detail     *string `json:"detail,omitempty"`
+		}{storedAudit: storedAudit(a)})
+	}
+	return json.Marshal(storedAudit(a))
+}
+
 type Session struct {
 	// Revision binds an in-flight password check to the account state it read.
 	Revision int64
