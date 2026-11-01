@@ -240,6 +240,53 @@ func TestPaymentHTTPAuthorizationPrecedesReservation(t *testing.T) {
 	}
 }
 
+func TestAPITokenBoundaryPreservesProviderAuthorization(t *testing.T) {
+	h := newPaymentHTTPHarness(t, nil)
+	order, invoice := h.order(t)
+	h.checkout(t, invoice)
+	raw, signature := h.runtime.signed(t, h.runtime.event(t, 0))
+	request := func(authorization, proof string) int {
+		r, err := http.NewRequest("POST", h.server.URL+"/api/v1/payment-callbacks/"+paymentfixture.ProviderID, bytes.NewReader(raw))
+		if err != nil {
+			t.Fatal(err)
+		}
+		r.Header.Set("Authorization", authorization)
+		r.Header.Set("Content-Type", "application/json")
+		r.Header.Set(paymentfixture.SignatureHeader, proof)
+		resp, err := http.DefaultClient.Do(r)
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer resp.Body.Close()
+		return resp.StatusCode
+	}
+	if status := request("Bearer ast_"+randomSecret(), signature); status != 403 {
+		t.Fatal("personal token reached payment callback", status)
+	}
+	if _, calls := h.runtime.counts(); calls != 0 {
+		t.Fatal("personal token forwarded to provider")
+	}
+	if status := request("Bearer provider-verification-header", ""); status != 400 {
+		t.Fatal("provider header bypassed signature verification", status)
+	}
+	h.pair(t, order, invoice, "unpaid")
+	if status := request("Bearer provider-verification-header", signature); status != 200 {
+		t.Fatal("provider authorization intercepted by account tokens", status)
+	}
+	h.pair(t, order, invoice, "paid")
+	h.runtime.mu.Lock()
+	defer h.runtime.mu.Unlock()
+	found := false
+	for _, header := range h.runtime.callbacks[len(h.runtime.callbacks)-1].Headers {
+		if strings.EqualFold(header.Name, "Authorization") && len(header.Values) == 1 && header.Values[0] == "Bearer provider-verification-header" {
+			found = true
+		}
+	}
+	if !found {
+		t.Fatal("provider authorization was not preserved")
+	}
+}
+
 func TestPaymentHTTPSelectionAndCurrencyFailBeforeReservation(t *testing.T) {
 	for _, name := range []string{"disabled", "version mismatch", "digest invalid", "currency unsupported"} {
 		t.Run(name, func(t *testing.T) {

@@ -223,18 +223,27 @@ func (a *App) serve(w http.ResponseWriter, r *http.Request) {
 		fail(w, r, 405, "METHOD_NOT_ALLOWED", "不支持此请求方式")
 		return
 	}
+	// Only the dedicated provider callback bypasses browser CSRF. It still
+	// requires canonical Host, bounded input and plugin signature verification.
+	if strings.HasPrefix(p, "/payment-callbacks/") {
+		// A provider may use its own Authorization header. Personal API
+		// credentials must never be accepted here or forwarded to its worker.
+		for _, value := range r.Header.Values("Authorization") {
+			parts := strings.Fields(value)
+			if len(parts) >= 2 && strings.EqualFold(parts[0], "Bearer") && strings.HasPrefix(parts[1], "ast_") {
+				fail(w, r, 403, "FORBIDDEN", "API tokens cannot authenticate payment callbacks")
+				return
+			}
+		}
+		a.paymentCallbackHTTP(w, r, strings.TrimPrefix(p, "/payment-callbacks/"))
+		return
+	}
 	if r.Header.Get("Authorization") != "" {
 		var ok bool
 		r, ok = a.bearerRequest(w, r, p)
 		if !ok {
 			return
 		}
-	}
-	// Only the dedicated provider callback bypasses browser CSRF. It still
-	// requires canonical Host, bounded input and plugin signature verification.
-	if strings.HasPrefix(p, "/payment-callbacks/") {
-		a.paymentCallbackHTTP(w, r, strings.TrimPrefix(p, "/payment-callbacks/"))
-		return
 	}
 	_, bearer := bearerUser(r)
 	if r.Method != "GET" && !bearer {
