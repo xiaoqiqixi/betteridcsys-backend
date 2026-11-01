@@ -30,7 +30,7 @@ func newRawFixture(component string) *catalogFixture {
 	for name, raw := range data {
 		provAssets[name] = map[string]any{"sha256": digestBytes(raw), "size": len(raw)}
 	}
-	prov := map[string]any{"schema": 1, "repository": Repository, "repository_id": RepositoryID, "tag": tag, "version": version, "source_sha": source, "run_id": 100, "run_attempt": 2, "event": "push", "workflow_path": ".github/workflows/release-build.yml", "workflow_sha": source, "run_head_sha": source, "default_branch": "main", "default_sha": source, "artifact_name": "candidate-100-2", "trusted_blobs": map[string]string{".github/workflows/release-build.yml": strings.Repeat("d", 40)}, "assets": provAssets}
+	prov := map[string]any{"schema": 1, "repository": Repository, "repository_id": RepositoryID, "tag": tag, "version": version, "source_sha": source, "run_id": 100, "run_attempt": 2, "event": "push", "workflow_path": ".github/workflows/release.yml", "workflow_sha": source, "run_head_sha": source, "default_branch": "main", "default_sha": source, "artifact_name": "candidate-100-2", "trusted_blobs": map[string]string{".github/workflows/release.yml": strings.Repeat("d", 40)}, "assets": provAssets}
 	data["PROVENANCE.json"] = marshal(prov)
 	names := []string{}
 	for name := range data {

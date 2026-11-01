@@ -14,6 +14,8 @@ import datetime
 import fcntl
 import hashlib
 import json
+import importlib.util
+from pathlib import Path
 import os
 import re
 import secrets
@@ -26,9 +28,9 @@ import urllib.parse
 import urllib.request
 import zlib
 
-REPOSITORY = "xiaoqiqixi/betteridcsys"
-REPOSITORY_ID = 1418618420
-WORKFLOW = ".github/workflows/release-build.yml"
+REPOSITORY = "xiaoqiqixi/betteridcsys-backend"
+REPOSITORY_ID = 1435344087
+WORKFLOW = ".github/workflows/release.yml"
 LEGACY_TRUSTED_PATHS = {WORKFLOW, "vps-billing/deploy/ci/release_pipeline.py", "vps-billing/deploy/ci/historical-artifacts.json", "vps-billing/deploy/ci/check.sh", "vps-billing/deploy/ci/prepare-native-runner.sh", "vps-billing/deploy/ci/prepare-browser.py", "vps-billing/deploy/ci/accept-native.sh", "vps-billing/deploy/ci/accept-native-http.py", "vps-billing/deploy/ci/plugin-native.sh", "vps-billing/deploy/ci/plugin-native.py", "vps-billing/deploy/ci/smtp-loopback-fixture.py", "vps-billing/deploy/ci/test_plugin_native.py", "vps-billing/deploy/ci/browser-demo.py", "vps-billing/deploy/ci/mysql-native.sh", "vps-billing/deploy/ci/mysql-distribution.json", "vps-billing/deploy/scripts/package-release.sh", "vps-billing/deploy/scripts/release-manifest.py", "vps-billing/deploy/scripts/plugin-manager.py", "vps-billing/deploy/scripts/update-manager.py", "vps-billing/deploy/scripts/test-update-manager.py", "vps-billing/deploy/systemd/aster-api.service", "vps-billing/deploy/systemd/aster-smtp.service"}
 PREPARE_TRUSTED_PATHS = LEGACY_TRUSTED_PATHS | {"vps-billing/deploy/scripts/core-manager.py", "vps-billing/deploy/scripts/test-core-manager.py"}
 EXECUTOR_TRUSTED_PATHS = PREPARE_TRUSTED_PATHS | {"vps-billing/deploy/scripts/core-operation.py", "vps-billing/deploy/scripts/test-core-operation.py", "vps-billing/deploy/ci/core-native.sh", "vps-billing/deploy/ci/core-native.py"}
@@ -204,10 +206,28 @@ def binary_assets(component, version):
     return ({"bin/aster-api": "aster-api-" + version + "-linux-amd64", "bin/aster-plugin-host": "aster-plugin-host-" + version + "-linux-amd64"} if component == "core" else {"plugin": "aster-smtp-" + version + "-linux-amd64"})
 
 
+def paired_policy():
+    base = Path(__file__).resolve().parents[2]
+    root = base.parent if base.name == 'vps-billing' else base
+    if os.geteuid() == 0:
+        for name in ('scripts/release_bundle.py', 'scripts/backend_bundle.py', 'scripts/frontend_pair.py',
+                     'scripts/pair_runtime.py', 'contracts/frontend-bundle/frontend_bundle.py'):
+            fd = protected_open(str(root / name))
+            os.close(fd)
+    path = root / 'scripts/release_bundle.py'
+    spec = importlib.util.spec_from_file_location('aster_paired_release', path)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
 def archive_name(component, version, distribution_format="archive-v1"):
     require(isinstance(component, str) and component in {"core", "smtp"}, "Unsupported release component.")
     stable(version)
-    require(isinstance(distribution_format, str) and distribution_format in {"archive-v1", "raw-binaries-v1"}, "Unsupported distribution format.")
+    require(isinstance(distribution_format, str) and distribution_format in {"archive-v1", "raw-binaries-v1", "paired-bundles-v1"}, "Unsupported distribution format.")
+    if distribution_format == "paired-bundles-v1":
+        require(component == "core", "Paired releases support Core only.")
+        return "aster-finance-backend-" + version + "-linux-amd64.tar.gz"
     if distribution_format == "raw-binaries-v1":
         return ("aster-smtp-" if component == "smtp" else "aster-core-") + version + "-linux-amd64-resources.tar.gz"
     return ("aster-smtp-" if component == "smtp" else "aster-") + version + "-linux-amd64.tar.gz"
@@ -221,6 +241,12 @@ def asset_inventory(value, component, version, distribution_format="archive-v1")
     expected = {archive_name(component, version, distribution_format), "BUILD.json", "PROVENANCE.json", "SHA256SUMS"}
     if distribution_format == "raw-binaries-v1":
         expected.update(binary_assets(component, version).values())
+    if distribution_format == "paired-bundles-v1":
+        require(component == "core" and isinstance(value, list), "Paired Core assets required.")
+        frontend = [item.get("name") for item in value if isinstance(item, dict) and isinstance(item.get("name"), str) and
+                    re.fullmatch(r"aster-finance-frontend-(?:0|[1-9][0-9]{0,5})(?:\.(?:0|[1-9][0-9]{0,5})){2}\.tar\.gz", item["name"])]
+        require(len(frontend) == 1, "Exactly one paired frontend archive is required.")
+        expected.update({"BACKEND.json", "FRONTEND.json", frontend[0]})
     require(isinstance(value, list) and len(value) == len(expected), "The exact declared official release assets are required.")
     result, ids = {}, set()
     for item in value:
@@ -307,11 +333,20 @@ class Official:
             raise Rejected("Official repository download failed.") from None
 
     def json(self, suffix):
-        require(isinstance(suffix, str) and re.fullmatch(r"/(?:git/ref/(?:tags/[A-Za-z0-9.-]+|heads/main)|git/tags/[a-f0-9]{40}|git/trees/[a-f0-9]{40}\?recursive=1|git/blobs/[a-f0-9]{40}|releases/(?:tags/[A-Za-z0-9.-]+|latest)|actions/runs/[1-9][0-9]*|actions/workflows/release-build.yml|compare/[a-f0-9]{40}\.\.\.main)", suffix), "Unsupported official API action.")
+        require(isinstance(suffix, str) and re.fullmatch(r"/(?:git/ref/(?:tags/[A-Za-z0-9.-]+|heads/main)|git/tags/[a-f0-9]{40}|git/trees/[a-f0-9]{40}\?recursive=1|git/blobs/[a-f0-9]{40}|releases/(?:tags/[A-Za-z0-9.-]+|latest)|actions/runs/[1-9][0-9]*(?:/attempts/[1-9][0-9]*(?:/jobs\?per_page=100)?)?|contents/FRONTEND_PAIR.json\?ref=[a-f0-9]{40}|actions/workflows/release.yml|compare/[a-f0-9]{40}\.\.\.main)", suffix), "Unsupported official API action.")
         return strict_json(self._get("https://api.github.com/repos/" + REPOSITORY + suffix, MAX_JSON))
 
     def repository(self):
         return strict_json(self._get("https://api.github.com/repos/" + REPOSITORY, MAX_JSON))
+
+    def frontend_repository(self):
+        return strict_json(self._get("https://api.github.com/repos/xiaoqiqixi/betteridcsys-frontend", MAX_JSON))
+
+    def attestation(self, name, raw, proof):
+        # Reject a writable or substituted host verifier before executing it.
+        fd = protected_open("/usr/bin/gh")
+        os.close(fd)
+        paired_policy().verify_attestation(name, raw, proof, self.token)
 
     def asset(self, asset_id, limit):
         require(positive(asset_id), "Invalid official asset ID.")
@@ -513,6 +548,19 @@ def verify_downloads(api, intent, files, current_core, *, with_bundle=False):
     require(set(files) == set(assets) and all(len(files[name]) == item["size"] and digest(files[name]) == item["sha256"] for name, item in assets.items()), "Downloaded assets differ from GitHub SHA-256 metadata.")
     sums = checksums(files["SHA256SUMS"], set(files) - {"SHA256SUMS"})
     require(all(digest(files[name]) == value for name, value in sums.items()), "Release checksum mismatch.")
+    if intent.get("distribution_format") == "paired-bundles-v1":
+        try:
+            bundle = paired_policy().verify_release(api, intent, files)
+        except (ValueError, KeyError, TypeError, OSError) as exc:
+            raise Rejected("Paired release source, signature or content verification failed.") from exc
+        require(digest(bundle["LICENSE"][0]) == LICENSE_SHA256, "Preserved root LICENSE mismatch.")
+        for path in ("bin/aster-api", "bin/aster-plugin-host"):
+            static_elf(bundle[path][0])
+        verified = dict(source_sha=intent["source_sha"], component="core", version=intent["version"],
+                        binary_sha256={path: digest(bundle[path][0]) for path in ("bin/aster-api", "bin/aster-plugin-host")},
+                        source_and_integrity_verified=True, independent_publisher_signature=True)
+        require(resolve_tag(api, intent["tag"]) == intent["source_sha"], "Release tag changed during verification.")
+        return (verified, bundle) if with_bundle else verified
     provenance = strict_json(files["PROVENANCE.json"])
     require(isinstance(provenance, dict) and set(provenance) == PROVENANCE_KEYS, "Unsupported build provenance fields.")
     require(type(provenance["schema"]) is int and provenance["schema"] == 1 and type(provenance["repository_id"]) is int and provenance["repository_id"] == REPOSITORY_ID and provenance["repository"] == REPOSITORY, "Build provenance repository mismatch.")
@@ -520,7 +568,7 @@ def verify_downloads(api, intent, files, current_core, *, with_bundle=False):
     require(all(isinstance(provenance[field], str) and SHA.fullmatch(provenance[field]) for field in ("run_head_sha", "workflow_sha", "default_sha")) and provenance["workflow_sha"] == provenance["run_head_sha"] and isinstance(provenance["trusted_blobs"], dict) and 1 <= len(provenance["trusted_blobs"]) <= 64 and all(isinstance(v, str) and SHA.fullmatch(v) for v in provenance["trusted_blobs"].values()), "Invalid build policy provenance.")
     expected_provenance_assets = {name: {"size": len(raw), "sha256": digest(raw)} for name, raw in files.items() if name not in {"SHA256SUMS", "PROVENANCE.json"}}
     require(provenance["assets"] == expected_provenance_assets, "Build provenance asset inventory mismatch.")
-    workflow = api.json("/actions/workflows/release-build.yml")
+    workflow = api.json("/actions/workflows/release.yml")
     run = api.json("/actions/runs/" + str(intent["run_id"]))
     require(isinstance(workflow, dict) and isinstance(run, dict), "Invalid official workflow or run metadata.")
     require(workflow.get("path") == WORKFLOW and workflow.get("state") == "active" and positive(workflow.get("id")) and positive(run.get("workflow_id")) and positive(run.get("id")) and positive(run.get("run_attempt")) and run["workflow_id"] == workflow["id"] and run.get("path") == WORKFLOW and run["id"] == intent["run_id"] and run["run_attempt"] == intent["run_attempt"] and run.get("status") == "completed" and run.get("conclusion") == "success" and run.get("event") == provenance["event"] and run.get("head_sha") == provenance["run_head_sha"], "The official build has not completed successfully.")

@@ -121,21 +121,22 @@ def release_descriptor(api, version):
     for item in release["assets"]:
         updater.require(isinstance(item, dict) and item.get("state") == "uploaded" and isinstance(item.get("digest"), str) and re.fullmatch(r"sha256:[a-f0-9]{64}", item["digest"]), "Official Core assets require complete SHA-256 metadata.")
         assets.append({"name": item.get("name"), "id": item.get("id"), "size": item.get("size"), "sha256": item["digest"][7:]})
-    updater.asset_inventory(assets, "core", version, "raw-binaries-v1")
-    descriptor = {"component": "core", "tag": tag, "version": version, "source_sha": release["target_commitish"], "release_id": release["id"], "distribution_format": "raw-binaries-v1", "assets": assets}
+    format = "paired-bundles-v1" if any(item["name"] == "BACKEND.json" for item in assets) else "raw-binaries-v1"
+    updater.asset_inventory(assets, "core", version, format)
+    descriptor = {"component": "core", "tag": tag, "version": version, "source_sha": release["target_commitish"], "release_id": release["id"], "distribution_format": format, "assets": assets}
     updater.release_assets(api, descriptor)
     return descriptor
 
 
 def verified_release(api, version, assets_directory, trust):
     descriptor = release_descriptor(api, version)
-    inventory = updater.asset_inventory(descriptor["assets"], "core", version, "raw-binaries-v1")
+    inventory = updater.asset_inventory(descriptor["assets"], "core", version, descriptor["distribution_format"])
     files = {}
     directory_fd = -1
     try:
         if assets_directory is not None:
             directory_fd = updater.protected_open(assets_directory, True, trust)
-            updater.require(set(os.listdir(directory_fd)) == set(inventory), "Local Core input directory must contain exactly the six official assets.")
+            updater.require(set(os.listdir(directory_fd)) == set(inventory), "Local Core input directory must contain exactly the declared official assets.")
         for name, item in sorted(inventory.items()):
             files[name] = (updater.read_protected(assets_directory + "/" + name, updater.asset_limit(name), trust) if directory_fd >= 0 else api.asset(item["id"], min(updater.asset_limit(name), item["size"])))
     finally:
@@ -227,8 +228,8 @@ def prepare(version, release_directory, assets_directory=None, api=None, trust=u
             try:
                 descriptor, verification, bundle = verified_release(updater.Official() if api is None else api, version, assets_directory, trust)
                 updater.require(RECEIPT not in bundle, "Official resources collide with the local preparation receipt.")
-                result = {"schema": 1, "status": "prepared", "operation_id": event["operation_id"], "version": version, "source_sha": descriptor["source_sha"], "release_directory": release_directory, "release_directory_created": True, "active_release_changed": False, "service_action": "none", "database_action": "none", "program_executed": False, "source_and_integrity_verified": verification["source_and_integrity_verified"], "independent_publisher_signature": False, "required_operator_checks": ["host_environment_and_database_preflight", "configuration_secrets_and_permissions", "backup_and_isolated_restore_for_existing_installation", "installed_plugin_manifest_compatibility", "explicit_database_migration_and_first_admin", "reviewed_service_configuration_and_activation", "https_readiness_and_business_verification"]}
-                receipt = dict(result, receipt_kind="local_operator_preparation_receipt", official_release_inventory=False, operation_id=event["operation_id"], release_id=descriptor["release_id"], run_id=descriptor["run_id"], run_attempt=descriptor["run_attempt"], distribution_format="raw-binaries-v1", assets=descriptor["assets"], files_sha256={path: updater.digest(raw) for path, (raw, _) in sorted(bundle.items())})
+                result = {"schema": 1, "status": "prepared", "operation_id": event["operation_id"], "version": version, "source_sha": descriptor["source_sha"], "release_directory": release_directory, "release_directory_created": True, "active_release_changed": False, "service_action": "none", "database_action": "none", "program_executed": False, "source_and_integrity_verified": verification["source_and_integrity_verified"], "independent_publisher_signature": verification["independent_publisher_signature"], "required_operator_checks": ["host_environment_and_database_preflight", "configuration_secrets_and_permissions", "backup_and_isolated_restore_for_existing_installation", "installed_plugin_manifest_compatibility", "explicit_database_migration_and_first_admin", "reviewed_service_configuration_and_activation", "https_readiness_and_business_verification"]}
+                receipt = dict(result, receipt_kind="local_operator_preparation_receipt", official_release_inventory=False, operation_id=event["operation_id"], release_id=descriptor["release_id"], run_id=descriptor["run_id"], run_attempt=descriptor["run_attempt"], distribution_format=descriptor["distribution_format"], assets=descriptor["assets"], files_sha256={path: updater.digest(raw) for path, (raw, _) in sorted(bundle.items())})
                 files = dict(bundle)
                 files[RECEIPT] = (updater.json_bytes(receipt), 0o644)
                 os.mkdir(stage_name, 0o700, dir_fd=parent)

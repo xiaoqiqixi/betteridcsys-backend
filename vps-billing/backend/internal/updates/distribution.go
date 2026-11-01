@@ -85,6 +85,9 @@ func buildDistribution(build map[string]any) (string, error) {
 // official metadata checks and the host operator's artifact verification.
 func ValidDistributionAssets(component, version, format string, assets []Asset) bool {
 	layout, err := releaseLayout(component, version, format)
+	if format == PairedDistribution && component == "core" && pluginapi.ValidVersion(version) && frontendAssetVersion(assets) != "" {
+		layout, err = pairedLayout(version, frontendAssetVersion(assets)), nil
+	}
 	if err != nil || len(assets) != len(layout.Assets) {
 		return false
 	}
@@ -95,7 +98,7 @@ func ValidDistributionAssets(component, version, format string, assets []Asset) 
 		}
 		limit := int64(80 << 20)
 		switch asset.Name {
-		case "BUILD.json":
+		case "BUILD.json", "BACKEND.json", "FRONTEND.json":
 			limit = maxJSON
 		case "PROVENANCE.json":
 			limit = 128 << 10

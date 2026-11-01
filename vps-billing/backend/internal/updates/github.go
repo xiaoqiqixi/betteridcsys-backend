@@ -328,6 +328,14 @@ func (g *githubClient) verify(ctx context.Context, release map[string]any, compo
 	if len(notes) > 16<<10 || !utf8.ValidString(notes) || strings.IndexByte(notes, 0) >= 0 {
 		return Candidate{}, ErrUnavailable
 	}
+	for _, value := range array(release, "assets") {
+		if item, ok := value.(map[string]any); ok && text(item, "name") == "BACKEND.json" {
+			if component != "core" {
+				return Candidate{}, ErrUnavailable
+			}
+			return g.verifyPaired(ctx, release, current)
+		}
+	}
 	legacyLayout, err := releaseLayout(component, version, ArchiveDistribution)
 	if err != nil {
 		return Candidate{}, ErrUnavailable
@@ -457,7 +465,7 @@ func (g *githubClient) verify(ctx context.Context, release map[string]any, compo
 		return Candidate{}, ErrUnavailable
 	}
 
-	if !exactKeys(prov, "schema", "repository", "repository_id", "run_id", "run_attempt", "event", "tag", "version", "source_sha", "run_head_sha", "workflow_sha", "workflow_path", "default_branch", "default_sha", "trusted_blobs", "artifact_name", "assets") || number(prov, "schema") != 1 || number(prov, "repository_id") != RepositoryID || text(prov, "repository") != Repository || text(prov, "tag") != tag || text(prov, "version") != version || !commitPattern.MatchString(source) || runID <= 0 || attempt <= 0 || text(prov, "workflow_path") != ".github/workflows/release-build.yml" || text(prov, "workflow_sha") != text(prov, "run_head_sha") || !commitPattern.MatchString(text(prov, "workflow_sha")) || text(prov, "default_branch") != "main" || !commitPattern.MatchString(text(prov, "default_sha")) || text(prov, "artifact_name") != "candidate-"+strconv.FormatInt(runID, 10)+"-"+strconv.FormatInt(attempt, 10) {
+	if !exactKeys(prov, "schema", "repository", "repository_id", "run_id", "run_attempt", "event", "tag", "version", "source_sha", "run_head_sha", "workflow_sha", "workflow_path", "default_branch", "default_sha", "trusted_blobs", "artifact_name", "assets") || number(prov, "schema") != 1 || number(prov, "repository_id") != RepositoryID || text(prov, "repository") != Repository || text(prov, "tag") != tag || text(prov, "version") != version || !commitPattern.MatchString(source) || runID <= 0 || attempt <= 0 || text(prov, "workflow_path") != ".github/workflows/release.yml" || text(prov, "workflow_sha") != text(prov, "run_head_sha") || !commitPattern.MatchString(text(prov, "workflow_sha")) || text(prov, "default_branch") != "main" || !commitPattern.MatchString(text(prov, "default_sha")) || text(prov, "artifact_name") != "candidate-"+strconv.FormatInt(runID, 10)+"-"+strconv.FormatInt(attempt, 10) {
 		return Candidate{}, ErrUnavailable
 	}
 	trusted := obj(prov, "trusted_blobs")
@@ -489,7 +497,7 @@ func (g *githubClient) verify(ctx context.Context, release map[string]any, compo
 		return Candidate{}, ErrUnavailable
 	}
 	run, err := g.object(ctx, "/actions/runs/"+strconv.FormatInt(runID, 10)+"/attempts/"+strconv.FormatInt(attempt, 10))
-	if err != nil || number(run, "id") != runID || number(run, "run_attempt") != attempt || text(run, "status") != "completed" || text(run, "conclusion") != "success" || text(run, "path") != ".github/workflows/release-build.yml" || number(obj(run, "repository"), "id") != RepositoryID || text(obj(run, "repository"), "full_name") != Repository || number(obj(run, "head_repository"), "id") != RepositoryID || text(obj(run, "head_repository"), "full_name") != Repository || text(run, "head_sha") != text(prov, "run_head_sha") || text(run, "event") != text(prov, "event") {
+	if err != nil || number(run, "id") != runID || number(run, "run_attempt") != attempt || text(run, "status") != "completed" || text(run, "conclusion") != "success" || text(run, "path") != ".github/workflows/release.yml" || number(obj(run, "repository"), "id") != RepositoryID || text(obj(run, "repository"), "full_name") != Repository || number(obj(run, "head_repository"), "id") != RepositoryID || text(obj(run, "head_repository"), "full_name") != Repository || text(run, "head_sha") != text(prov, "run_head_sha") || text(run, "event") != text(prov, "event") {
 		return Candidate{}, ErrUnavailable
 	}
 	if text(run, "event") == "push" {
@@ -499,8 +507,8 @@ func (g *githubClient) verify(ctx context.Context, release map[string]any, compo
 	} else if text(run, "event") != "workflow_dispatch" || text(run, "head_branch") != "main" {
 		return Candidate{}, ErrUnavailable
 	}
-	workflow, err := g.object(ctx, "/actions/workflows/release-build.yml")
-	if err != nil || number(workflow, "id") != number(run, "workflow_id") || text(workflow, "path") != ".github/workflows/release-build.yml" || text(workflow, "state") != "active" {
+	workflow, err := g.object(ctx, "/actions/workflows/release.yml")
+	if err != nil || number(workflow, "id") != number(run, "workflow_id") || text(workflow, "path") != ".github/workflows/release.yml" || text(workflow, "state") != "active" {
 		return Candidate{}, ErrUnavailable
 	}
 	min := text(compat, "min")

@@ -20,6 +20,7 @@ class PairedRuntimeCLI(unittest.TestCase):
         self.backend = fixtures.BackendBundleCLI()
         self.backend.setUp()
         self.addCleanup(self.backend.doCleanups)
+        self.backend.write('LICENSE', (SCRIPTS.parent / 'LICENSE').read_bytes())
         self.root = self.backend.root
         self.base = self.root.parent
         if (SCRIPTS / 'pair_runtime.py').exists():

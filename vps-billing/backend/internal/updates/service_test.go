@@ -38,7 +38,7 @@ func newFixture(component string) *catalogFixture {
 	build := map[string]any{"schema": 2, "release_kind": component, "release_label": version, "source_commit": source, "target": "linux/amd64", "cgo_enabled": false, "component_versions": map[string]string{"core": "0.4.1", "smtp": "1.1.0"}, "plugin_protocol": "aster.smtp/1", "smtp_core_compatibility": map[string]string{"min": "0.4.0", "max_exclusive": "0.5.0"}}
 	buildBytes := marshal(build)
 	archiveBytes := []byte("archive deliberately never downloaded by web")
-	prov := map[string]any{"schema": 1, "repository": Repository, "repository_id": RepositoryID, "tag": tag, "version": version, "source_sha": source, "run_id": 100, "run_attempt": 2, "event": "push", "workflow_path": ".github/workflows/release-build.yml", "workflow_sha": source, "run_head_sha": source, "default_branch": "main", "default_sha": source, "artifact_name": "candidate-100-2", "trusted_blobs": map[string]string{".github/workflows/release-build.yml": strings.Repeat("d", 40)}, "assets": map[string]any{archive: map[string]any{"sha256": digestBytes(archiveBytes), "size": len(archiveBytes)}, "BUILD.json": map[string]any{"sha256": digestBytes(buildBytes), "size": len(buildBytes)}}}
+	prov := map[string]any{"schema": 1, "repository": Repository, "repository_id": RepositoryID, "tag": tag, "version": version, "source_sha": source, "run_id": 100, "run_attempt": 2, "event": "push", "workflow_path": ".github/workflows/release.yml", "workflow_sha": source, "run_head_sha": source, "default_branch": "main", "default_sha": source, "artifact_name": "candidate-100-2", "trusted_blobs": map[string]string{".github/workflows/release.yml": strings.Repeat("d", 40)}, "assets": map[string]any{archive: map[string]any{"sha256": digestBytes(archiveBytes), "size": len(archiveBytes)}, "BUILD.json": map[string]any{"sha256": digestBytes(buildBytes), "size": len(buildBytes)}}}
 	provBytes := marshal(prov)
 	sums := []byte(digestBytes(buildBytes) + "  BUILD.json\n" + digestBytes(provBytes) + "  PROVENANCE.json\n" + digestBytes(archiveBytes) + "  " + archive + "\n")
 	data := map[string][]byte{archive: archiveBytes, "BUILD.json": buildBytes, "PROVENANCE.json": provBytes, "SHA256SUMS": sums}
@@ -52,11 +52,11 @@ func newFixture(component string) *catalogFixture {
 	}
 	release := map[string]any{"id": 80, "tag_name": tag, "draft": false, "prerelease": false, "html_url": officialURL(tag), "published_at": "2026-10-14T12:00:00Z", "body": "Official plain-text notes <script>never render HTML</script>", "assets": assets}
 	values := map[string][]byte{
-		"/repos/" + Repository:                                          marshal(map[string]any{"id": RepositoryID, "full_name": Repository}),
-		"/repos/" + Repository + "/releases?per_page=20":                marshal([]any{release}),
-		"/repos/" + Repository + "/git/ref/tags/" + tag:                 marshal(map[string]any{"ref": "refs/tags/" + tag, "object": map[string]string{"type": "commit", "sha": source}}),
-		"/repos/" + Repository + "/actions/runs/100/attempts/2":         marshal(map[string]any{"id": 100, "run_attempt": 2, "status": "completed", "conclusion": "success", "path": ".github/workflows/release-build.yml", "repository": map[string]any{"id": RepositoryID, "full_name": Repository}, "head_repository": map[string]any{"id": RepositoryID, "full_name": Repository}, "head_sha": source, "head_branch": tag, "event": "push", "workflow_id": 7}),
-		"/repos/" + Repository + "/actions/workflows/release-build.yml": marshal(map[string]any{"id": 7, "path": ".github/workflows/release-build.yml", "state": "active"}),
+		"/repos/" + Repository:                                    marshal(map[string]any{"id": RepositoryID, "full_name": Repository}),
+		"/repos/" + Repository + "/releases?per_page=20":          marshal([]any{release}),
+		"/repos/" + Repository + "/git/ref/tags/" + tag:           marshal(map[string]any{"ref": "refs/tags/" + tag, "object": map[string]string{"type": "commit", "sha": source}}),
+		"/repos/" + Repository + "/actions/runs/100/attempts/2":   marshal(map[string]any{"id": 100, "run_attempt": 2, "status": "completed", "conclusion": "success", "path": ".github/workflows/release.yml", "repository": map[string]any{"id": RepositoryID, "full_name": Repository}, "head_repository": map[string]any{"id": RepositoryID, "full_name": Repository}, "head_sha": source, "head_branch": tag, "event": "push", "workflow_id": 7}),
+		"/repos/" + Repository + "/actions/workflows/release.yml": marshal(map[string]any{"id": 7, "path": ".github/workflows/release.yml", "state": "active"}),
 	}
 	return &catalogFixture{values: values, assets: assetData, release: release}
 }
