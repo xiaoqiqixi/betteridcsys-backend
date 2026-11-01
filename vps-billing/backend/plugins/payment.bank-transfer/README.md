@@ -4,6 +4,14 @@ Instructions flow; no network calls, callbacks, status lookup or refunds. Core
 stores the attempt reference. Staff reconcile the bank receipt and use the manual
 payment endpoint; viewing instructions never marks an invoice paid.
 
+After reconciling the deposit, staff call
+`POST /api/v1/admin/invoices/{id}/payments` with `method: "bank_transfer"`, the
+exact `amount_minor`, the displayed `reference`, `received_at` and an
+`Idempotency-Key`. Partial receipts reduce the balance due. Full confirmation
+records a manual receipt and closes the outstanding checkout: polling reports
+`invoice_status: "paid"` and the original attempt's `status: "voided"`. It never
+fabricates a provider callback or a gateway settlement record.
+
 Write a root-owned, mode 0600 `/etc/aster/payment/<slot>/config.json`:
 
 ```json
