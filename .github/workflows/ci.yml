@@ -108,6 +108,8 @@ jobs:
           python3 -B vps-billing/deploy/ci/test_performance_report.py
       - name: Prepare isolated native runner
         run: bash vps-billing/deploy/ci/prepare-native-runner.sh
+      - name: Regress the real MySQL performance fixture and migration dispatch
+        run: RUNNER_TEMP="$ASTER_NATIVE_FIXTURE_ROOT" bash vps-billing/deploy/ci/mysql-native.sh -- bash -c 'cd vps-billing/backend && go test -race -count=1 -timeout=3m -run "^(TestMySQLHTTPPerformanceSeedUsesLiveStaffMembershipAndCurrentSchema|TestMigrationDispatchKeepsInternalZeroVersionOutOfSourceLookup)$" ./internal/billing'
       - name: Measure synthetic HTTP with real disposable MySQL
         timeout-minutes: 25
         run: |

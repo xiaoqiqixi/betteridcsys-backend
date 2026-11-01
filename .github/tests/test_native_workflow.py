@@ -54,6 +54,9 @@ class NativeWorkflow(unittest.TestCase):
         self.assertIn('scripts/native_fixture_report.py', source)
         self.assertIn('--exit-code "$result"', source)
         self.assertNotIn('|| true', source)
+        self.assertIn('go test -race -count=1 -timeout=3m', source)
+        self.assertIn('TestMySQLHTTPPerformanceSeedUsesLiveStaffMembershipAndCurrentSchema', source)
+        self.assertIn('TestMigrationDispatchKeepsInternalZeroVersionOutOfSourceLookup', source)
 
 
 if __name__ == '__main__':
