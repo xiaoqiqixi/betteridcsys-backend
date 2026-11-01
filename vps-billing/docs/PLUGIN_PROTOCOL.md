@@ -1,6 +1,6 @@
 # 运行时插件协议与信任边界
 
-本协议适用于 Linux amd64 的 Core `0.5.3`、独立 SMTP `1.1.0` 与 `aster.payment/1` 支付插槽。Core `0.5.2` 及更早程序不具有此运行时支付协议。安装/操作见 [PLUGINS.md](PLUGINS.md)，实际执行结果见 [VALIDATION.md](VALIDATION.md) 和对应 Release 来源。本文件说明协议与边界，不能替代原生进程/版本替换的实际验收。
+本协议描述 Linux amd64 的 Core `0.6.0` 运行时接口；`aster.payment/1` 自 Core `0.5.3` 引入，0.6 增加命名支付槽、显示元数据、多种结账流程与可选查询/退款。插件必须独立声明当前 Core 的兼容区间，旧 `<0.6.0` 上界仍被拒绝。安装/操作见 [PLUGINS.md](PLUGINS.md)，本文件不能替代原生进程/版本替换验收。
 
 ## 被动发现与明确批准
 
@@ -30,7 +30,7 @@ SMTP 协议仍为 `aster.smtp/1`，manifest schema 仍为 1；分发改为原始
 
 上例摘要是说明占位符，不能安装。兼容区间包含下界、不含上界，版本是无前导零的 `major.minor.patch`；当前协议不接受任意 prerelease 标识。Core 与 SMTP 版本独立，协议不兼容需新协议/兼容声明并重新验收，不能改包名制造兼容。
 
-策略 schema 1、正整数 revision，选择记录包含 enabled、id/version、manifest_sha256、非零且不同的 worker_uid/client_uid、绝对 socket 路径及最多八个精确 host/port 目标。支付槽另含非空 `merchant_id`，两个槽的 worker UID 和 socket 必须分别独立，worker UID 不得与任一 client UID 相同。支付 manifest 使用 `aster.payment/1`、`payment.<name>`、固定的 `payment.checkout` 和 `payment.verify_callback` 能力，以及显式币种精度和结账主机声明，完整示例见 [PAYMENT_PLUGINS.md](PAYMENT_PLUGINS.md)。策略不含任何凭据。关闭状态不允许调用；第一次选择使用缺失策略的 revision 0，写入后必须取新 revision。
+策略 schema 1、正整数 revision，选择记录包含 enabled、id/version、manifest_sha256、非零且不同的 worker_uid/client_uid、绝对 socket 路径及最多八个精确 host/port 目标。`payments[]` 最多 64 个命名槽，各含 `slot` 和非空 `merchant_id`；所有 worker UID 和 socket 必须分别独立，worker UID 不得与任一 client UID 相同。旧 `payment` 单槽可显式迁移，不与 `payments[]` 混用。支付 manifest 使用 `aster.payment/1`、`payment.<name>`、必需的 `payment.checkout` 和 `payment.verify_callback`，可追加 `payment.query`、`payment.refund`。元数据、币种精度、流程和精确结账主机声明见 [PAYMENT_PLUGINS.md](PAYMENT_PLUGINS.md)。策略不含凭据；离线支付可无出站目标。关闭状态不允许调用；第一次选择使用缺失策略的 revision 0，写入后必须取新 revision。
 
 主机/端口匹配按配置字符串精确比较，不是域名后缀、URL 或 IP 范围规则；DNS 解析结果与网络出口仍由主机策略审查。不要声称 manifest 白名单等于操作系统出站隔离。
 
@@ -42,12 +42,14 @@ SMTP 协议仍为 `aster.smtp/1`，manifest schema 仍为 1；分发改为原始
 |---|---|---|
 | `/v1/handshake` | protocol、core_version、随机 32 字节 nonce 的 64 位 hex | protocol、id、version、sha256、capabilities 与原 nonce；核对批准 manifest |
 | `/v1/smtp/send` | protocol、version、同 nonce 的 request_id、timeout_ms、本次 config/message | accepted 或 failed、固定 code、delivery_uncertain；一次连接最多一次 |
-| `/v1/payment/checkout` | 相同封装；config 固定 provider_id、manifest_sha256、merchant_id；intent 为核心订单/账单/支付尝试快照 | accepted 与完整 checkout，或 failed 与固定 code；不自动重试 |
+| `/v1/payment/checkout` | 相同封装；config 固定 provider_id、gateway_id、manifest_sha256、merchant_id；intent 为核心订单/账单/支付尝试快照 | accepted 与完整 checkout，或 failed 与固定 code；不自动重试 |
 | `/v1/payment/verify` | 相同封装与 config；callback 保留 method/path/raw_query、受限头数组及原始 body 的 base64 | verified 与完整 event，或 failed 与固定 code；不授予记账权限 |
+| `/v1/payment/query` | 相同封装与 config；query 含原 intent 和 session_id | accepted 与 result；succeeded 必须带完整结算 event，其他状态不得携带 event |
+| `/v1/payment/refund` | 相同封装与 config；refund 含独立幂等键、交易 ID、整数金额、币种和精度 | accepted 与 result（refund_id、status）；不授予账务授权 |
 
 **握手与业务调用使用同一连接。** 如果握手后断线，不重连复用许可，不向另一进程发送凭据。插件身份是已批准程序 hash 自报告和 peer UID 的组合，结合宿主执行已验证 inode，防止误版本/意外替换；它不是受侵害 worker UID 的密码学远程证明。
 
-JSON 限制：manifest 8 KiB、策略 16 KiB、RPC 请求 512 KiB、响应 8 KiB，嵌套最多八层，每对象键/数组元素最多 64。请求额度包含 JSON 转义开销，正文自身仍最多 64 KiB。拒绝重复/大小写别名键、未知字段、null、无效 UTF-8、尾随 JSON、非法版本/状态/摘要；SMTP 发送响应的五个字段必须完整存在，支付成功结果须通过商户、provider、金额、币种精度、时间与结账主机的类型化验证。关键字段使用类型化验证，不用 `Execute(map)`。
+JSON 限制：manifest 64 KiB、策略 128 KiB、RPC 请求 512 KiB、响应 64 KiB，嵌套最多八层，每对象键/数组元素最多 64。请求额度包含 JSON 转义开销，正文自身仍最多 64 KiB。拒绝重复/大小写别名键、未知字段、null、无效 UTF-8、尾随 JSON、非法版本/状态/摘要；SMTP 发送响应的五个字段必须完整存在，支付成功结果须通过商户、provider、gateway、金额、币种精度、时间与结账主机的类型化验证。关键字段使用类型化验证，不用 `Execute(map)`。
 
 Core 连接最多一秒，握手最多两秒，发送调用最多十二秒；较短调用方 deadline 优先。这些期限约束 RPC，不保证本地文件系统读取/哈希或整个管理员 HTTP 请求的总耗时。响应失败、异常分类、panic、发送后连接丢失均按无法确定是否接受处理。Core 不重试 RPC；三次连接/协议失败后短暂熔断五秒，新批准版本重新开始判定。
 
@@ -55,7 +57,7 @@ Core 连接最多一秒，握手最多两秒，发送调用最多十二秒；较
 
 Core 负责授权、CSRF、设置 revision、AES-256-GCM 解密、限速与审计。SMTP 插件只得到当前 SMTP 连接参数/认证凭据、单个收件人与固定测试内容；支付插件只得到固定商户身份和本次支付快照/通知，支付秘密由 worker 自己的受保护配置持有；没有数据库/Store、会话秘密、SMTP 加密密钥或迁移/备份秘密接口。不能把同机不同 UID 理解为主机管理员也无法读秘密。
 
-`aster-plugin-host` 以插件 UID 运行，root/同 UID 调用方拒绝。它以已核对 SHA 的文件描述符执行精确 ELF inode，清除应用环境、用 Linux `close_range(CLOEXEC)` 防止继承额外描述符，关闭 core dump、限制文件数、设置 no-new-privs。支付宿主通过 `--kind payment` 选择独立批准项，只额外传递受限 `/run/credentials/` 目录中的 `CREDENTIALS_DIRECTORY`，不透传其他环境。需要 Linux >=5.11 支持该调用；不支持时拒绝启动，不降低保护。基线 Ubuntu 24.04 满足要求。
+`aster-plugin-host` 以插件 UID 运行，root/同 UID 调用方拒绝。它以已核对 SHA 的文件描述符执行精确 ELF inode，清除应用环境、用 Linux `close_range(CLOEXEC)` 防止继承额外描述符，关闭 core dump、限制文件数、设置 no-new-privs。支付宿主通过 `--kind payment --slot <id>` 选择独立批准项，只额外传递受限 `/run/credentials/` 目录中的 `CREDENTIALS_DIRECTORY`，不透传其他环境。`aster-payment@.service` 为每槽加载 `/etc/aster/payment/<id>/` 的凭据目录。需要 Linux >=5.11；不支持时拒绝启动。
 
 systemd unit 使用独立 UID、只读文件系统/秘密不可达、设备/内核/能力/写入限制与 CPU/内存/进程边界；插件崩溃按启动频率限制恢复，不影响 Core 地址空间。插件 stdout/stderr 关闭，HTTP 原始错误日志丢弃，只保留 service 生命周期与固定 RPC 错误分类；不在日志输出凭据、正文、收件人、原始 SMTP 回复或主机秘密路径。
 
@@ -63,7 +65,7 @@ systemd unit 使用独立 UID、只读文件系统/秘密不可达、设备/内�
 
 ## 当前能力与支持边界
 
-SMTP 的 `smtp.send` 业务入口限制为管理员固定测试。支付仅提供 `payment.checkout` 和 `payment.verify_callback`，账务校验、持久化重放去重与原子结算属于 Core；浏览器回跳不能触发记账，签名正确性仍由经过批准的渠道适配器负责。没有任意文件、shell、数据库、主控/被控或账务修改能力。兼容性承诺仅限明确区间、当前协议和实际验证组合；尚无 LTS/SLA、自动插件升级、自动回退或跨版本数据迁移保证。
+支付提供 checkout、verify_callback 及可选 query/refund 钩子；账务授权、持久化重放去重与原子结算属于 Core，浏览器回跳不能触发记账，签名正确性仍由经过批准的渠道适配器负责。没有任意文件、shell、数据库或账务修改能力。兼容性承诺仅限明确区间、当前协议和实际验证组合；尚无 LTS/SLA、自动插件升级、自动回退或跨版本数据迁移保证。
 
 插件升级/回退只切换所选槽的独立程序及策略；Core 文件/进程保持不变的结论必须由原生验收中的哈希/PID/业务检查证实，单元测试、manifest 或本文不能作为替代证明。
 

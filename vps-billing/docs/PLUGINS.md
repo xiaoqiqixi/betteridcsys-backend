@@ -1,10 +1,10 @@
 # 插件扩展与独立 SMTP 安装
 
-Core 自 `0.5.3` 提供 SMTP 与支付独立运行时插槽，`0.5.10` 新增资源插槽。插件是单独构建和运行的程序，通过受保护的 Unix socket 与 Core 通信；安装兼容插件无需重编 Core。Core 只读取元数据，主机管理员核验程序、兼容范围和哈希并明确批准后，才可启动专用非特权服务。没有网页上传、自动下载或通用命令执行入口。
+Core 自 `0.5.3` 提供 SMTP 与支付独立运行时插槽，`0.5.10` 新增资源插槽，`0.6.0` 支持多个命名支付槽。插件是单独构建和运行的程序，通过受保护的 Unix socket 与 Core 通信；安装兼容插件无需重编 Core。Core 只读取元数据，主机管理员核验程序、兼容范围和哈希并明确批准后，才可启动专用非特权服务。没有网页上传、自动下载或通用命令执行入口。
 
-官方 `email.smtp` 插件版本为 `1.1.0`，使用 `aster.smtp/1`，支持 Core `>=0.4.0,<0.6.0`。Core 没有内置 SMTP 传输回退。支付采用 `aster.payment/1`，具体渠道由开发者按[支付插件接入指南](PAYMENT_PLUGINS.md)实现；官方未提供真实收款渠道，默认关闭。资源使用 `aster.resource/1`，见[资源插件](RESOURCE_PLUGINS.md)；它不负责安装独立主控或计算被控。SMS 和对象存储尚无运行时插槽。
+官方 `email.smtp` 插件版本为 `1.1.0`，使用 `aster.smtp/1`，支持 Core `>=0.4.0,<0.6.0`，该已发布版本不能用于 Core 0.6。Core 没有内置 SMTP 传输回退。支付采用 `aster.payment/1`，具体渠道由开发者按[支付插件作者指南](PAYMENT_PLUGINS.md)实现；仓库提供银行转账和 Stripe 参考插件，默认关闭，真实商户配置和渠道验收由运营者完成。资源使用 `aster.resource/1`，见[资源插件](RESOURCE_PLUGINS.md)；它不负责安装独立主控或计算被控。SMS 和对象存储尚无运行时插槽。
 
-以下流程使用经核验的 Core `0.5.10` 与独立 SMTP `1.1.0`；两者分别核对正常 Release、完整资产和来源，不从版本号推定下载可用。SMTP 支持管理员配置与单封固定测试邮件；业务通知、邮箱验证、找回密码和发送队列尚未提供。
+以下 SMTP 安装流程记录 Core `0.5.10` 与独立 SMTP `1.1.0` 的组合；两者分别核对正常 Release、完整资产和来源，不从版本号推定下载可用。Core 0.6 的支付安装与迁移使用[支付插件作者指南](PAYMENT_PLUGINS.md)，不能用旧兼容上界推定当前可用。
 
 ## 程序、审批与服务
 
@@ -160,9 +160,9 @@ Core 不自动重试 RPC。SMTP 传输仅对 MAIL 前已明确的暂时失败最
 
 支付插件使用独立 manifest、商户审批、UID、service 和 socket，不能把 SMTP 的 `smtp.send` 用于支付。开发者负责渠道接口和验签；Core 根据保存的订单、账单、金额、币种精度及所有权核对已验签证据，并在数据库事务中处理重放、渠道交易唯一性和账务状态。浏览器回跳或结账链接不代表付款完成。
 
-客户结账和服务商通知已有专用接口。支付尝试先于渠道调用持久化，结果不确定时不会自动创建第二次付款；取消也会排除已有支付尝试。安装工具对支付启停及回退须使用 `--kind payment`，停用或回退不会删除在途记录。完整协议、合成示例、原始通知与通用应答合同见[支付接入指南](PAYMENT_PLUGINS.md)。当前未提供渠道查询、撤销、退款、对账或资源开通，特定明文／XML／签名应答还需扩展协议。
+Core 0.6 用 `payments[]` 审批多个命名槽，每槽独立 UID、`/run/aster-payment/<id>/plugin.sock` 和 `aster-payment@<id>.service`，凭据来自 `/etc/aster/payment/<id>/`。安装工具对支付选择、启停、回退和移除使用 `--kind payment --slot <id>`；旧单槽可用 `migrate` 保留原 hash 审批。支付尝试先于渠道调用持久化，结果不确定时不会自动创建第二次付款，停用或回退不会删除在途记录。协议新增 redirect/qr/instructions 流程、可选 `payment.query` 和 `payment.refund`；账务与资源开通仍由 Core 控制。完整合同见[支付插件作者指南](PAYMENT_PLUGINS.md)，特定明文／XML／签名回调应答还需扩展协议。
 
-`PAYMENT_PROVIDER=payment.disabled`、`EMAIL_PROVIDER=email.disabled` 和 `INTEGRATIONS_CONFIG_FILE` 是保留的旧编译期配置边界，不安装或启用运行时插件。当前服务器只允许两个禁用 ID 的空配置；不要改为真实渠道 ID 或 `email.smtp`。运行时选择以受保护的 `plugins.json` 审批为准，支付状态通过 `GET /api/v1/admin/plugins` 查看；这些审批不会授予插件数据库或服务管理权限。
+`PAYMENT_PROVIDER=payment.disabled`、`EMAIL_PROVIDER=email.disabled` 和 `INTEGRATIONS_CONFIG_FILE` 是保留的旧编译期配置边界，不安装或启用运行时插件。当前服务器只允许两个禁用 ID 的空配置；不要改为真实渠道 ID 或 `email.smtp`。运行时选择以受保护的 `plugins.json` 审批为准，支付状态通过 `GET /api/v1/admin/integrations/gateways` 查看；这些审批不会授予插件数据库或服务管理权限。
 
 ## 资源插件
 
