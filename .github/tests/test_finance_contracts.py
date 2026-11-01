@@ -1,11 +1,21 @@
 """Repository documentation and PR CI entry-point regressions (stdlib only)."""
 from pathlib import Path
+import json
 import re
 import unittest
 
 ROOT = Path(__file__).resolve().parents[2]
 
 class FinanceContracts(unittest.TestCase):
+    def test_migration_docs_identify_the_current_paired_source_and_artifact(self):
+        pin = json.loads((ROOT / 'FRONTEND_PAIR.json').read_text())
+        for name in ('REPOSITORY_MIGRATION.md', 'RELEASE_TOOLING.md'):
+            with self.subTest(document=name):
+                document = (ROOT / 'docs/development' / name).read_text()
+                self.assertIn('`' + pin['source_sha'] + '`', document)
+                self.assertIn('`' + str(pin['artifact_id']) + '`', document)
+                self.assertIn('Core `' + pin['core_version'] + '`', document)
+
     def test_pull_requests_run_without_repository_secrets(self):
         workflow = (ROOT / '.github/workflows/ci.yml').read_text()
         self.assertRegex(workflow, r'(?m)^  pull_request:\s*$')
