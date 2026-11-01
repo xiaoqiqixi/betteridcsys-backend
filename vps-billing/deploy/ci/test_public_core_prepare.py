@@ -30,9 +30,9 @@ class PublishedPreparationContract(unittest.TestCase):
         self.raw = {index: (name + "-MODEL-ONLY").encode() for index, name in enumerate(names, 1)}
         self.assets = [{"name": name, "id": index, "size": len(self.raw[index]), "sha256": hashlib.sha256(self.raw[index]).hexdigest()}
                        for index, name in enumerate(names, 1)]
-        self.descriptor = {"source_sha": self.source, "assets": self.assets, "release_id": 42}
+        self.descriptor = {"source_sha": self.source, "assets": self.assets, "release_id": 42, "distribution_format": "raw-binaries-v1"}
         self.result = {"status": "prepared", "version": h.VERSION, "source_sha": self.source,
-                       "source_and_integrity_verified": True, "active_release_changed": False,
+                       "source_and_integrity_verified": True, "independent_publisher_signature": False, "active_release_changed": False,
                        "service_action": "none", "database_action": "none", "program_executed": False}
         self.receipt = {**self.result, "receipt_kind": "local_operator_preparation_receipt", "release_id": 42,
                         "official_release_inventory": False, "run_id": 8, "run_attempt": 1, "assets": self.assets}
@@ -83,6 +83,23 @@ class PublishedPreparationContract(unittest.TestCase):
             self.assertEqual(result["migration_files"], 13)
             self.assertNotIn("PRIVATE", json.dumps(result))
             self.assertNotIn(str(work), json.dumps(result))
+
+    def test_paired_public_download_keeps_the_verified_signature_result(self):
+        names = ("aster-finance-backend-0.5.10-linux-amd64.tar.gz", "aster-finance-frontend-0.5.9.tar.gz",
+                 "BACKEND.json", "FRONTEND.json", "BUILD.json", "PROVENANCE.json", "SHA256SUMS")
+        self.raw = {index: (name + "-MODEL-ONLY").encode() for index, name in enumerate(names, 1)}
+        self.assets = [{"name": name, "id": index, "size": len(self.raw[index]), "sha256": hashlib.sha256(self.raw[index]).hexdigest()}
+                       for index, name in enumerate(names, 1)]
+        self.descriptor.update(assets=self.assets, distribution_format="paired-bundles-v1")
+        self.result["independent_publisher_signature"] = True
+        self.receipt.update(assets=self.assets, independent_publisher_signature=True)
+        self.inventory = self.updater.asset_inventory(self.assets, "core", h.VERSION, "paired-bundles-v1")
+        with self.fixture() as (_, verify):
+            result = verify()
+            self.assertTrue(result["independent_publisher_signature"])
+            self.assertEqual(self.public.asset.call_count, 7)
+            self.metadata.asset.assert_not_called()
+            self.prepared_checker.assert_called_once()
 
     def test_invalid_or_different_source_stops_before_asset_download_and_prepare(self):
         for source in ("main", "a" * 39, "b" * 40, "a" * 40 + "\n", "$(PRIVATE)"):
