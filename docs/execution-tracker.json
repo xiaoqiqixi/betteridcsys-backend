@@ -10043,7 +10043,7 @@
     ]
   },
   "active_batch": "20261029-controller-verification-host",
-  "batch_record": "EXECUTION-20261029.md",
+  "batch_record": "EXECUTION-20261101.md",
   "cloud_install_migration": {
     "contract": "https://github.com/xiaoqiqixi/betteridcsys-cloud/blob/main/docs/development/INSTALL_AND_MIGRATION.md",
     "scope": [
@@ -12389,9 +12389,9 @@
         "host_startup": false
       },
       "isolated_process_integration": {
-        "state": "pushed_main_local_full_MySQL_passed_native_CI_pending",
+        "state": "native_identity_failure_diagnosis_and_readonly_UI_actual_component_acceptance",
         "production_root_launcher_connected": false,
-        "new_native_scenario_executed": false,
+        "new_native_scenario_executed": true,
         "systemd": false,
         "migration_browser_acceptance": false,
         "scope": "fixed private child command -> nonroot isolated HTTPS + real minimum SQL; lifetime and actual exit; not full managed activation",
@@ -12437,6 +12437,134 @@
           "private_data_and_credentials_removed": true,
           "system_services_changed": false,
           "host_trust_changed": false
+        },
+        "previous_native_ci": {
+          "source_sha": "d0c325269b92b331f58d7c2bf2eca57cb0f1ee3d",
+          "run": 41002207487,
+          "conclusion": "failure",
+          "success": 15,
+          "failed": 3,
+          "failures": [
+            "Ubuntu24 whole-schema SQL fixture reached shared 5-minute deadline; no proven source-data drift",
+            "Ubuntu22/24 verification process stop readiness unconfirmed; earlier bad-credential negative was insufficiently specific"
+          ]
+        },
+        "current_diagnostic_revision": {
+          "source_sha": "5f5d55946ea2f9cc5c85dabbfd132dc8f42a1b6b",
+          "run": 41268725773,
+          "state": "in_progress",
+          "success_as_observed": 14,
+          "failed_as_observed": 3,
+          "running_as_observed": 1,
+          "changes": [
+            "whole-schema backup suite runs alone; no test/retry/deadline reduction",
+            "child rejection reports fixed stage only; wrong credential must reach minimum SQL denial",
+            "Linux root startup rejection gate verifies real process exit and actual guard drain"
+          ],
+          "verified_ubuntu24_startup_artifact": {
+            "id": 13068562226,
+            "bytes": 726,
+            "sha256": "b6b67aebca4cf793297ef62b6d4de16b4ab79706e284f37364aea9b121eaaccf",
+            "real_linux_processes": true,
+            "reached_minimum_sql_check": true,
+            "guard_drained": true,
+            "http_started": false,
+            "mysql_verified": false,
+            "migration_ready": false
+          },
+          "new_failure": {
+            "job": 124736882248,
+            "scenario": "Ubuntu24 controller-restore-data",
+            "artifact_id": 13067963143,
+            "bytes": 857,
+            "sha256": "85cf0e5c7cc730f72499efedc0cceda590e8e902b0baa76224868b04312a7013",
+            "stage_evidence": "sandbox selftest complete; no image provenance, pre-VM checkpoint or guest report",
+            "root_cause": "unconfirmed; official pinned manifests/signatures currently return HTTP 200 locally, not proof of CI transport success",
+            "host_network_unchanged": true
+          },
+          "independent_mysql": {
+            "ubuntu22": {
+              "passed": true,
+              "whole_schema_snapshot_seconds": 168.19,
+              "runtime_skips": 0
+            },
+            "ubuntu24": {
+              "passed": true,
+              "whole_schema_snapshot_seconds": 179.8,
+              "runtime_skips": 0
+            }
+          },
+          "configuration_failures": {
+            "ubuntu22_job": 124736882077,
+            "ubuntu24_job": 124736882220,
+            "phase": "target-verification-process-identity",
+            "strict_TLS_401_reached": true,
+            "root_cause": "unconfirmed; new fixed observation codes do not relax checks",
+            "native_completed": false
+          }
+        },
+        "parallel_readonly_ui": {
+          "state": "local_main_committed_component_acceptance_passed_not_pushed",
+          "server_confirmation": "verification_mode is derived by identity service; existing grants unchanged",
+          "scope": [
+            "members and instances remain readable",
+            "mutation guards fail before persisting intent or issuing write",
+            "live metrics/observations and hidden migration-target requests suppressed",
+            "Chinese/English readonly context"
+          ],
+          "component_tests": 9,
+          "real_mysql_verification_tests": 14,
+          "real_mysql_runtime_skips": 0,
+          "full_mysql": {
+            "top_level_pass": 535,
+            "runtime_skips": 0,
+            "explicit_linux_root_exclusions": 5,
+            "seconds": 671.675
+          },
+          "browser": {
+            "passed": true,
+            "engine": "Firefox 157 Playwright1.64.0",
+            "real_minimum_mysql": "8.4.13",
+            "strict_TLS": true,
+            "untrusted_CA_rejected": true,
+            "host_trust_changed": false,
+            "desktop_width": 1440,
+            "mobile_widths": [
+              390,
+              320
+            ],
+            "screenshots": 7,
+            "checks": 10,
+            "business_write_attempts": 0,
+            "forbidden_node_reads": 0,
+            "foreign_requests": 0,
+            "page_errors": 0,
+            "business_and_identity_records_unchanged": true,
+            "historical_audit_prefix_unchanged": true,
+            "actual_login_logout": true,
+            "private_data_profile_credentials_and_test_CA_removed": true,
+            "system_services_changed": false,
+            "native_managed_launcher": false,
+            "same_source_CI": "not_yet_run"
+          },
+          "native_managed_launcher": false,
+          "migration_ready": false,
+          "frontend_full_tests": 1011,
+          "typecheck": true,
+          "build": true,
+          "format": true,
+          "browser_contract_tests": 17,
+          "original_files_unchanged": 221,
+          "reserved_label": "Chinese and English verified in actual browser; resource state unchanged",
+          "source_commit": "5224b5e0e8d51a98f1ae05fbdca7ca181b7788ab"
+        },
+        "next_record": "EXECUTION-20261101.md",
+        "native_new_scenario_passed": false,
+        "parallel_diagnostics": {
+          "native_contract_tests": 73,
+          "image_transport": "fixed safe failure classification; original URL/TLS/signature/digest/no-retry limits unchanged",
+          "process_observation": "12 fixed checks; native root cause not yet confirmed",
+          "source_commit": "47b24c9dc33009f00a88769f49c8ba1b9300da0b"
         }
       }
     }
