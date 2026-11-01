@@ -76,3 +76,6 @@ var CommerceBilling string
 
 //go:embed 025_affiliate_commissions.sql
 var AffiliateCommissions string
+
+//go:embed 026_commerce_services.sql
+var CommerceServices string

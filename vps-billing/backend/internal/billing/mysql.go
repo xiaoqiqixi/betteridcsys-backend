@@ -84,7 +84,7 @@ func OpenMySQL(ctx context.Context, dsn string, allowInsecure bool) (*MySQL, err
 	return &MySQL{DB: db, transport: transport, database: cfg.DBName}, nil
 }
 
-var schemaVersions = []string{migrations.Initial, migrations.SiteSettings, migrations.Currencies, migrations.BillingSnapshots, migrations.ExactCurrencyCodes, migrations.EmailSettings, migrations.CurrencyRegistry, migrations.PaymentRuntime, migrations.AuditQueryIndexes, migrations.CustomerAccounts, migrations.CatalogTaxonomy, migrations.CatalogNodes, migrations.ProductConfigurations, migrations.PaymentResolution, migrations.StaffRoles, migrations.CommerceCatalog, migrations.AccountSecurity, migrations.CommerceCoupons, migrations.PaymentGateways, migrations.CommerceLedger, migrations.Automation, migrations.AccountFeatures, migrations.CreditPrecision, migrations.CommerceBilling, migrations.AffiliateCommissions}
+var schemaVersions = []string{migrations.Initial, migrations.SiteSettings, migrations.Currencies, migrations.BillingSnapshots, migrations.ExactCurrencyCodes, migrations.EmailSettings, migrations.CurrencyRegistry, migrations.PaymentRuntime, migrations.AuditQueryIndexes, migrations.CustomerAccounts, migrations.CatalogTaxonomy, migrations.CatalogNodes, migrations.ProductConfigurations, migrations.PaymentResolution, migrations.StaffRoles, migrations.CommerceCatalog, migrations.AccountSecurity, migrations.CommerceCoupons, migrations.PaymentGateways, migrations.CommerceLedger, migrations.Automation, migrations.AccountFeatures, migrations.CreditPrecision, migrations.CommerceBilling, migrations.AffiliateCommissions, migrations.CommerceServices}
 
 func (m *MySQL) Ping(ctx context.Context) error {
 	rows, err := m.DB.QueryContext(ctx, "SELECT version,checksum FROM schema_migrations ORDER BY version")
@@ -218,6 +218,15 @@ func (m *MySQL) Migrate(ctx context.Context) error {
 				}
 				if _, _, err = prepareAuditIndex(ctx, conn, q); err != nil {
 					return fmt.Errorf("migration 9 preparation failed: %w", err)
+				}
+			}
+		}
+		if source == migrations.CommerceServices {
+			for _, q := range strings.Split(source, ";") {
+				if q = strings.TrimSpace(q); q != "" {
+					if _, _, err = prepareCommerceServicesMigration(ctx, conn, version, q); err != nil {
+						return fmt.Errorf("commerce service migration preparation failed: %w", err)
+					}
 				}
 			}
 		}
