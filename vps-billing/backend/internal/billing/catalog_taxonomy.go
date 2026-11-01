@@ -237,6 +237,10 @@ func (m *Memory) UpdateCatalogTaxonomy(ctx context.Context, actor User, input Ta
 	return taxonomyProjection(next, true), nil
 }
 func (a *App) taxonomyHTTP(w http.ResponseWriter, r *http.Request, actor User, admin bool) {
+	if a.commerceContract06(r) {
+		a.taxonomy06HTTP(w, r, actor, admin)
+		return
+	}
 	store, ok := a.Store.(catalogTaxonomyStore)
 	if !ok {
 		a.internal(w, r, errors.New("catalog taxonomy store unavailable"))

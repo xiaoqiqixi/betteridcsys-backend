@@ -82,6 +82,14 @@ func (m *MySQL) UpdateCatalogTaxonomy(ctx context.Context, actor User, input Tax
 		return TaxonomyConfiguration{}, err
 	}
 	defer tx.Rollback()
+	out, err := updateCatalogTaxonomyTx06(ctx, tx, actor, input, false)
+	if err != nil {
+		return out, err
+	}
+	return out, tx.Commit()
+}
+func updateCatalogTaxonomyTx06(ctx context.Context, tx *sql.Tx, actor User, input TaxonomyUpdate, modern bool) (TaxonomyConfiguration, error) {
+	var err error
 	actor, err = lockActiveAdministrator(ctx, tx, actor.ID)
 	if err != nil {
 		return TaxonomyConfiguration{}, err
@@ -114,6 +122,30 @@ func (m *MySQL) UpdateCatalogTaxonomy(ctx context.Context, actor User, input Tax
 	rows.Close()
 	if err != nil {
 		return TaxonomyConfiguration{}, err
+	}
+	rows, err = tx.QueryContext(ctx, "SELECT p.id,n.region_id,r.type_id,p.node_id,p.visibility FROM products p JOIN catalog_nodes n ON n.id=p.node_id JOIN catalog_regions r ON r.id=n.region_id ORDER BY p.id FOR UPDATE")
+	if err != nil {
+		return TaxonomyConfiguration{}, err
+	}
+	for rows.Next() {
+		var p CatalogPlan
+		var visibility string
+		if err = rows.Scan(&p.ID, &p.RegionID, &p.TypeID, &p.NodeID, &visibility); err != nil {
+			rows.Close()
+			return TaxonomyConfiguration{}, err
+		}
+		p.Available = visibility == "public"
+		plans = append(plans, p)
+	}
+	err = rows.Err()
+	rows.Close()
+	if err != nil {
+		return TaxonomyConfiguration{}, err
+	}
+	if modern {
+		for i := range plans {
+			plans[i].Available = false
+		}
 	}
 	next, err := applyTaxonomy(old, input, plans)
 	if err != nil {
@@ -180,5 +212,5 @@ func (m *MySQL) UpdateCatalogTaxonomy(ctx context.Context, actor User, input Tax
 	if err = insertCurrencyAudit(ctx, tx, catalogAudit(actor, "catalog.taxonomy_updated", "catalog-taxonomy", next.Revision, strings.TrimSpace(input.Reason))); err != nil {
 		return TaxonomyConfiguration{}, err
 	}
-	return taxonomyProjection(next, true), tx.Commit()
+	return taxonomyProjection(next, true), nil
 }
