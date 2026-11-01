@@ -474,6 +474,67 @@ def observe_restore_protected_open(executor, fixture):
         executor.updater.protected_open = original
 
 
+def clone_installed_baseline(source, destination):
+    """Clone a protected existing legacy installation for disposable host tests.
+
+    No network or official provenance is invented. Only the local receipt's path
+    changes; every source byte is rechecked by the production legacy verifier.
+    """
+    executor = module("core_legacy_clone_executor", "core-operation.py")
+    verified = executor.prepared_release(str(source))
+    verify_published_baseline(source)
+    receipt = executor.updater.strict_json((Path(source) / "manifests/PREPARED.json").read_bytes())
+    files = {name: (executor.read_file(str(Path(source) / name), executor.updater.MAX_FILE),
+                   0o755 if name in {"bin/aster-api", "bin/aster-plugin-host"} or name.startswith("deploy/scripts/") else 0o644)
+             for name in verified["files_sha256"]}
+    receipt.update(release_directory=str(destination), native_clone_of_receipt_sha256=verified["receipt_sha256"])
+    files["manifests/PREPARED.json"] = (executor.updater.json_bytes(receipt), 0o644)
+    parent_path, name = executor.manager.target_path(str(destination))
+    parent = executor.manager.parent_directory(parent_path, executor.updater._Trust(), create=True)
+    try:
+        os.mkdir(name, 0o700, dir_fd=parent)
+        directory = os.open(name, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW, dir_fd=parent)
+        try:
+            executor.manager.populate(directory, files)
+            os.fchmod(directory, 0o755)
+        finally:
+            os.close(directory)
+    finally:
+        os.close(parent)
+    executor.prepared_release(str(destination))
+    return {"status": "prepared", "version": PUBLISHED_VERSION, "source_sha": verified["source_sha"],
+            "source_and_integrity_verified": True, "program_executed": False, "active_release_changed": False,
+            "service_action": "none", "database_action": "none", "network_fetch": False,
+            "scope": "protected-existing-legacy-installation-clone"}
+
+
+def verify_paired_candidate(source, assets, installed, commit):
+    spec = importlib.util.spec_from_file_location("native_paired_candidate", source / "scripts/release_bundle.py")
+    policy = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(policy)
+    pin = policy.P.validate_pin(json.loads((source / "FRONTEND_PAIR.json").read_bytes()))
+    names = policy.names(pin['core_version'], pin) - {'BUILD.json', 'PROVENANCE.json'}
+    require({p.name for p in assets.iterdir()} == names, "Paired candidate asset inventory differs")
+    files = {name: (assets / name).read_bytes() for name in names}
+    bundle = policy.content(files, commit, pin)
+    build = policy.build_manifest(files, commit, pin)
+    bundle['manifests/BUILD.json'] = policy.B.encode(build)
+    expected = set(bundle)
+    require({str(p.relative_to(installed)) for p in installed.rglob('*') if p.is_file()} - {'web/release-id.txt'} == expected,
+            "Installed paired candidate inventory differs")
+    for name, raw in bundle.items():
+        path = installed / name
+        info = path.lstat()
+        require(stat.S_ISREG(info.st_mode) and info.st_uid == 0 and info.st_nlink == 1 and not info.st_mode & 0o022 and
+                path.read_bytes() == raw, "Installed paired candidate bytes or permissions differ")
+    sql = {name for name in expected if name.startswith('migrations/')}
+    require(sql, "Paired candidate migrations are missing")
+    return {"version": pin['core_version'], "source_commit": commit, "directory": str(installed),
+            "trust": "selected-source-built-paired-candidate-not-official-release", "official_provenance_fabricated": False,
+            "package_inventory": {name: sha256(raw) for name, raw in files.items()},
+            "copied_source_files_verified": len(expected), "migration_count": len(sql), "binary_sha256": build['binary_sha256']}
+
+
 def verify_source_candidate(source, assets, installed):
     """Verify actual package and every source copy against the selected Git commit."""
     pipeline = module("core_acceptance_pipeline", "release_pipeline.py")
@@ -481,6 +542,8 @@ def verify_source_candidate(source, assets, installed):
     git = ["git", "-c", "safe.directory=" + str(source), "-C", str(source)]
     commit = command([*git, "rev-parse", "--verify", "HEAD"]).decode().strip()
     require(re.fullmatch(r"[a-f0-9]{40}", commit), "Invalid selected Git commit")
+    if (assets / "BACKEND.json").is_file():
+        return verify_paired_candidate(source, assets, installed, commit)
     build = pipeline.strict_json((assets / "BUILD.json").read_bytes())
     version = build["component_versions"]["core"]
     require(tuple(map(int, version.split("."))) > tuple(map(int, PUBLISHED_VERSION.split("."))),
@@ -1112,8 +1175,7 @@ def late_schema_native(executor, fixture):
 def late_schema_recovery(args, resources, executor, candidate, baseline, overrides):
     stage("late-schema-official-baseline-install")
     late = Fixture(resources, executor, "late", candidate, baseline, overrides)
-    token = executor.updater.load_protected_token(str(args.github_token_file), executor.updater._Trust())
-    prepared = executor.manager.prepare(PUBLISHED_VERSION, late.baseline, api=executor.updater.Official(token))
+    prepared = clone_installed_baseline(baseline["directory"], late.baseline)
     require(prepared["status"] == "prepared", "Late-schema actual official baseline preparation failed")
     verify_published_baseline(late.baseline)
     late.spec["release_directory"] = late.baseline
@@ -1424,8 +1486,7 @@ def run_scenarios(args, candidate, baseline):
 
         stage("unknown-schema-hold-and-manual-recovery")
         unknown = Fixture(resources, executor, "unknown", candidate, baseline, overrides)
-        token = executor.updater.load_protected_token(str(args.github_token_file), executor.updater._Trust())
-        actual = executor.manager.prepare(PUBLISHED_VERSION, unknown.baseline, api=executor.updater.Official(token))
+        actual = clone_installed_baseline(baseline["directory"], unknown.baseline)
         require(actual["status"] == "prepared", "Second actual official baseline preparation failed")
         verify_published_baseline(unknown.baseline)
         unknown.spec["release_directory"] = unknown.baseline
@@ -1522,10 +1583,15 @@ def parser():
 
 
 def main():
+    if len(sys.argv) == 4 and sys.argv[1] == "--clone-installed-baseline":
+        require(os.geteuid() == 0 and os.environ.get("GITHUB_REPOSITORY_ID") == "1435344087" and
+                os.environ.get("RUNNER_ENVIRONMENT") == "github-hosted", "Disposable runner required")
+        print(json.dumps(clone_installed_baseline(sys.argv[2], sys.argv[3]), sort_keys=True))
+        return
     args = parser().parse_args()
     require(os.geteuid() == 0 and os.environ.get("GITHUB_ACTIONS") == "true" and
             os.environ.get("RUNNER_ENVIRONMENT") == "github-hosted" and
-            os.environ.get("GITHUB_REPOSITORY") == "xiaoqiqixi/betteridcsys", "Hosted native CI guard required")
+            os.environ.get("GITHUB_REPOSITORY") == "xiaoqiqixi/betteridcsys-backend" and os.environ.get("GITHUB_REPOSITORY_ID") == "1435344087", "Hosted native CI guard required")
     require(re.fullmatch(r"/opt/aster-ci-[0-9]+-[0-9]+-[0-9]+", str(args.fixture_root)), "Unexpected parent fixture root")
     candidate = verify_source_candidate(args.source, args.candidate_assets, args.candidate_release)
     baseline = verify_published_baseline(args.baseline_release)

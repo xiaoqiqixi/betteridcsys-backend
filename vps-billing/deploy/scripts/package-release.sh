@@ -18,6 +18,34 @@ while (($#)); do
 done
 [[ -n "$commit_ref" && -n "$version" && -n "$output" && $kind =~ ^(core|smtp)$ ]] || { usage; exit 2; }
 [[ "$version" =~ ^(0|[1-9][0-9]{0,5})\.(0|[1-9][0-9]{0,5})\.(0|[1-9][0-9]{0,5})$ ]] || { echo 'Invalid stable semantic version' >&2; exit 2; }
+# Core is now a two-repository candidate. The frontend is fetched by its immutable
+# CI identity and archive digest; no frontend source layout is compiled here.
+script_dir=$(cd "$(dirname "$0")" && pwd -P)
+repo=$(git -C "$script_dir" rev-parse --show-toplevel)
+if [[ $kind == core ]]; then
+  commit=$(git -C "$repo" rev-parse --verify "${commit_ref}^{commit}")
+  python3 -I - "$repo" "$version" <<'PYPAIRVERSION'
+import json, sys
+from pathlib import Path
+pin = json.loads(Path(sys.argv[1], 'FRONTEND_PAIR.json').read_text())
+if pin['core_version'] != sys.argv[2]:
+    raise SystemExit('Core version differs from the reviewed frontend pair.')
+PYPAIRVERSION
+  output=$(python3 -c 'from pathlib import Path; import sys; print(Path(sys.argv[1]).absolute())' "$output")
+  python3 -I "$repo/scripts/backend_bundle.py" build --source-sha "$commit" --output "$output"
+  python3 -I "$repo/scripts/release_bundle.py" fetch-frontend --output "$output/frontend"
+  mv "$output/frontend/FRONTEND.json" "$output/frontend/"*.tar.gz "$output/"
+  rmdir "$output/frontend"
+  python3 -I - "$output" <<'PYPAIRSUMS'
+import hashlib, sys
+from pathlib import Path
+root = Path(sys.argv[1])
+files = sorted(root.iterdir())
+(root / 'SHA256SUMS').write_text(''.join(hashlib.sha256(p.read_bytes()).hexdigest() + '  ' + p.name + '\n' for p in files))
+PYPAIRSUMS
+  echo "Paired candidate: $output (not signed or published)"
+  exit 0
+fi
 for tool in git tar gzip sha256sum python3 go; do
   command -v "$tool" >/dev/null || { echo "Required tool missing: $tool" >&2; exit 1; }
 done

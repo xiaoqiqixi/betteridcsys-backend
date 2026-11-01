@@ -4,10 +4,14 @@
 set +x
 set -euo pipefail
 umask 077
+# Local policy/transport regression only; this never opts into privileged acceptance.
+if [[ $# == 1 && $1 == --check ]]; then
+  exec python3 -B "$(dirname -- "${BASH_SOURCE[0]}")/test_accept_native.py"
+fi
 fail() { printf 'FAIL Core executor acceptance: %s\n' "$*" >&2; exit 1; }
 [[ $# == 3 && $1 == --allow-isolated-runner ]] || fail 'Explicit isolated-runner opt-in, source root and new evidence directory required.'
 [[ ${GITHUB_ACTIONS:-} == true && ${RUNNER_ENVIRONMENT:-} == github-hosted ]] || fail 'Only disposable GitHub-hosted Actions runners are accepted.'
-[[ ${GITHUB_REPOSITORY:-} == xiaoqiqixi/betteridcsys ]] || fail 'Unexpected repository; no privileged actions permitted.'
+[[ ${GITHUB_REPOSITORY:-} == xiaoqiqixi/betteridcsys-backend && ${GITHUB_REPOSITORY_ID:-} == 1435344087 ]] || fail 'Unexpected repository; no privileged actions permitted.'
 [[ ${GITHUB_RUN_ID:-} =~ ^[0-9]+$ && ${GITHUB_RUN_ATTEMPT:-} =~ ^[0-9]+$ ]] || fail 'Missing run identity.'
 [[ $EUID != 0 && $(uname -s) == Linux && $(uname -m) == x86_64 ]] || fail 'Start as the ordinary Linux amd64 runner account.'
 [[ $(cat /proc/1/comm) == systemd ]] || fail 'PID 1 must be systemd; no simulated service acceptance.'
@@ -34,15 +38,19 @@ controller="$ASTER_CORE_FIXTURE_OPT/core-acceptance-controller"
 [[ ! -e $controller && ! -L $controller ]] || fail 'Refusing to reuse a controller directory.'
 sudo -n install -d -o root -g root -m 755 "$controller"
 for file in core-native.py release_pipeline.py; do
-  sudo -n install -o root -g root -m 644 "$source_root/vps-billing/deploy/ci/$file" "$controller/$file"
+  sudo -n install -D -o root -g root -m 644 "$source_root/vps-billing/deploy/ci/$file" "$controller/deploy/scripts/$file"
 done
 for file in core-operation.py core-manager.py update-manager.py plugin-manager.py; do
-  sudo -n install -o root -g root -m 644 "$source_root/vps-billing/deploy/scripts/$file" "$controller/$file"
+  sudo -n install -D -o root -g root -m 644 "$source_root/vps-billing/deploy/scripts/$file" "$controller/deploy/scripts/$file"
 done
+for file in backend_bundle.py frontend_pair.py pair_runtime.py release_bundle.py; do
+  sudo -n install -D -o root -g root -m 644 "$source_root/scripts/$file" "$controller/scripts/$file"
+done
+sudo -n install -D -o root -g root -m 644 "$source_root/contracts/frontend-bundle/frontend_bundle.py" "$controller/contracts/frontend-bundle/frontend_bundle.py"
 sudo -n env -i PATH=/usr/sbin:/usr/bin:/sbin:/bin PYTHONDONTWRITEBYTECODE=1 \
-  GITHUB_ACTIONS=true RUNNER_ENVIRONMENT=github-hosted GITHUB_REPOSITORY=xiaoqiqixi/betteridcsys \
+  GITHUB_ACTIONS=true RUNNER_ENVIRONMENT=github-hosted GITHUB_REPOSITORY=xiaoqiqixi/betteridcsys-backend GITHUB_REPOSITORY_ID=1435344087 \
   "GITHUB_RUN_ID=$GITHUB_RUN_ID" "GITHUB_RUN_ATTEMPT=$GITHUB_RUN_ATTEMPT" \
-  python3 -I "$controller/core-native.py" --source "$source_root" --evidence "$3" \
+  python3 -I "$controller/deploy/scripts/core-native.py" --source "$source_root" --evidence "$3" \
   --fixture-root "$ASTER_CORE_FIXTURE_OPT" --candidate-assets "$ASTER_CORE_CANDIDATE_ASSETS" \
   --candidate-release "$ASTER_CORE_CANDIDATE_RELEASE" --baseline-release "$ASTER_CORE_BASELINE_RELEASE" \
   --github-token-file "$ASTER_CORE_GITHUB_TOKEN_FILE" \

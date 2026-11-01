@@ -59,6 +59,8 @@ class CheckScriptTest(unittest.TestCase):
             assert 'ASTER_MYSQL_TEST_DSN' not in os.environ
             sys.exit(7 if os.environ.get('CI_TEST_HTTP_FAIL') == '1' else 0)
         '''))
+        (self.source / "scripts").mkdir()
+        (self.source / "scripts/check-paired-frontend.sh").write_text("#!/bin/bash\nset -eu\nprintf 'paired frontend verify\\n' >> \"$CI_TEST_EVENTS\"\nexit \"${CI_TEST_PAIR_FAIL:-0}\"\n")
         self.api_source = self.root / "fake_api.py"
         executable(self.api_source, '''\
             #!/usr/bin/env python3
@@ -202,6 +204,12 @@ class CheckScriptTest(unittest.TestCase):
         self.assertFalse(self.pid_file.exists())
         self.assertNotIn("All required checks passed", result.stdout)
 
+    def test_paired_frontend_verification_failure_stops_the_check(self):
+        result = self.run_check(CI_TEST_PAIR_FAIL="8")
+        self.assertEqual(result.returncode, 8, result.stdout + result.stderr)
+        self.assertFalse(self.pid_file.exists())
+        self.assertEqual(self.events.read_text().splitlines()[-1], "paired frontend verify")
+
     def test_skipped_go_test_fails_closed(self):
         result = self.run_check(CI_TEST_GO_SKIP="1")
         self.assertEqual(result.returncode, 1)
@@ -242,8 +250,7 @@ class CheckScriptTest(unittest.TestCase):
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
         self.assertIn("All required checks passed", result.stdout)
         self.assertEqual(self.events.read_text().splitlines(), [
-            "go test", "go vet", "go list", "go build", "resource package", "npm ci --include=dev --no-audit --no-fund",
-            "npm run typecheck", "npm test", "npm run build", "npm run format:check",
+            "go test", "go vet", "go list", "go build", "resource package", "paired frontend verify",
         ])
         self.assert_api_stopped()
 

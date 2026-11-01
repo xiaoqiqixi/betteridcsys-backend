@@ -5,6 +5,10 @@
 set +x
 set -euo pipefail
 umask 077
+# Local policy/transport regression only; this never opts into privileged acceptance.
+if [[ $# == 1 && $1 == --check ]]; then
+  exec python3 -B "$(dirname -- "${BASH_SOURCE[0]}")/test_accept_native.py"
+fi
 fail() { printf 'FAIL native acceptance: %s\n' "$*" >&2; exit 1; }
 step() { printf '\n== Native acceptance: %s ==\n' "$*"; }
 normalize_fixture_release() {
@@ -28,7 +32,7 @@ PYFACT
 }
 [[ $# == 3 && $1 == --allow-isolated-runner ]] || fail 'Explicit isolated-runner opt-in, source root and new evidence directory required.'
 [[ ${GITHUB_ACTIONS:-} == true && ${RUNNER_ENVIRONMENT:-} == github-hosted ]] || fail 'Only disposable GitHub-hosted Actions runners are accepted.'
-[[ ${GITHUB_REPOSITORY:-} == xiaoqiqixi/betteridcsys ]] || fail 'Unexpected repository; no privileged actions permitted.'
+[[ ${GITHUB_REPOSITORY:-} == xiaoqiqixi/betteridcsys-backend && ${GITHUB_REPOSITORY_ID:-} == 1435344087 ]] || fail 'Unexpected repository; no privileged actions permitted.'
 [[ ${GITHUB_RUN_ID:-} =~ ^[0-9]+$ && ${GITHUB_RUN_ATTEMPT:-} =~ ^[0-9]+$ ]] || fail 'Missing run identity.'
 [[ $EUID != 0 && $(uname -s) == Linux && $(uname -m) == x86_64 ]] || fail 'Start as the ordinary Linux amd64 runner account.'
 [[ $(cat /proc/1/comm) == systemd ]] || fail 'PID 1 must be systemd; no simulated service acceptance.'
@@ -176,7 +180,7 @@ for path in "$opt" "$config" "$logs" "$run" "/etc/systemd/system/$api_unit" "/et
 step 'Real isolated edge security headers and privacy-safe diagnostics'
 python3 "$project/deploy/ci/edge-observability.py" --nginx "$ASTER_ACCEPT_NGINX_BIN" --report "$evidence/edge-observability.json"
 
-step 'Build actual raw release programs and resources from the selected source'
+step 'Build and inspect the paired backend and frontend candidate'
 core_version=$(python3 - "$project/backend/pkg/pluginapi/protocol.go" <<'PYVERSION'
 from pathlib import Path
 import re
@@ -188,17 +192,14 @@ print(matches[0])
 PYVERSION
 )
 source_commit=$(git -C "$source_root" rev-parse --verify HEAD)
-bash "$project/deploy/scripts/package-release.sh" --commit "$source_commit" --kind core --version "$core_version" --output "$scratch/core-distribution" > "$scratch/core-package.log" 2>&1 || fail 'Selected-source raw release build failed.'
+bash "$project/deploy/scripts/package-release.sh" --commit "$source_commit" --kind core --version "$core_version" --output "$scratch/core-distribution" > "$scratch/core-package.log" 2>&1 || fail 'Selected-source paired release build failed.'
 # These are actual source-built raw assets, not an official published release or
 # an invented Actions provenance. The production prepare verifier is tested
 # independently against bounded official-metadata fixtures.
 (cd "$scratch/core-distribution" && sha256sum --check --status SHA256SUMS) || fail 'Source-built asset checksum mismatch.'
-mkdir -m 700 "$scratch/assembled"
-tar -xzf "$scratch/core-distribution/aster-core-$core_version-linux-amd64-resources.tar.gz" --directory "$scratch/assembled" --no-same-owner --no-same-permissions
-assembled="$scratch/assembled/aster-core-$core_version-linux-amd64-resources"
-mkdir -m 755 "$assembled/bin"
-install -m 755 "$scratch/core-distribution/aster-api-$core_version-linux-amd64" "$assembled/bin/aster-api"
-install -m 755 "$scratch/core-distribution/aster-plugin-host-$core_version-linux-amd64" "$assembled/bin/aster-plugin-host"
+assembled="$scratch/assembled"
+python3 -I "$source_root/scripts/release_bundle.py" assemble-candidate --directory "$scratch/core-distribution" \
+  --output "$assembled" --source "$source_commit"
 cp "$assembled/bin/aster-api" "$scratch/aster-api"
 cp "$assembled/bin/aster-plugin-host" "$scratch/aster-plugin-host"
 for user in "$api_user" "$web_user" "$smtp_user" "$payment_user"; do
@@ -232,20 +233,28 @@ for version in a; do
   sudo -n install -m 644 "$scratch/release-id" "$opt/releases/$version/web/release-id.txt"
 done
 sudo -n install -m 755 "$ASTER_ACCEPT_NGINX_BIN" "$opt/tools/nginx"
-step 'Run the real host preparer against a normal published Core release'
-[[ -n ${ASTER_ACCEPT_GITHUB_TOKEN:-} ]] || fail 'A temporary read-only CI token is required for the public prepare smoke.'
-printf '%s' "$ASTER_ACCEPT_GITHUB_TOKEN" > "$scratch/public-read-token"
-unset ASTER_ACCEPT_GITHUB_TOKEN
-sudo -n install -o root -g root -m 600 "$scratch/public-read-token" "$config/public-read-token"
-for tool in core-manager.py update-manager.py; do
-  sudo -n install -o root -g root -m 755 "$project/deploy/scripts/$tool" "$opt/tools/$tool"
+step 'Recheck a protected existing legacy installation without contacting its old origin'
+[[ -n ${ASTER_INSTALLED_LEGACY_BASELINE:-} && $ASTER_INSTALLED_LEGACY_BASELINE == /* ]] || fail 'A protected existing 0.5.2 installation is required for controlled migration tests; no old release is downloaded.'
+for tool in core-manager.py core-operation.py update-manager.py plugin-manager.py; do
+  sudo -n install -D -o root -g root -m 755 "$project/deploy/scripts/$tool" "$opt/tools/deploy/scripts/$tool"
 done
+for tool in core-native.py release_pipeline.py; do
+  sudo -n install -D -o root -g root -m 644 "$project/deploy/ci/$tool" "$opt/tools/deploy/scripts/$tool"
+done
+for tool in backend_bundle.py frontend_pair.py pair_runtime.py release_bundle.py; do
+  sudo -n install -D -o root -g root -m 644 "$source_root/scripts/$tool" "$opt/tools/scripts/$tool"
+done
+sudo -n install -D -o root -g root -m 644 "$source_root/contracts/frontend-bundle/frontend_bundle.py" "$opt/tools/contracts/frontend-bundle/frontend_bundle.py"
+# The legacy regression controller's interface retains a protected path, but no
+# credential is needed for local installed-byte validation.
+printf 'local-baseline-no-network' > "$scratch/public-read-token"
+sudo -n install -o root -g root -m 600 "$scratch/public-read-token" "$config/public-read-token"
 public_version=0.5.2
 public_target="$opt/core-upgrade/releases/$public_version"
-sudo -n python3 -I "$opt/tools/core-manager.py" doctor --release-directory "$public_target" --socket "$mysql_socket" --listen-address 127.0.0.1:18080 > "$evidence/host-doctor.json"
+sudo -n python3 -I "$opt/tools/deploy/scripts/core-manager.py" doctor --release-directory "$public_target" --socket "$mysql_socket" --listen-address 127.0.0.1:18080 > "$evidence/host-doctor.json"
 [[ ! -e $public_target && ! -L $public_target ]] || fail 'Read-only host doctor changed the target.'
 emit_json_fact HOST_DOCTOR_JSON host-doctor.json
-sudo -n python3 -I "$opt/tools/core-manager.py" prepare --version "$public_version" --release-directory "$public_target" --github-token-file "$config/public-read-token" > "$evidence/public-core-prepare.json"
+sudo -n env GITHUB_REPOSITORY_ID=1435344087 RUNNER_ENVIRONMENT=github-hosted python3 -I "$opt/tools/deploy/scripts/core-native.py" --clone-installed-baseline "$ASTER_INSTALLED_LEGACY_BASELINE" "$public_target" > "$evidence/public-core-prepare.json"
 python3 - "$evidence/public-core-prepare.json" "$public_version" <<'PYPREPARED'
 import json
 from pathlib import Path
