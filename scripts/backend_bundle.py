@@ -32,6 +32,8 @@ MAX_FILES, MAX_FILE, MAX_RAW, MAX_ARCHIVE = 4096, 32 * 1024 * 1024, 128 * 1024 *
 MAX_MANIFEST = 1024 * 1024
 BINS = {'bin/aster-api': './cmd/server', 'bin/aster-plugin-host': './cmd/plugin-host'}
 SCRIPTS = ('backup-native.sh', 'core-manager.py', 'core-operation.py', 'plugin-manager.py', 'update-manager.py')
+TOOLS = ('scripts/backend_bundle.py', 'scripts/frontend_pair.py', 'scripts/pair_runtime.py',
+         'scripts/release_bundle.py', 'contracts/frontend-bundle/frontend_bundle.py')
 SYSTEMD = {'aster-api.service', 'aster-payment.service', 'aster-resource.service', 'aster-smtp.service',
            'api.env.example', 'journald-aster.conf.example'}
 
@@ -83,7 +85,7 @@ def snapshot(source, destination):
     raw = run(['git', '--no-replace-objects', '-c', 'core.hooksPath=/dev/null', '-c', 'core.fsmonitor=false',
                'archive', '--format=tar', source, '--', 'LICENSE', 'FRONTEND_PAIR.json', 'vps-billing/backend',
                'vps-billing/docs', 'vps-billing/deploy/systemd', 'vps-billing/deploy/nginx.native.conf',
-               *('vps-billing/deploy/scripts/' + name for name in SCRIPTS)], ROOT, env, limit=MAX_RAW)
+               *('vps-billing/deploy/scripts/' + name for name in SCRIPTS), *TOOLS], ROOT, env, limit=MAX_RAW)
     seen, total = set(), 0
     with tarfile.open(fileobj=io.BytesIO(raw), mode='r:') as archive:
         for member in archive:
@@ -110,7 +112,7 @@ def put(files, name, raw):
 
 def resource_name(name):
     return (name in {'LICENSE', 'FRONTEND_PAIR.json', 'manifests/go.mod', 'manifests/go.sum',
-                     'DEPENDENCIES.json', 'deploy/nginx.native.conf', *BINS} or
+                     'DEPENDENCIES.json', 'deploy/nginx.native.conf', *BINS, *TOOLS} or
             name in {'deploy/scripts/' + script for script in SCRIPTS} or
             name in {'deploy/systemd/' + unit for unit in SYSTEMD} or
             re.fullmatch(r'migrations/[0-9]{3}_[A-Za-z0-9_-]+\.sql', name) is not None or
@@ -121,7 +123,7 @@ def complete_inventory(files, pin):
     require(all(resource_name(name) for name in files), 'unexpected_backend_resource')
     required = {'LICENSE', 'FRONTEND_PAIR.json', 'manifests/go.mod', 'manifests/go.sum', 'DEPENDENCIES.json',
                 'licenses/go-runtime/LICENSE', 'docs/OPERATIONS.md', 'deploy/nginx.native.conf',
-                'deploy/systemd/aster-api.service', *BINS, *('deploy/scripts/' + name for name in SCRIPTS)}
+                'deploy/systemd/aster-api.service', *BINS, *TOOLS, *('deploy/scripts/' + name for name in SCRIPTS)}
     require(required <= set(files) and any(name.startswith('migrations/') for name in files),
             'required_resources_missing')
     require(all(raw or name == 'manifests/go.sum' for name, raw in files.items()), 'empty_resource_refused')
@@ -255,6 +257,8 @@ def build(args):
         put(files, 'deploy/nginx.native.conf', read(project / 'deploy/nginx.native.conf'))
         for name in SCRIPTS:
             put(files, 'deploy/scripts/' + name, read(project / 'deploy/scripts' / name))
+        for name in TOOLS:
+            put(files, name, read(source / name))
         compile_backend(source, files, scratch)
         require(all(read(project / 'backend' / name) == files['manifests/' + name] for name in ('go.mod', 'go.sum')),
                 'module_inputs_changed_during_build')
@@ -279,7 +283,7 @@ def build(args):
             'files': len(files), 'asset': name}
 
 
-def verified_content(args):
+def verified_content(args, pin=None):
     raw_manifest = PAIR.regular(args.manifest, MAX_MANIFEST)
     value = PAIR.decode(raw_manifest)
     require(isinstance(value, dict) and set(value) == {'schema', 'kind', 'repository', 'repository_id', 'version',
@@ -289,7 +293,7 @@ def verified_content(args):
             value['format'] == 'backend-tar-v1' and isinstance(args.expected_source_sha, str) and
             re.fullmatch(PAIR.SHA, args.expected_source_sha) and value['source_commit'] == args.expected_source_sha,
             'backend_identity_mismatch')
-    pin = PAIR.load_pin()
+    pin = PAIR.load_pin() if pin is None else PAIR.validate_pin(pin)
     require(encode(pin) == encode(value['frontend_pair']) and pin['source_sha'] == args.expected_frontend_sha and
             value['version'] == pin['core_version'], 'paired_frontend_mismatch')
     epoch = value['source_date_epoch']

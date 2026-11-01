@@ -32,7 +32,8 @@ class FrontendPairCLI(unittest.TestCase):
         (self.frontend / 'package.json').write_text(json.dumps(dict(name='finance', version='0.5.10')))
         self.init_repo(self.frontend)
         frontend_sha = self.git(self.frontend, 'rev-parse', 'HEAD').strip()
-        self.pin = dict(schema=1, repository='xiaoqiqixi/betteridcsys-frontend', repository_id=1435344023,
+        self.pin = dict(archive_sha256='c' * 64, manifest_sha256='d' * 64, artifact_sha256='e' * 64,
+                        artifact_id=800, run_id=700, run_attempt=1, schema=1, repository='xiaoqiqixi/betteridcsys-frontend', repository_id=1435344023,
                         source_sha=frontend_sha, frontend_version='0.5.10', core_version='0.5.10',
                         compatibility_sha256=hashlib.sha256((self.frontend / 'compatibility.json').read_bytes()).hexdigest())
         (self.root / 'FRONTEND_PAIR.json').write_text(json.dumps(self.pin))
@@ -78,7 +79,8 @@ class FrontendPairCLI(unittest.TestCase):
         self.assertEqual(good.stdout, 'source_sha=' + self.pin['source_sha'] + '\n')
         for key, value in (('source_sha', 'main'), ('source_sha', 'https://example.invalid/code'),
                            ('repository', 'xiaoqiqixi/betteridcsys'), ('repository_id', True),
-                           ('schema', True), ('extra', 'ignored'), ('frontend_version', '0.5.10\nX=1')):
+                           ('schema', True), ('archive_sha256', 'latest'), ('manifest_sha256', 'a' * 63),
+                           ('artifact_sha256', None), ('artifact_id', True), ('run_attempt', 0), ('extra', 'ignored'), ('frontend_version', '0.5.10\nX=1')):
             with self.subTest(key=key, value=value):
                 (self.root / 'FRONTEND_PAIR.json').write_text(json.dumps(dict(self.pin, **{key: value})))
                 result = self.call('pin')
