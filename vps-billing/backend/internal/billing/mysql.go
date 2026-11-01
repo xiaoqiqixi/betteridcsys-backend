@@ -310,6 +310,11 @@ func (m *MySQL) Users(c context.Context) ([]User, error) {
 	return out, r.Err()
 }
 func (m *MySQL) PutSession(c context.Context, s Session) error {
+	// Separate autocommit batch avoids holding expired-session locks while
+	// waiting for account locks (account mutations also revoke sessions).
+	if _, err := m.DB.ExecContext(c, "DELETE FROM sessions WHERE expires_at<=UTC_TIMESTAMP(6) ORDER BY expires_at LIMIT 256"); err != nil {
+		return err
+	}
 	tx, err := m.DB.BeginTx(c, &sql.TxOptions{Isolation: sql.LevelReadCommitted})
 	if err != nil {
 		return err
