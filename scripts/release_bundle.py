@@ -178,6 +178,26 @@ def provenance(files, source, pin, env):
                 frontend_pair=pin, assets={name: {'size': len(raw), 'sha256': B.digest(raw)} for name, raw in sorted(files.items())})
 
 
+def release_tag(source, version):
+    prefix = 'repos/' + REPOSITORY
+    tag = 'v' + version
+    ref = api(prefix + '/git/ref/tags/' + tag)
+    require(ref.get('ref') == 'refs/tags/' + tag, 'tag_identity_mismatch')
+    item, seen = ref.get('object', {}), set()
+    for _ in range(4):
+        sha = item.get('sha', '')
+        require(re.fullmatch(P.SHA, sha) and sha not in seen, 'tag_object_invalid')
+        seen.add(sha)
+        if item.get('type') == 'commit':
+            require(sha == source, 'tag_source_changed')
+            return
+        require(item.get('type') == 'tag', 'tag_object_invalid')
+        value = api(prefix + '/git/tags/' + sha)
+        require(value.get('sha') == sha, 'annotated_tag_identity_mismatch')
+        item = value.get('object', {})
+    raise P.Rejected('tag_nesting_bound')
+
+
 def release_gate(source, dry_run):
     require(re.fullmatch(P.SHA, source), 'release_source_required')
     prefix = 'repos/' + REPOSITORY
@@ -190,15 +210,20 @@ def release_gate(source, dry_run):
             'release_source_not_on_main')
     result = api(prefix + '/actions/workflows/ci.yml/runs?head_sha=' + source + '&branch=main&status=success&per_page=100')
     required = {'Go and real MySQL (ubuntu-22.04)', 'Go and real MySQL (ubuntu-24.04)',
-                'vulnerability', 'Real MySQL financial browser acceptance'}
+                'vulnerability', 'Real MySQL financial browser acceptance',
+                'Native financial acceptance (ubuntu-22.04)', 'Native financial acceptance (ubuntu-24.04)'}
     for run in result.get('workflow_runs', []):
         if run.get('head_sha') != source or run.get('head_branch') != 'main' or run.get('event') not in {'push', 'workflow_dispatch'} or \
-                run.get('path') != '.github/workflows/ci.yml' or run.get('conclusion') != 'success' or \
-                any(run.get(key, {}).get('id') != REPOSITORY_ID for key in ('repository', 'head_repository')):
+                run.get('path') != '.github/workflows/ci.yml' or run.get('conclusion') != 'success' or run.get('status') != 'completed' or \
+                any(run.get(key, {}).get('id') != REPOSITORY_ID or run.get(key, {}).get('full_name') != REPOSITORY for key in ('repository', 'head_repository')):
             continue
         jobs = api(prefix + '/actions/runs/' + str(run['id']) + '/attempts/' + str(run['run_attempt']) + '/jobs?per_page=100')
-        if jobs.get('total_count') == len(jobs.get('jobs', [])) and required <= {job.get('name') for job in jobs['jobs']
-                if job.get('conclusion') == 'success' and job.get('status') == 'completed' and job.get('head_sha') == source}:
+        if jobs.get('total_count') != len(jobs.get('jobs', [])) or len(jobs['jobs']) > 100:
+            continue
+        selected = [job for job in jobs['jobs'] if job.get('name') in required]
+        if len(selected) == len(required) and {job.get('name') for job in selected} == required and all(
+                job.get('conclusion') == 'success' and job.get('status') == 'completed' and job.get('head_sha') == source and
+                job.get('run_id') == run['id'] and job.get('run_attempt') == run['run_attempt'] for job in selected):
             return
     raise P.Rejected('exact_source_backend_ci_required')
 
@@ -212,6 +237,8 @@ def seal(directory, source):
     content(files, source, pin)
     files['BUILD.json'] = B.encode(build_manifest(files, source, pin))
     proof = provenance(files, source, pin, os.environ)
+    if not proof['dry_run']:
+        release_tag(source, pin['core_version'])
     files['PROVENANCE.json'] = B.encode(proof)
     files['SHA256SUMS'] = ''.join(B.digest(raw) + '  ' + name + '\n' for name, raw in sorted(files.items())).encode()
     for name in ('BUILD.json', 'PROVENANCE.json', 'SHA256SUMS'):
@@ -330,10 +357,16 @@ def main():
     assembling.add_argument('--directory', type=Path, required=True)
     assembling.add_argument('--output', type=Path, required=True)
     assembling.add_argument('--source', required=True)
+    gate = sub.add_parser('check-tag')
+    gate.add_argument('--source', required=True)
     args = parser.parse_args()
     try:
         if args.action == 'fetch-frontend':
             fetch_frontend(args.output)
+        elif args.action == 'check-tag':
+            pin = P.load_pin()
+            release_gate(args.source, False)
+            release_tag(args.source, pin['core_version'])
         elif args.action == 'seal':
             seal(args.directory, args.source)
         else:

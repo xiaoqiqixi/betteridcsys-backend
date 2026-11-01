@@ -65,6 +65,7 @@ jobs:
           assert p['dry_run'] is False and p['event'] == 'push'
           Path(sys.argv[2]).write_text('财务后端 ' + p['version'] + '。\n\n后端源码：`' + p['source_sha'] + '`；前端仓库 ID：1435344023，源码：`' + p['frontend_pair']['source_sha'] + '`。\n\n附件包含配对归档、清单、SHA256 和 GitHub artifact attestations。安装前必须使用本版本受保护的工具验证签名；原生安装与旧实例回归状态见迁移门禁文档。\n')
           PY
+          python3 -I scripts/release_bundle.py check-tag --source "$GITHUB_SHA"
           gh release create "$GITHUB_REF_NAME" "$RUNNER_TEMP/release/"* \
             --repo xiaoqiqixi/betteridcsys-backend --verify-tag --target "$GITHUB_SHA" \
             --title "Finance backend $GITHUB_REF_NAME" --notes-file "$RUNNER_TEMP/release-notes.md"
