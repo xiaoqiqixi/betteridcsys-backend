@@ -78,6 +78,8 @@ func TestStripeOfflineConformanceAndIsolation(t *testing.T) {
 		}
 		w.Header().Set("Content-Type", "application/json")
 		switch {
+		case r.Method == "GET" && r.URL.Path == "/v1/account":
+			json.NewEncoder(w).Encode(map[string]string{"id": cfg.AccountID, "object": "account"})
 		case r.Method == "POST" && r.URL.Path == "/v1/checkout/sessions":
 			if r.ParseForm() != nil || r.Form.Get("line_items[0][price_data][unit_amount]") != "1200" || r.Form.Get("metadata[aster_gateway]") != c.GatewayID || r.Header.Get("Idempotency-Key") != "checkout:stripe-us:attempt" {
 				t.Error("checkout parameters changed")
@@ -165,5 +167,40 @@ func TestStripeDoesNotFollowProviderRedirects(t *testing.T) {
 	}
 	if p.client.Transport.(*http.Transport).Proxy != nil {
 		t.Fatal("environment proxy enabled")
+	}
+}
+
+func TestStripeRejectsAPIKeysForAnotherMerchant(t *testing.T) {
+	now := time.Now()
+	cfg := Config{AccountID: "acct_expected", APIKey: "sk_test_fixture_secret", WebhookSecret: "whsec_fixture_secret", SuccessURL: "https://billing.example", CancelURL: "https://billing.example"}
+	c := paymentv1.Config{ProviderID: ID, GatewayID: "stripe-us", MerchantID: cfg.AccountID, ManifestSHA256: strings.Repeat("a", 64)}
+	in := paymentv1.Intent{AttemptID: "attempt", IdempotencyKey: "attempt", InvoiceID: "invoice", OrderID: "order", AccountID: "customer", Currency: "USD", AmountMinor: 1200, CurrencyDecimalPlaces: 2}
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != "GET" || r.URL.Path != "/v1/account" {
+			t.Error("mismatched merchant reached payment operation", r.Method, r.URL.Path)
+			w.WriteHeader(http.StatusForbidden)
+			return
+		}
+		json.NewEncoder(w).Encode(map[string]string{"id": "acct_other", "object": "account"})
+	}))
+	defer server.Close()
+	p, err := New(cfg)
+	if err != nil {
+		t.Fatal(err)
+	}
+	p.endpoint = server.URL
+	if _, err = p.Create(t.Context(), c, in); err == nil {
+		t.Fatal("created checkout for another merchant")
+	}
+	if _, err = p.Query(t.Context(), c, paymentv1.Query{Intent: in, SessionID: "cs_fixture"}); err == nil {
+		t.Fatal("queried another merchant")
+	}
+	if _, err = p.Refund(t.Context(), c, paymentv1.Refund{IdempotencyKey: "refund", TransactionID: "pi_fixture", AmountMinor: 200, Currency: "USD", CurrencyDecimalPlaces: 2}); err == nil {
+		t.Fatal("refunded another merchant")
+	}
+	body := []byte(`{"id":"evt_fixture","type":"checkout.session.completed","livemode":false,"data":{"object":{"id":"cs_fixture"}}}`)
+	callback := paymentv1.Callback{Method: "POST", Path: "/api/v1/payment-callbacks/stripe-us", Body: body, Headers: []paymentv1.Header{{Name: "Stripe-Signature", Values: []string{sign(body, cfg.WebhookSecret, now)}}}}
+	if _, err = p.Verify(t.Context(), c, callback); err == nil {
+		t.Fatal("verified another merchant")
 	}
 }

@@ -26,6 +26,10 @@ Use a distinct webhook endpoint/secret for each gateway slot at
 `account_id`, and allow the outbound target `api.stripe.com:443`. Live credentials
 require `live_mode: true`. The worker reads systemd's `payment_config.json`;
 neither the Core API nor the gateway administration endpoint accepts secrets.
+The API key must permit reading its own account (`GET /v1/account`); the worker
+verifies that account ID before any payment operation and caches only success
+for that worker's immutable credentials. A wrong merchant key cannot create a
+checkout even if the local account label and metadata match.
 
 The API version is pinned in `stripe.go`. Request keys include the gateway and
 stored attempt ID. Signature verification uses the unmodified body,

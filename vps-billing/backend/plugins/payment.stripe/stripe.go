@@ -17,6 +17,7 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"sync/atomic"
 	"time"
 )
 
@@ -44,10 +45,11 @@ type Config struct {
 	LiveMode      bool   `json:"live_mode"`
 }
 type Processor struct {
-	config   Config
-	client   *http.Client
-	endpoint string
-	now      func() time.Time
+	config           Config
+	client           *http.Client
+	endpoint         string
+	now              func() time.Time
+	merchantVerified atomic.Bool
 }
 
 var objectID = regexp.MustCompile(`^[a-z][a-z0-9_]{1,15}_[A-Za-z0-9_]{1,100}$`)
@@ -75,6 +77,29 @@ func New(c Config) (*Processor, error) {
 func (p *Processor) valid(c paymentv1.Config) bool {
 	return c.ProviderID == ID && c.MerchantID == p.config.AccountID && paymentv1.ValidateConfig(c) == nil && paymentv1.ValidGatewayID(c.GatewayID)
 }
+
+// An account ID in local configuration or payment metadata is not evidence of
+// which merchant owns the API key. Bind the immutable worker credentials to the
+// authenticated account before performing any payment operation. Cache success
+// only; transient failures may be retried and credential changes restart workers.
+func (p *Processor) checkMerchant(ctx context.Context) error {
+	if p.merchantVerified.Load() {
+		return nil
+	}
+	var account struct {
+		ID     string `json:"id"`
+		Object string `json:"object"`
+	}
+	if err := p.call(ctx, "GET", "/v1/account", "", nil, &account); err != nil {
+		return err
+	}
+	if account.Object != "account" || account.ID != p.config.AccountID {
+		return paymentv1.ErrRejected
+	}
+	p.merchantVerified.Store(true)
+	return nil
+}
+
 func (p *Processor) call(ctx context.Context, method, path, key string, form url.Values, out any) error {
 	var body io.Reader
 	if form != nil {
@@ -152,6 +177,9 @@ func (p *Processor) Create(ctx context.Context, c paymentv1.Config, i paymentv1.
 	if !p.valid(c) || paymentv1.ValidateIntent(i, Declarations()) != nil {
 		return paymentv1.Checkout{}, paymentv1.ErrInvalid
 	}
+	if err := p.checkMerchant(ctx); err != nil {
+		return paymentv1.Checkout{}, err
+	}
 	form := url.Values{"mode": {"payment"}, "success_url": {p.config.SuccessURL}, "cancel_url": {p.config.CancelURL}, "client_reference_id": {i.AttemptID}, "line_items[0][quantity]": {"1"}, "line_items[0][price_data][currency]": {strings.ToLower(i.Currency)}, "line_items[0][price_data][unit_amount]": {strconv.FormatInt(i.AmountMinor, 10)}, "line_items[0][price_data][product_data][name]": {"Invoice " + i.InvoiceID}}
 	// Automatic card capture gives charge.created a stable payment timestamp.
 	// Delayed bank methods and manual capture require a different settlement
@@ -181,6 +209,9 @@ func (p *Processor) retrieve(ctx context.Context, id string) (session, error) {
 	var s session
 	if !strings.HasPrefix(id, "cs_") || !objectID.MatchString(id) {
 		return s, paymentv1.ErrInvalid
+	}
+	if err := p.checkMerchant(ctx); err != nil {
+		return s, err
 	}
 	err := p.call(ctx, "GET", "/v1/checkout/sessions/"+id+"?expand%5B%5D=payment_intent.latest_charge", "", nil, &s)
 	if err == nil && (s.ID != id || s.Object != "checkout.session" || s.Mode != "payment" || s.LiveMode != p.config.LiveMode) {
@@ -325,6 +356,9 @@ func (p *Processor) Query(ctx context.Context, c paymentv1.Config, in paymentv1.
 func (p *Processor) Refund(ctx context.Context, c paymentv1.Config, in paymentv1.Refund) (paymentv1.RefundResult, error) {
 	if !p.valid(c) || paymentv1.ValidateRefund(in, Declarations()) != nil || !strings.HasPrefix(in.TransactionID, "pi_") || !objectID.MatchString(in.TransactionID) {
 		return paymentv1.RefundResult{}, paymentv1.ErrInvalid
+	}
+	if err := p.checkMerchant(ctx); err != nil {
+		return paymentv1.RefundResult{}, err
 	}
 	// The default PaymentIntent response contains latest_charge as an ID.
 	// Only decode fields needed for refund authorization, without expansion.
