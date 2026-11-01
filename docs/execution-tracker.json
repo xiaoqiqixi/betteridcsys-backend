@@ -12452,10 +12452,10 @@
         "current_diagnostic_revision": {
           "source_sha": "5f5d55946ea2f9cc5c85dabbfd132dc8f42a1b6b",
           "run": 41268725773,
-          "state": "in_progress",
-          "success_as_observed": 14,
+          "state": "completed_failure",
+          "success_as_observed": 15,
           "failed_as_observed": 3,
-          "running_as_observed": 1,
+          "running_as_observed": 0,
           "changes": [
             "whole-schema backup suite runs alone; no test/retry/deadline reduction",
             "child rejection reports fixed stage only; wrong credential must reach minimum SQL denial",
@@ -12501,10 +12501,23 @@
             "strict_TLS_401_reached": true,
             "root_cause": "unconfirmed; new fixed observation codes do not relax checks",
             "native_completed": false
+          },
+          "final_ubuntu22_data_proof": {
+            "digest": "sha256:74f45b139f82d9d525d229e59a75667e74370bc9f76e22be169e755547f0364f",
+            "id": 13069597011,
+            "name": "cloud-controller-restore-data-ubuntu-22.04-41268725773-1",
+            "size_in_bytes": 2679,
+            "download_digest_verified": true,
+            "source_sha": "5f5d55946ea2f9cc5c85dabbfd132dc8f42a1b6b",
+            "passed": true,
+            "migration_ready": false,
+            "source_host_export_verified": false,
+            "node_takeover_verified": false,
+            "host_network_unchanged": true
           }
         },
         "parallel_readonly_ui": {
-          "state": "local_main_committed_component_acceptance_passed_not_pushed",
+          "state": "pushed_main_local_component_acceptance_passed_successor_CI_running",
           "server_confirmation": "verification_mode is derived by identity service; existing grants unchanged",
           "scope": [
             "members and instances remain readable",
@@ -12545,7 +12558,7 @@
             "private_data_profile_credentials_and_test_CA_removed": true,
             "system_services_changed": false,
             "native_managed_launcher": false,
-            "same_source_CI": "not_yet_run"
+            "same_source_CI": "running 41272311114"
           },
           "native_managed_launcher": false,
           "migration_ready": false,
@@ -12565,6 +12578,23 @@
           "image_transport": "fixed safe failure classification; original URL/TLS/signature/digest/no-retry limits unchanged",
           "process_observation": "12 fixed checks; native root cause not yet confirmed",
           "source_commit": "47b24c9dc33009f00a88769f49c8ba1b9300da0b"
+        },
+        "successor_ci": {
+          "source_sha": "47b24c9dc33009f00a88769f49c8ba1b9300da0b",
+          "run": 41272311114,
+          "state": "in_progress",
+          "pushed": true,
+          "observed_passed": 6,
+          "observed_failed": 0,
+          "observed_running": 12
+        },
+        "local_followup": {
+          "source_sha": "276c72ace46b55923aa3ade401e0db0b7827f548",
+          "pushed": false,
+          "scope": "bounded settled screenshot capture, exactly one active navigation, boundary documentation",
+          "real_browser_repeated": true,
+          "product_code_changed": false,
+          "private_browser_mysql_and_CA_cleaned": true
         }
       }
     }
