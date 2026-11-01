@@ -2,6 +2,7 @@ package billing
 
 import (
 	"aster/billing/internal/integrations"
+	"aster/billing/internal/runtimeplugins"
 	"aster/billing/pkg/pluginapi"
 	"aster/billing/pkg/pluginapi/paymentv1"
 	"aster/billing/plugins/paymentfixture"
@@ -51,6 +52,25 @@ func (p *paymentHTTPRuntime) PaymentSelection() (pluginapi.Manifest, pluginapi.S
 	p.mu.Lock()
 	defer p.mu.Unlock()
 	return p.manifest, p.selection, nil
+}
+func (p *paymentHTTPRuntime) PaymentGatewaySelection(id string) (pluginapi.Manifest, pluginapi.Selection, error) {
+	m, s, err := p.PaymentSelection()
+	if id != s.ID && id != s.Slot {
+		return pluginapi.Manifest{}, pluginapi.Selection{}, paymentv1.ErrUnavailable
+	}
+	return m, s, err
+}
+func (p *paymentHTTPRuntime) PaymentGateways(context.Context) ([]runtimeplugins.Gateway, error) {
+	m, s, err := p.PaymentSelection()
+	status := "stopped"
+	if s.Enabled {
+		status = "ready"
+	}
+	now := time.Now().UTC()
+	return []runtimeplugins.Gateway{{Manifest: m, Selection: s, Status: status, LastCheckedAt: &now}}, err
+}
+func (p *paymentHTTPRuntime) QueryPayment(context.Context, paymentv1.Config, paymentv1.Query) (paymentv1.QueryResult, error) {
+	return paymentv1.QueryResult{}, paymentv1.ErrRejected
 }
 func (p *paymentHTTPRuntime) CreatePayment(ctx context.Context, cfg paymentv1.Config, in paymentv1.Intent) (paymentv1.Checkout, error) {
 	p.mu.Lock()
