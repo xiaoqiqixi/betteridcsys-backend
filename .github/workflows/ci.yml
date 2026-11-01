@@ -8,7 +8,9 @@ permissions:
   contents: read
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
-  cancel-in-progress: true
+  # Complete native main evidence even while other maintainers push. PRs still
+  # cancel obsolete runs; main keeps one running and the newest queued commit.
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 # Fork PRs use public checkouts and synthetic fixtures. No repository secrets
 # are required; github.token keeps the read-only permissions declared above.
 jobs:

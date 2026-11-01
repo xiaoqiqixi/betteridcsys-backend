@@ -11,7 +11,7 @@ class FinanceContracts(unittest.TestCase):
         self.assertRegex(workflow, r'(?m)^  pull_request:\s*$')
         self.assertNotIn('pull_request_target:', workflow)
         self.assertIn('github.event.pull_request.number || github.ref', workflow)
-        self.assertIn('cancel-in-progress: true', workflow)
+        self.assertIn("cancel-in-progress: ${{ github.event_name == 'pull_request' }}", workflow)
         # All existing jobs use public sources, synthetic credentials and the
         # automatic read-only github.token, also available to fork PRs.
         self.assertNotIn('secrets.', workflow)
