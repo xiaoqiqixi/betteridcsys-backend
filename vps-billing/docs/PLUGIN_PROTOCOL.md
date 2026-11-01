@@ -47,6 +47,8 @@ SMTP 协议仍为 `aster.smtp/1`，manifest schema 仍为 1；分发改为原始
 | `/v1/payment/query` | 相同封装与 config；query 含原 intent 和 session_id | accepted 与 result；succeeded 必须带完整结算 event，其他状态不得携带 event |
 | `/v1/payment/refund` | 相同封装与 config；refund 含独立幂等键、交易 ID、整数金额、币种和精度 | accepted 与 result（refund_id、status）；不授予账务授权 |
 
+验证事件可带 `acknowledgement`：HTTP 200 的受限纯文本、JSON 或 XML（最多 4 KiB），或无正文的 204。Core 仅在结算持久化成功后发送；插件不能覆盖记账错误或设置任意 HTTP 响应头。完整字段与验证限制见支付作者指南。
+
 **握手与业务调用使用同一连接。** 如果握手后断线，不重连复用许可，不向另一进程发送凭据。插件身份是已批准程序 hash 自报告和 peer UID 的组合，结合宿主执行已验证 inode，防止误版本/意外替换；它不是受侵害 worker UID 的密码学远程证明。
 
 JSON 限制：manifest 64 KiB、策略 128 KiB、RPC 请求 512 KiB、响应 64 KiB，嵌套最多八层，每对象键/数组元素最多 64。请求额度包含 JSON 转义开销，正文自身仍最多 64 KiB。拒绝重复/大小写别名键、未知字段、null、无效 UTF-8、尾随 JSON、非法版本/状态/摘要；SMTP 发送响应的五个字段必须完整存在，支付成功结果须通过商户、provider、gateway、金额、币种精度、时间与结账主机的类型化验证。关键字段使用类型化验证，不用 `Execute(map)`。

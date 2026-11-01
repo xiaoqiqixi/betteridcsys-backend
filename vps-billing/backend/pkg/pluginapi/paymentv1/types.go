@@ -79,20 +79,21 @@ type Callback struct {
 	Body     []byte   `json:"body"`
 }
 type VerifiedEvent struct {
-	GatewayID             string    `json:"gateway_id,omitempty"`
-	AttemptID             string    `json:"attempt_id"`
-	ProviderID            string    `json:"provider_id"`
-	EventID               string    `json:"event_id"`
-	TransactionID         string    `json:"transaction_id"`
-	MerchantAccountID     string    `json:"merchant_account_id"`
-	AccountID             string    `json:"account_id"`
-	OrderID               string    `json:"order_id"`
-	InvoiceID             string    `json:"invoice_id"`
-	AmountMinor           int64     `json:"amount_minor"`
-	Currency              string    `json:"currency"`
-	CurrencyDecimalPlaces int       `json:"currency_decimal_places"`
-	SettledAt             time.Time `json:"settled_at"`
-	Status                string    `json:"status"`
+	GatewayID             string                   `json:"gateway_id,omitempty"`
+	AttemptID             string                   `json:"attempt_id"`
+	ProviderID            string                   `json:"provider_id"`
+	EventID               string                   `json:"event_id"`
+	TransactionID         string                   `json:"transaction_id"`
+	MerchantAccountID     string                   `json:"merchant_account_id"`
+	AccountID             string                   `json:"account_id"`
+	OrderID               string                   `json:"order_id"`
+	InvoiceID             string                   `json:"invoice_id"`
+	AmountMinor           int64                    `json:"amount_minor"`
+	Currency              string                   `json:"currency"`
+	CurrencyDecimalPlaces int                      `json:"currency_decimal_places"`
+	SettledAt             time.Time                `json:"settled_at"`
+	Status                string                   `json:"status"`
+	Acknowledgement       *CallbackAcknowledgement `json:"acknowledgement,omitempty"`
 }
 type Processor interface {
 	Create(context.Context, Config, Intent) (Checkout, error)
@@ -303,5 +304,5 @@ func ValidateEvent(out VerifiedEvent, provider, merchant string, d Declarations,
 	if out.ProviderID != provider || out.MerchantAccountID != merchant || out.AmountMinor <= 0 || out.AmountMinor > MaxMinor || !d.Supports(out.Currency, out.CurrencyDecimalPlaces) || out.Status != "settled" || out.SettledAt.IsZero() || out.SettledAt.After(now.Add(time.Minute)) {
 		return ErrInvalid
 	}
-	return nil
+	return out.Acknowledgement.Validate()
 }

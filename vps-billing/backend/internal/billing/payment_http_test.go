@@ -461,7 +461,9 @@ func TestPaymentHTTPStorageFailureDoesNotAcknowledgeSettlement(t *testing.T) {
 	h := newPaymentHTTPHarness(t, func(store Store) Store { return &paymentHTTPFailSettlementStore{Store: store} })
 	order, invoice := h.order(t)
 	h.checkout(t, invoice)
-	raw, signature := h.runtime.signed(t, h.runtime.event(t, 0))
+	event := h.runtime.event(t, 0)
+	event.Acknowledgement = &paymentv1.CallbackAcknowledgement{StatusCode: 200, ContentType: "text/plain", Body: "success"}
+	raw, signature := h.runtime.signed(t, event)
 	if status, out := paymentHTTPNotify(t, h, "POST", "/api/v1/payment-callbacks/"+paymentfixture.ProviderID, raw, signature, ""); status != 503 {
 		t.Fatal("storage failure acknowledged payment", status, out)
 	}

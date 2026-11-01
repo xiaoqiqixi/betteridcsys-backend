@@ -98,6 +98,30 @@ func TestPaymentOptionalOperations(t *testing.T) {
 	}
 }
 
+func TestPaymentCallbackAcknowledgementCrossesValidatedRPC(t *testing.T) {
+	for _, contentType := range []string{"text/plain", "text/html"} {
+		t.Run(contentType, func(t *testing.T) {
+			f := newPaymentFixture(t)
+			ack := paymentv1.CallbackAcknowledgement{StatusCode: 200, ContentType: contentType, Body: "success"}
+			f.paymentServe(t, paymentProcessor{verify: func(context.Context, paymentv1.Config, paymentv1.Callback) (paymentv1.VerifiedEvent, error) {
+				e := paymentEvent()
+				e.Acknowledgement = &ack
+				return e, nil
+			}})
+			out, err := f.manager.VerifyPaymentCallback(t.Context(), f.paymentConfig(), paymentCallback())
+			if contentType == "text/html" {
+				if err == nil {
+					t.Fatal("unsafe acknowledgement crossed RPC")
+				}
+				return
+			}
+			if err != nil || out.Acknowledgement == nil || *out.Acknowledgement != ack {
+				t.Fatal("provider acknowledgement lost across RPC", out, err)
+			}
+		})
+	}
+}
+
 func TestGatewayRegistryReportsHandshakeAndCompatibility(t *testing.T) {
 	f := newPaymentFixture(t)
 	var calls atomic.Int32

@@ -34,6 +34,8 @@ func (Processor) Create(ctx context.Context, c paymentv1.Config, i paymentv1.Int
 
 // Verify rejects every callback until the author implements provider signatures,
 // merchant checks, replay windows and exact amount/currency evidence.
+// VerifiedEvent.Acknowledgement optionally supplies the provider's exact success
+// response; Core sends it only after durable settlement, including exact retries.
 func (Processor) Verify(context.Context, paymentv1.Config, paymentv1.Callback) (paymentv1.VerifiedEvent, error) {
 	return paymentv1.VerifiedEvent{}, paymentv1.ErrRejected
 }

@@ -124,10 +124,17 @@ Expiry and staff voiding retain historical attempts. Late valid receipts still
 follow the existing settlement rules: duplicate receipts on a paid invoice and
 receipts for cancelled orders are recorded for review without paying or
 provisioning twice. Exact retries return success; conflicting evidence returns
-409. Successful callbacks return `{"data":{"received":true}}` only after commit;
-invalid signatures return 400, missing attempts 404 and unavailable workers/storage
-503. Providers requiring a literal, XML or signed acknowledgment need an explicit
-protocol extension; this JSON acknowledgment is not compatible with every provider.
+409. Successful callbacks default to `{"data":{"received":true}}`. A verified
+event may include `acknowledgement: {"status_code":200,"content_type":"text/plain",
+"body":"success"}` for a provider-specific response. Allowed types are
+`text/plain`, `application/json`, `application/xml` and `text/xml`; bodies must be
+valid UTF-8, at most 4 KiB, with valid JSON/XML where applicable. XML cannot contain
+DTDs or processing instructions other than its declaration. Alternatively return
+`{"status_code":204}` without content type or body. Core preserves the body bytes,
+sets safe response headers and emits the acknowledgement only after settlement
+commits, including exact retries. Invalid signatures return 400, missing attempts
+404 and unavailable workers/storage 503; plugins cannot override these errors or
+supply arbitrary HTTP headers. Query responses never emit an acknowledgement.
 
 `GET /api/v1/admin/integrations/gateways` reports ready/stopped/misconfigured/
 incompatible status and last handshake time. `PATCH .../gateways/{id}` requires

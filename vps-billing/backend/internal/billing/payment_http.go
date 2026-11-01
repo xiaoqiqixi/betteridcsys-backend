@@ -202,6 +202,21 @@ func (a *App) paymentCallbackHTTP(w http.ResponseWriter, r *http.Request, provid
 		a.paymentStoreError(w, r, err)
 		return
 	}
+	if ack := verified.Acknowledgement; ack != nil {
+		// The worker chooses a bounded provider response, never whether storage
+		// succeeded. Preserve the body exactly for literal or signed responses.
+		w.Header().Set("Content-Security-Policy", "default-src 'none'; frame-ancestors 'none'; sandbox")
+		w.Header().Set("X-Content-Type-Options", "nosniff")
+		w.Header().Set("Content-Disposition", "attachment")
+		if ack.ContentType != "" {
+			w.Header().Set("Content-Type", ack.ContentType+"; charset=utf-8")
+		}
+		w.WriteHeader(ack.StatusCode)
+		if ack.StatusCode != http.StatusNoContent {
+			_, _ = io.WriteString(w, ack.Body)
+		}
+		return
+	}
 	jsonOut(w, 200, map[string]bool{"received": true})
 }
 
