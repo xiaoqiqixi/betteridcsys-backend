@@ -1,0 +1,41 @@
+name: Release tooling dry run
+on:
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+jobs:
+  tooling:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e
+        with:
+          go-version: '1.27.3'
+          cache: false
+      - name: Release tooling and host consumer regressions
+        run: bash scripts/check-release-tooling.sh
+      - name: Reproducible independent backend bundle
+        run: |
+          set -euo pipefail
+          python3 -I scripts/backend_bundle.py build --source-sha "$GITHUB_SHA" --output "$RUNNER_TEMP/backend-a"
+          python3 -I scripts/backend_bundle.py build --source-sha "$GITHUB_SHA" --output "$RUNNER_TEMP/backend-b"
+          diff -qr "$RUNNER_TEMP/backend-a" "$RUNNER_TEMP/backend-b"
+      - name: Inspect the exact paired frontend CI artifact
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python3 -I scripts/release_bundle.py fetch-frontend --output "$RUNNER_TEMP/frontend"
+      - name: Stage and verify the paired candidate without publication
+        run: |
+          set -euo pipefail
+          version=$(python3 -c 'import json; print(json.load(open("FRONTEND_PAIR.json"))["core_version"])')
+          frontend=$(python3 -c 'import json; print(json.load(open("FRONTEND_PAIR.json"))["frontend_version"])')
+          python3 -I scripts/pair_runtime.py stage --backend-source "$GITHUB_SHA" \
+            --backend-manifest "$RUNNER_TEMP/backend-a/BACKEND.json" --backend-archive "$RUNNER_TEMP/backend-a/aster-finance-backend-$version-linux-amd64.tar.gz" \
+            --frontend-manifest "$RUNNER_TEMP/frontend/FRONTEND.json" --frontend-archive "$RUNNER_TEMP/frontend/aster-finance-frontend-$frontend.tar.gz" \
+            --output "$RUNNER_TEMP/paired-runtime"
+          python3 -I scripts/pair_runtime.py verify --backend-source "$GITHUB_SHA" --directory "$RUNNER_TEMP/paired-runtime"

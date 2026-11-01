@@ -23,9 +23,9 @@ import urllib.parse
 import urllib.request
 import zipfile
 
-REPOSITORY = "xiaoqiqixi/betteridcsys"
-REPOSITORY_ID = 1418618420
-BUILD_WORKFLOW = ".github/workflows/release-build.yml"
+REPOSITORY = "xiaoqiqixi/betteridcsys-backend"
+REPOSITORY_ID = 1435344087
+BUILD_WORKFLOW = ".github/workflows/release.yml"
 PUBLISH_WORKFLOW = ".github/workflows/release-publish.yml"
 FINANCIAL_CI_JOBS = frozenset({
     "checks", "Native financial acceptance (ubuntu-22.04)", "go-vulnerability",
@@ -280,8 +280,8 @@ def historical_manifest():
     value = strict_json(HISTORICAL_MANIFEST.read_bytes())
     require(isinstance(value, dict) and set(value) == {"schema", "repository", "repository_id", "release_tag", "archives"} and
             type(value["schema"]) is int and value["schema"] == 1 and
-            value["repository"] == REPOSITORY and type(value["repository_id"]) is int and
-            value["repository_id"] == REPOSITORY_ID and value["release_tag"] == "v0.3.0-rc.3",
+            value["repository"] == "xiaoqiqixi/betteridcsys" and type(value["repository_id"]) is int and
+            value["repository_id"] == 1418618420 and value["release_tag"] == "v0.3.0-rc.3",
             "Invalid historical archive policy")
     require(isinstance(value["archives"], list) and len(value["archives"]) == 2,
             "Historical policy must preserve both candidates")
@@ -466,7 +466,7 @@ def verify_source_archive(api, files, provenance):
 
 
 def build_workflow(api):
-    result = api.request("GET", api_path("/actions/workflows/release-build.yml"))
+    result = api.request("GET", api_path("/actions/workflows/release.yml"))
     require(result.get("path") == BUILD_WORKFLOW and result.get("state") == "active",
             "Unexpected or inactive build workflow")
     return integer(result.get("id"), "build workflow ID")
@@ -1405,6 +1405,15 @@ def write_new(path, data):
 
 
 def main(argv=None):
+    args = sys.argv[1:] if argv is None else argv
+    if args and args[0] == "paired":
+        import importlib.util
+        path = Path(__file__).resolve().parents[3] / "scripts/release_bundle.py"
+        spec = importlib.util.spec_from_file_location("paired_release_pipeline", path)
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        sys.argv = [str(path), *args[1:]]
+        raise SystemExit(module.main())
     parser = argparse.ArgumentParser(description=__doc__)
     sub = parser.add_subparsers(dest="command", required=True)
     for command in ("prepare-build", "seal-build", "prepare-publish", "publish"):
