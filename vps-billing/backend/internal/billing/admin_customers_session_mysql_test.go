@@ -44,7 +44,8 @@ func awaitAccountLockWait(t *testing.T, ctx context.Context, db *sql.DB, table s
 }
 
 // Hash every migrated business row, not just an asserted wallet total. Users,
-// sessions and identity audits are checked separately; raw rows never escape.
+// sessions, session metadata, login history and identity audits are checked
+// separately; raw rows never escape. Staff membership/permissions stay here.
 func accountBusinessSnapshot(t *testing.T, db *sql.DB) string {
 	t.Helper()
 	rows, err := db.Query("SHOW TABLES")
@@ -60,7 +61,7 @@ func accountBusinessSnapshot(t *testing.T, db *sql.DB) string {
 		if !regexp.MustCompile(`^[a-z][a-z0-9_]*$`).MatchString(name) {
 			t.Fatal("unexpected isolated table identifier")
 		}
-		if name != "users" && name != "sessions" && name != "audit_events" {
+		if name != "users" && name != "sessions" && name != "account_sessions" && name != "login_events" && name != "audit_events" {
 			tables = append(tables, name)
 		}
 	}
@@ -89,6 +90,13 @@ func accountBusinessSnapshot(t *testing.T, db *sql.DB) string {
 			if err := rows.Scan(pointers...); err != nil {
 				t.Fatal(err)
 			}
+			if table == "staff_members" {
+				for i, column := range columns {
+					if column == "last_login_at" {
+						values[i] = nil
+					} // Asserted with login history below.
+				}
+			}
 			raw, err := json.Marshal(values)
 			if err != nil {
 				t.Fatal(err)
@@ -106,6 +114,150 @@ func accountBusinessSnapshot(t *testing.T, db *sql.DB) string {
 		}
 	}
 	return hex.EncodeToString(h.Sum(nil))
+}
+
+type accountIdentityEvidence struct {
+	sessions   map[string]accountSessionEvidence
+	logins     map[string]string
+	staffLogin map[string]sql.NullTime
+}
+type accountSessionEvidence struct {
+	ID, Hash, IP, Agent, Owner string
+	Created, Seen              time.Time
+}
+
+func captureAccountIdentity(t *testing.T, db *sql.DB) accountIdentityEvidence {
+	t.Helper()
+	v := accountIdentityEvidence{map[string]accountSessionEvidence{}, map[string]string{}, map[string]sql.NullTime{}}
+	rows, err := db.Query("SELECT a.id,a.token_hash,a.ip,a.user_agent,a.created_at,a.last_seen_at,s.user_id FROM account_sessions a JOIN sessions s ON s.token_hash=a.token_hash")
+	if err != nil {
+		t.Fatal(err)
+	}
+	for rows.Next() {
+		var s accountSessionEvidence
+		if err = rows.Scan(&s.ID, &s.Hash, &s.IP, &s.Agent, &s.Created, &s.Seen, &s.Owner); err != nil {
+			t.Fatal(err)
+		}
+		v.sessions[s.Hash] = s
+	}
+	if err = rows.Err(); err != nil {
+		t.Fatal(err)
+	}
+	rows.Close()
+	rows, err = db.Query("SELECT id,user_id,email_hash,ip,user_agent,result,created_at FROM login_events")
+	if err != nil {
+		t.Fatal(err)
+	}
+	for rows.Next() {
+		var id, hash, ip, agent, result string
+		var uid sql.NullString
+		var at time.Time
+		if err = rows.Scan(&id, &uid, &hash, &ip, &agent, &result, &at); err != nil {
+			t.Fatal(err)
+		}
+		raw, _ := json.Marshal([]any{uid, hash, ip, agent, result, at})
+		v.logins[id] = digest(string(raw))
+	}
+	if err = rows.Err(); err != nil {
+		t.Fatal(err)
+	}
+	rows.Close()
+	rows, err = db.Query("SELECT user_id,last_login_at FROM staff_members")
+	if err != nil {
+		t.Fatal(err)
+	}
+	for rows.Next() {
+		var uid string
+		var at sql.NullTime
+		if err = rows.Scan(&uid, &at); err != nil {
+			t.Fatal(err)
+		}
+		v.staffLogin[uid] = at
+	}
+	if err = rows.Err(); err != nil {
+		t.Fatal(err)
+	}
+	rows.Close()
+	return v
+}
+
+// Identity operations intentionally insert/delete sessions and append login
+// evidence. Verify those precise changes instead of classifying them as money.
+func assertAccountIdentityChanges(t *testing.T, db *sql.DB, before accountIdentityEvidence, actor User, newLogins int) {
+	t.Helper()
+	after := captureAccountIdentity(t, db)
+	var now time.Time
+	if err := db.QueryRow("SELECT UTC_TIMESTAMP(6)").Scan(&now); err != nil {
+		t.Fatal(err)
+	}
+	added := 0
+	for hash, current := range after.sessions {
+		old, exists := before.sessions[hash]
+		if !exists {
+			added++
+			if current.Owner != actor.ID {
+				t.Fatal("unexpected session owner after identity action")
+			}
+		} else {
+			if current.Seen.Before(old.Seen) {
+				t.Fatal("last-seen time moved backwards")
+			}
+			old.Seen = current.Seen
+			if old != current {
+				t.Fatal("identity action rewrote immutable session metadata")
+			}
+		}
+		if current.Seen.After(now) || current.Created.After(current.Seen) {
+			t.Fatal("invalid session activity time")
+		}
+	}
+	if added != newLogins {
+		t.Fatal("unexpected session metadata creation", added, newLogins)
+	}
+	for hash, old := range before.sessions {
+		if _, exists := after.sessions[hash]; exists {
+			continue
+		}
+		var n int
+		if err := db.QueryRow("SELECT COUNT(*) FROM sessions WHERE token_hash=?", hash).Scan(&n); err != nil || n != 0 || old.Owner != actor.ID {
+			t.Fatal("unrelated or live session metadata removed", err)
+		}
+	}
+	added = 0
+	for id, old := range before.logins {
+		if after.logins[id] != old {
+			t.Fatal("identity action rewrote or deleted login history")
+		}
+	}
+	for id := range after.logins {
+		if _, exists := before.logins[id]; exists {
+			continue
+		}
+		added++
+		var uid, hash, result string
+		if err := db.QueryRow("SELECT user_id,email_hash,result FROM login_events WHERE id=?", id).Scan(&uid, &hash, &result); err != nil || uid != actor.ID || hash != digest(actor.Email) || result != "success" {
+			t.Fatal("unexpected appended login evidence", err)
+		}
+	}
+	if added != newLogins {
+		t.Fatal("unexpected login events", added, newLogins)
+	}
+	if len(after.staffLogin) != len(before.staffLogin) {
+		t.Fatal("identity request changed staff membership")
+	}
+	for uid, old := range before.staffLogin {
+		current, exists := after.staffLogin[uid]
+		if !exists {
+			t.Fatal("staff membership removed")
+		}
+		if uid == actor.ID && newLogins == 1 {
+			if !current.Valid || !current.Time.After(old.Time) || current.Time.After(now) {
+				t.Fatal("staff login time was not updated by the successful login")
+			}
+		} else if current != old {
+			t.Fatal("unrelated staff login time changed")
+		}
+	}
 }
 
 func accountCookieHash(t *testing.T, c *http.Client, origin string) string {
@@ -142,6 +294,7 @@ func TestMySQLAccountQueuedWriteRequiresOriginalRequestSession(t *testing.T) {
 				t.Fatal(err)
 			}
 			businessBefore := accountBusinessSnapshot(t, m.DB)
+			identityBefore := captureAccountIdentity(t, m.DB)
 			blocker, err := m.DB.BeginTx(f.ctx, nil)
 			if err != nil {
 				t.Fatal(err)
@@ -229,6 +382,11 @@ func TestMySQLAccountQueuedWriteRequiresOriginalRequestSession(t *testing.T) {
 			if businessBefore != accountBusinessSnapshot(t, m.DB) {
 				t.Fatal("account-session rejection changed a business/financial table")
 			}
+			newLogins := 0
+			if test.invalidation == "same-owner-rotation" {
+				newLogins = 1
+			}
+			assertAccountIdentityChanges(t, m.DB, identityBefore, f.admin, newLogins)
 			if test.invalidation == "same-owner-rotation" {
 				current := accountHTTPS(c, origin, "GET", "/api/v1/session", "", "")
 				user, _ := current.data["user"].(map[string]any)
@@ -250,6 +408,7 @@ func TestMySQLAccountSessionExpiryIsCheckedAfterItsRowLock(t *testing.T) {
 		t.Fatal(err)
 	}
 	businessBefore := accountBusinessSnapshot(t, m.DB)
+	identityBefore := captureAccountIdentity(t, m.DB)
 	var auditsBefore int
 	if err := m.DB.QueryRowContext(f.ctx, "SELECT COUNT(*) FROM audit_events").Scan(&auditsBefore); err != nil {
 		t.Fatal(err)
@@ -318,6 +477,7 @@ func TestMySQLAccountSessionExpiryIsCheckedAfterItsRowLock(t *testing.T) {
 	if businessBefore != accountBusinessSnapshot(t, m.DB) {
 		t.Fatal("session expiry changed a business/financial table")
 	}
+	assertAccountIdentityChanges(t, m.DB, identityBefore, f.admin, 0)
 }
 
 func TestMySQLAccountSelfSessionDeletionSerializesWithLogout(t *testing.T) {
@@ -328,6 +488,7 @@ func TestMySQLAccountSelfSessionDeletionSerializesWithLogout(t *testing.T) {
 			c, origin, csrf := accountTLSClient(t, m, f.admin.Email, "AccountFixture!2026")
 			hash := accountCookieHash(t, c, origin)
 			businessBefore := accountBusinessSnapshot(t, m.DB)
+			identityBefore := captureAccountIdentity(t, m.DB)
 			blocker, err := m.DB.BeginTx(f.ctx, nil)
 			if err != nil {
 				t.Fatal(err)
@@ -369,6 +530,7 @@ func TestMySQLAccountSelfSessionDeletionSerializesWithLogout(t *testing.T) {
 			if businessBefore != accountBusinessSnapshot(t, m.DB) {
 				t.Fatal("identity/logout serialization changed a business table")
 			}
+			assertAccountIdentityChanges(t, m.DB, identityBefore, f.admin, 0)
 		})
 	}
 }
