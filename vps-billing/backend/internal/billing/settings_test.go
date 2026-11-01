@@ -109,7 +109,9 @@ func TestRejectTLSDowngradeBeforeConnecting(t *testing.T) {
 
 func TestProxyIPv6AliasesShareLoginLimit(t *testing.T) {
 	app := NewApp(NewMemory(), Config{Demo: true, Origin: "http://localhost", Secret: ID() + ID(), TrustedProxyCIDRs: []string{"127.0.0.1/32"}})
-	app.attempts["ip:2001:db8::1"] = bucket{Count: 20, Start: time.Now()}
+	for n := 0; n < 20; n++ {
+		app.allowLogin("ip:2001:db8::1")
+	}
 	token := ID() + ID()
 	for _, ip := range []string{"2001:db8::1", "2001:0db8:0000:0000:0000:0000:0000:0001"} {
 		r := httptest.NewRequest("POST", "http://localhost/api/v1/auth/login", strings.NewReader(`{"email":"missing@example.com","password":"wrong"}`))

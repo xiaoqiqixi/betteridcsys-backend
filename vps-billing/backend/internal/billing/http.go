@@ -4,6 +4,7 @@ import (
 	"aster/billing/internal/integrations"
 	"aster/billing/internal/runtimeplugins"
 	"aster/billing/pkg/pluginapi"
+	"container/list"
 	"context"
 	"crypto/hmac"
 	"crypto/sha256"
@@ -16,6 +17,7 @@ import (
 	"mime"
 	"net"
 	"net/http"
+	"net/netip"
 	"net/url"
 	"regexp"
 	"strings"
@@ -39,6 +41,7 @@ type Config struct {
 type bucket struct {
 	Count int
 	Start time.Time
+	Entry *list.Element
 }
 type App struct {
 	SMTP         *SMTPService
@@ -47,6 +50,7 @@ type App struct {
 	Config       Config
 	limiterMu    sync.Mutex
 	attempts     map[string]bucket
+	loginOrder   list.List
 	dummyHash    []byte
 }
 
@@ -531,24 +535,55 @@ func (a *App) allowLogin(key string) bool {
 	a.limiterMu.Lock()
 	defer a.limiterMu.Unlock()
 	now := time.Now()
-	if len(a.attempts) > 10000 {
-		for k, v := range a.attempts {
-			if now.Sub(v.Start) > 15*time.Minute {
-				delete(a.attempts, k)
-			}
+	if strings.HasPrefix(key, "ip:") {
+		key = "ip:" + loginIPPrefix(strings.TrimPrefix(key, "ip:"))
+	}
+	b, exists := a.attempts[key]
+	if !exists {
+		if len(a.attempts) >= 10000 {
+			oldest := a.loginOrder.Front()
+			delete(a.attempts, oldest.Value.(string))
+			a.loginOrder.Remove(oldest)
 		}
-		if len(a.attempts) > 10000 {
+		b.Entry = a.loginOrder.PushBack(key)
+	}
+	if now.Sub(b.Start) > 15*time.Minute {
+		b.Count, b.Start = 0, now
+	}
+	if strings.HasPrefix(key, "email:") && b.Count >= 20 {
+		// Denied requests never extend the deadline. A sprayed account gets
+		// another authentication opportunity at most 30 seconds later.
+		delay := time.Second << min(b.Count-20, 5)
+		if delay > 30*time.Second {
+			delay = 30 * time.Second
+		}
+		if now.Sub(b.Start) < delay {
 			return false
 		}
+		b.Start = now
 	}
-	b := a.attempts[key]
-	if now.Sub(b.Start) > 15*time.Minute {
-		b = bucket{Start: now}
-	}
-	b.Count++
+	b.Count = min(b.Count+1, 26)
 	a.attempts[key] = b
-	return b.Count <= 20
+	return strings.HasPrefix(key, "email:") || b.Count <= 20
 }
+
+// IPv4-mapped addresses share the IPv4 /32 bucket; IPv6 privacy addresses
+// within a /64 cannot create independent limits.
+func loginIPPrefix(ip string) string {
+	address, err := netip.ParseAddr(ip)
+	if err != nil {
+		return "unknown"
+	}
+	address = address.Unmap()
+	bits := 128
+	if address.Is4() {
+		bits = 32
+	} else {
+		bits = 64
+	}
+	return netip.PrefixFrom(address, bits).Masked().String()
+}
+
 func (a *App) login(w http.ResponseWriter, r *http.Request) {
 	var v struct {
 		Email    string `json:"email"`
@@ -558,6 +593,10 @@ func (a *App) login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	v.Email = strings.ToLower(strings.TrimSpace(v.Email))
+	if len(v.Email) > 254 || len(v.Password) > 72 {
+		fail(w, r, 401, "INVALID_CREDENTIALS", "邮箱或密码不正确")
+		return
+	}
 	ip, _, _ := net.SplitHostPort(r.RemoteAddr)
 	if parsed := net.ParseIP(ip); parsed != nil {
 		ip = parsed.String()
@@ -572,8 +611,8 @@ func (a *App) login(w http.ResponseWriter, r *http.Request) {
 			break
 		}
 	}
-	if !a.allowLogin("ip:"+ip) || !a.allowLogin("email:"+v.Email) {
-		w.Header().Set("Retry-After", "900")
+	if !a.allowLogin("ip:"+ip) || !a.allowLogin("pair:"+v.Email+":"+loginIPPrefix(ip)) || !a.allowLogin("email:"+v.Email) {
+		w.Header().Set("Retry-After", "30")
 		fail(w, r, 429, "RATE_LIMITED", "尝试次数过多，请稍后再试")
 		return
 	}
