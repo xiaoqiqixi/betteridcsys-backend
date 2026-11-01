@@ -2,12 +2,15 @@ name: Finance backend checks
 on:
   push:
     branches: [main]
+  pull_request:
   workflow_dispatch:
 permissions:
   contents: read
 concurrency:
-  group: checks-${{ github.ref }}
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
+# Fork PRs use public checkouts and synthetic fixtures. No repository secrets
+# are required; github.token keeps the read-only permissions declared above.
 jobs:
   backend-mysql:
     name: Go and real MySQL (${{ matrix.os }})
@@ -27,6 +30,8 @@ jobs:
         with:
           go-version: '1.27.3'
           cache: false
+      - name: Finance PR workflow and documentation contracts
+        run: python3 -B .github/tests/test_finance_contracts.py
       - name: Independent frontend source-pair CLI contracts
         run: python3 -B scripts/test_frontend_pair.py
       - name: Independent backend bundle real Git and Go CLI contracts
