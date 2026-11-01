@@ -45,6 +45,8 @@ func commerceBody(w http.ResponseWriter, r *http.Request, operation string, out 
 }
 func (a *App) commerceError(w http.ResponseWriter, r *http.Request, err error) {
 	switch {
+	case errors.Is(err, ErrInsufficientCredit):
+		fail(w, r, 409, "INSUFFICIENT_CREDIT", "Insufficient account credit")
 	case errors.Is(err, ErrNotFound):
 		fail(w, r, 404, "NOT_FOUND", "Resource not found")
 	case errors.Is(err, ErrAdminRequired):

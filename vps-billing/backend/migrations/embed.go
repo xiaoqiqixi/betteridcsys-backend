@@ -58,3 +58,6 @@ var CommerceCoupons string
 
 //go:embed 019_payment_gateways.sql
 var PaymentGateways string
+
+//go:embed 020_credit_ledger.sql
+var CommerceLedger string

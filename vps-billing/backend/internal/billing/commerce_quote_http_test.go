@@ -13,7 +13,9 @@ func TestMySQLQuoteCouponAndGatewayHandlers(t *testing.T) {
 	f := mysqlCatalogFixture(t)
 	m := f.store.(*MySQL)
 	runtime := newPaymentHTTPRuntime(t)
-	srv := httptest.NewServer(NewApp(m, Config{Demo: true, Origin: "http://localhost", Secret: ID() + ID(), PaymentRuntime: runtime}).Handler())
+	runtime.selection.Slot = "quote-gateway"
+	gateways := &gatewayTestRuntime{slots: map[string]*paymentHTTPRuntime{"quote-gateway": runtime}}
+	srv := httptest.NewServer(NewApp(m, Config{Demo: true, Origin: "http://localhost", Secret: ID() + ID(), PaymentRuntime: gateways}).Handler())
 	defer srv.Close()
 	admin := client(t, srv.URL, f.admin.Email, "CatalogFixture!2026")
 	customer := client(t, srv.URL, f.customer.Email, "CatalogFixture!2026")

@@ -337,6 +337,9 @@ func (a *App) serveAuthorized(w http.ResponseWriter, r *http.Request, u User, p 
 		a.staffHTTP(w, r, u, p)
 		return
 	}
+	if a.credit06HTTP(w, r, u, p) {
+		return
+	}
 	if a.coupons06HTTP(w, r, u, p) {
 		return
 	}
