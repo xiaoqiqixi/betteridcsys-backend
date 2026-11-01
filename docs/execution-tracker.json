@@ -12587,17 +12587,18 @@
           "source_commit": "47b24c9dc33009f00a88769f49c8ba1b9300da0b"
         },
         "successor_ci": {
-          "source_sha": "47b24c9dc33009f00a88769f49c8ba1b9300da0b",
-          "run": 41272311114,
+          "source_sha": "8fa0566cb65f1e972abdcb46732c24ac0e2d2b5b",
+          "run": 41282985998,
           "state": "in_progress",
+          "conclusion": "",
           "pushed": true,
-          "observed_passed": 14,
-          "observed_failed": 2,
-          "observed_running": 2
+          "observed_passed": 12,
+          "observed_failed": 0,
+          "observed_running": 6
         },
         "local_followup": {
           "source_sha": "276c72ace46b55923aa3ade401e0db0b7827f548",
-          "pushed": false,
+          "pushed": true,
           "scope": "bounded settled screenshot capture, exactly one active navigation, boundary documentation",
           "real_browser_repeated": true,
           "product_code_changed": false,
@@ -12605,7 +12606,7 @@
         },
         "parallel_static_ui": {
           "source_sha": "369f85a73c2070f4c82f93980a189edeecc1712d",
-          "state": "committed_not_pushed",
+          "state": "pushed_main_same_source_native_CI_running",
           "root_protected_installed_assets": true,
           "same_origin_tls_and_lifetime": true,
           "no_api_spa_fallback": true,
@@ -12639,7 +12640,7 @@
         },
         "parallel_route_fix": {
           "source_sha": "8fa0566cb65f1e972abdcb46732c24ac0e2d2b5b",
-          "state": "committed_not_pushed",
+          "state": "pushed_main_kernel_preflight_verified_full_native_CI_running",
           "verified_failure_22_24": "VERIFICATION_PROCESS_NETWORK_ROUTES",
           "kernel_main_table_absence_format": "source-confirmed legal zero-byte representation; actual old native bytes not exported",
           "regression_methods": 4,
@@ -12648,13 +12649,114 @@
           "all_ipv4_tables_netlink_check_required": true,
           "fast_linux_kernel_preflight_required": true,
           "production_network_security_changed": false,
-          "native_acceptance_pending": true
+          "native_acceptance_pending": true,
+          "kernel_preflight": {
+            "ubuntu22": true,
+            "ubuntu24": true,
+            "same_source_sha": "8fa0566cb65f1e972abdcb46732c24ac0e2d2b5b",
+            "actual_linux_processes": true,
+            "http_started": false,
+            "mysql_verified": false,
+            "artifact_digests_verified": [
+              {
+                "id": 13074611970,
+                "bytes": 748,
+                "sha256": "38d04ac9cdfae0e770af1531dbfca3c9373684b9da3c6010854dc8fafaadd986"
+              },
+              {
+                "id": 13073992387,
+                "bytes": 748,
+                "sha256": "f25735c27d4cd610d10bfb89f604915c3cc3182740ad421623cc7561e22ef9ac"
+              }
+            ]
+          }
         },
         "backend_record_ci": {
-          "source_sha": "1d5e67e853cb1bf146bc8670d4d09a52ba9c6712",
-          "run": 41271966809,
+          "source_sha": "758a2cc26d02562b3c5102dba24e591b4e4b656a",
+          "run": 41275174577,
           "state": "success",
           "passed": 4
+        },
+        "completed_route_diagnostic_ci": {
+          "source_sha": "47b24c9dc33009f00a88769f49c8ba1b9300da0b",
+          "run": 41272311114,
+          "state": "completed_failure",
+          "pushed": true,
+          "observed_passed": 16,
+          "observed_failed": 2,
+          "observed_running": 0,
+          "failed_configuration_22_24": "VERIFICATION_PROCESS_NETWORK_ROUTES",
+          "data_artifacts_verified": [
+            {
+              "ubuntu": "22.04",
+              "id": 13070482687,
+              "bytes": 2689,
+              "sha256": "d8fe92a3ec03cbc87dec0a7cd22a2a42789a751d2e31c10680c0ea1d19243f01"
+            },
+            {
+              "ubuntu": "24.04",
+              "id": 13071272448,
+              "bytes": 2691,
+              "sha256": "4c1d1d1f395229ffa13eaa3196914cc1233a460c9577ef1ca7c8dc9c7acb6264"
+            }
+          ]
+        },
+        "parallel_managed_handoff": {
+          "source_sha": "9f7733a54eff79ec2c1b4ca6a56232611978b46f",
+          "state": "committed_local_main_native_positive_pending",
+          "pushed": false,
+          "scope": [
+            "original installed ELF/archive/target plan rederived",
+            "original sealed-target lock held through complete root callback",
+            "nonce and fresh proof digest bound private root-parent IPC",
+            "independent process guards retained through plaintext cleanup",
+            "only start isolated HTTPS after successful cleanup",
+            "same installed UI, minimum SQL and original absolute deadline",
+            "concurrent duplicate startup refused; stop waits for real child exit"
+          ],
+          "local_mysql": {
+            "private_socket_only": true,
+            "mysql": "8.4.13",
+            "system_services_changed": false,
+            "host_trust_changed": false,
+            "mysql-managed-launch-verification": {
+              "exit": 0,
+              "seconds": 25.878,
+              "top_level_pass": 15,
+              "runtime_skips": 0
+            },
+            "mysql-managed-launch-full": {
+              "exit": 0,
+              "seconds": 666.323,
+              "top_level_pass": 539,
+              "runtime_skips": 0
+            },
+            "leftover_fixture_databases": 0,
+            "leftover_verification_users_and_roles": 0,
+            "passed": true,
+            "process_stopped": true,
+            "private_data_and_credentials_removed": true
+          },
+          "native_workflow_contracts": 78,
+          "go_vet": true,
+          "linux_amd64_cross_build": true,
+          "shellcheck_actionlint": true,
+          "native_evidence_required": "verification_original_approval_launch",
+          "native_positive_executed": false,
+          "native_fixture_uid_gid": 65532,
+          "dedicated_system_account_installed": false,
+          "production_systemd_manager_complete": false,
+          "actual_original_account_browser_login": false,
+          "migration_ready": false,
+          "financial_logic_changed": false,
+          "original_non_finder_files_preserved": 221,
+          "pending": [
+            "dedicated locked OS identity and installation ownership receipt",
+            "production fixed root manager and non-restarting systemd lifecycle",
+            "same-source Ubuntu22/24 original approval handoff acceptance",
+            "actual restored-account browser acceptance",
+            "full source export, single-active takeover and rollback acceptance"
+          ]
         }
       }
     }
