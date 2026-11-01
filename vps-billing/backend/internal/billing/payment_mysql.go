@@ -339,6 +339,9 @@ func (m *MySQL) SettlePayment(ctx context.Context, id string, v integrations.Ver
 				return PaymentSettlement{}, e
 			}
 			o.Status, i.Status, i.PaidAt = "paid", "paid", &paid
+			if e = recordAffiliateCommissionTx(ctx, tx, i.ID, now); e != nil {
+				return PaymentSettlement{}, e
+			}
 		} else {
 			if _, e = tx.ExecContext(ctx, "UPDATE invoices SET settlement_review=TRUE WHERE id=?", i.ID); e != nil {
 				return PaymentSettlement{}, e

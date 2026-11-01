@@ -73,3 +73,6 @@ var CreditPrecision string
 
 //go:embed 024_commerce_billing.sql
 var CommerceBilling string
+
+//go:embed 025_affiliate_commissions.sql
+var AffiliateCommissions string

@@ -376,6 +376,7 @@ func (a *App) registerAccountAutomation() {
 		return AutomationResult{Processed: int64(processed), Failed: int64(failed)}, err
 	})
 	_ = a.RegisterAutomationJob("close_tickets", a.closeInactiveTickets)
+	_ = a.RegisterAutomationJob("release_affiliate", a.releaseAffiliate)
 }
 
 func (a *App) emailTemplatesHTTP(w http.ResponseWriter, r *http.Request, u User, path string) {

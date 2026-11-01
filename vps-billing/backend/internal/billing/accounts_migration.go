@@ -33,7 +33,14 @@ var accountFeatureSchema = map[string]string{
 var accountFeatureKeys = []string{"ssh_keys:id", "ssh_keys:user_id,fingerprint", "api_tokens:id", "api_tokens:token_hash", "support_departments:id", "tickets:id", "tickets:number", "ticket_messages:id", "announcements:id"}
 var accountFeatureFKs = []string{"ssh_keys:user_id:users:id:CASCADE", "api_tokens:user_id:users:id:CASCADE", "tickets:user_id:users:id:RESTRICT", "tickets:department_id:support_departments:id:RESTRICT", "tickets:service_id:services:id:RESTRICT", "tickets:assignee_id:users:id:RESTRICT", "ticket_messages:ticket_id:tickets:id:CASCADE", "ticket_messages:author_id:users:id:RESTRICT"}
 
+var affiliateColumns = map[string]string{"affiliate_commissions": "id:char(32)! affiliate_id:char(32)! client_id:char(32)! invoice_id:char(32)! currency:char(3)! decimal_places:int! basis_points:int! amount_minor:bigint! withdrawn_minor:bigint! status:enum('pending','available','withdrawn','cancelled')! created_at:datetime(6)! released_at:datetime(6)?"}
+
 func accountSchemaColumns(version int, specs map[string]string) {
+	if schemaIncludes(version, migrations.AffiliateCommissions) {
+		for k, v := range affiliateColumns {
+			specs[k] = v
+		}
+	}
 	if schemaIncludes(version, migrations.AccountFeatures) {
 		for k, v := range accountFeatureSchema {
 			specs[k] = v

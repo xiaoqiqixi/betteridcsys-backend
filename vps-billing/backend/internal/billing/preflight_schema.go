@@ -199,6 +199,9 @@ func preflightChecks(version int) map[string]map[string]string {
 		checks["credit_ledger"]["credit_precision"] = "decimal_places >= 0 AND decimal_places <= 6"
 	}
 	commerceBillingChecks(version, checks)
+	if schemaIncludes(version, migrations.AffiliateCommissions) {
+		checks["affiliate_commissions"] = map[string]string{"affiliate_commission_money": "amount_minor >= 0 AND amount_minor <= 9007199254740991 AND withdrawn_minor >= 0 AND withdrawn_minor <= amount_minor", "affiliate_commission_rate": "basis_points >= 0 AND basis_points <= 10000", "affiliate_commission_precision": "decimal_places >= 0 AND decimal_places <= 6"}
+	}
 	return checks
 }
 
@@ -452,6 +455,10 @@ func validatePreflightTableKeys(ctx context.Context, conn *sql.Conn, version int
 	if schemaIncludes(version, migrations.PaymentGateways) {
 		required["payment_gateway_settings:id"] = true
 	}
+	if schemaIncludes(version, migrations.AffiliateCommissions) {
+		required["affiliate_commissions:id"] = true
+		required["affiliate_commissions:invoice_id"] = true
+	}
 	if schemaIncludes(version, migrations.CommerceCatalog) {
 		for _, key := range commerceCatalogKeys {
 			required[key] = true
@@ -600,6 +607,11 @@ func validatePreflightTableKeys(ctx context.Context, conn *sql.Conn, version int
 	if schemaIncludes(version, migrations.StaffRoles) {
 		fks["staff_members:user_id:users:id:CASCADE"] = true
 		fks["staff_members:role_id:staff_roles:id:RESTRICT"] = true
+	}
+	if schemaIncludes(version, migrations.AffiliateCommissions) {
+		for _, k := range []string{"affiliate_commissions:affiliate_id:affiliates:user_id:RESTRICT", "affiliate_commissions:client_id:users:id:RESTRICT", "affiliate_commissions:invoice_id:invoices:id:RESTRICT"} {
+			fks[k] = true
+		}
 	}
 
 	if schemaIncludes(version, migrations.CommerceCatalog) {
