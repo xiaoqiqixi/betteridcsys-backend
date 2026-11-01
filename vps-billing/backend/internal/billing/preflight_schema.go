@@ -217,7 +217,11 @@ func preflightColumnMatches(table, name, spec, kind, nullable, extra, generated 
 		return false
 	}
 	wantDefault, hasDefault := preflightDefaults[table+"."+name]
-	if def.Valid != hasDefault || (hasDefault && strings.ToLower(def.String) != wantDefault) {
+	actualDefault := def.String
+	if strings.HasPrefix(wantDefault, "current_timestamp") {
+		actualDefault = strings.ToLower(actualDefault)
+	}
+	if def.Valid != hasDefault || (hasDefault && actualDefault != wantDefault) {
 		return false
 	}
 	wantExtra := ""
@@ -227,7 +231,7 @@ func preflightColumnMatches(table, name, spec, kind, nullable, extra, generated 
 	if extra != wantExtra {
 		return false
 	}
-	if strings.HasPrefix(kind, "char(") || strings.HasPrefix(kind, "varchar(") || strings.HasPrefix(kind, "enum(") {
+	if strings.HasPrefix(kind, "char(") || strings.HasPrefix(kind, "varchar(") || strings.HasPrefix(kind, "enum(") || kind == "tinytext" || kind == "text" || kind == "mediumtext" || kind == "longtext" {
 		wantCharset, wantCollation := "utf8mb4", databaseCollation
 		switch table + "." + name {
 		case "invoice_payments.attempt_id", "coupons.code", "products.node_id", "commerce_requests.operation", "commerce_requests.request_key":

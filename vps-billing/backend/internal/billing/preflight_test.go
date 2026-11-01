@@ -11,6 +11,34 @@ import (
 	"testing"
 )
 
+func TestPreflightStringDefaultsAndTextCollation(t *testing.T) {
+	valid := func(s string) sql.NullString { return sql.NullString{String: s, Valid: true} }
+	for _, tc := range []struct {
+		name, table, column, spec, kind, def, charset, collation string
+		hasDefault, want                                         bool
+	}{
+		{"currency", "users", "currency", "char(3)!", "char(3)", "CNY", "utf8mb4", "utf8mb4_0900_ai_ci", true, true},
+		{"currency case", "users", "currency", "char(3)!", "char(3)", "cny", "utf8mb4", "utf8mb4_0900_ai_ci", true, false},
+		{"currency missing default", "users", "currency", "char(3)!", "char(3)", "", "utf8mb4", "utf8mb4_0900_ai_ci", false, false},
+		{"profile text", "account_profiles", "notes", "text!", "text", "", "utf8mb4", "utf8mb4_0900_ai_ci", false, true},
+		{"response text", "account_requests", "response", "mediumtext?", "mediumtext", "", "utf8mb4", "utf8mb4_0900_ai_ci", false, true},
+		{"changed text charset", "account_profiles", "notes", "text!", "text", "", "ascii", "ascii_bin", false, false},
+		{"changed text collation", "account_profiles", "notes", "text!", "text", "", "utf8mb4", "utf8mb4_bin", false, false},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			nullable := "NO"
+			if strings.HasSuffix(tc.spec, "?") {
+				nullable = "YES"
+			}
+			def := sql.NullString{String: tc.def, Valid: tc.hasDefault}
+			got := preflightColumnMatches(tc.table, tc.column, tc.spec, tc.kind, nullable, "", "", def, valid(tc.charset), valid(tc.collation), "utf8mb4_0900_ai_ci")
+			if got != tc.want {
+				t.Fatalf("column matches = %v, want %v", got, tc.want)
+			}
+		})
+	}
+}
+
 func TestMySQLTransportExceptionIsLocalOnly(t *testing.T) {
 	for _, dsn := range []string{"user:secret@tcp(127.0.0.1:3306)/aster", "user:secret@tcp(db.invalid:3306)/aster?tls=true", "user:secret@unix(relative.sock)/aster", "user:secret@unix(/run/mysql.sock)/aster?tls=skip-verify", "user:secret@unix(/run/mysql.sock)/aster?allowFallbackToPlaintext=true"} {
 		if _, err := mysqlConfiguration(dsn, true); err == nil {
