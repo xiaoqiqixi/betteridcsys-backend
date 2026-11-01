@@ -210,7 +210,7 @@ func (a *App) serve(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	p = strings.TrimPrefix(p, "/api/v1")
-	if r.Method != "GET" && r.Method != "POST" {
+	if r.Method != "GET" && r.Method != "POST" && r.Method != "PATCH" && r.Method != "DELETE" {
 		fail(w, r, 405, "METHOD_NOT_ALLOWED", "不支持此请求方式")
 		return
 	}
@@ -220,7 +220,7 @@ func (a *App) serve(w http.ResponseWriter, r *http.Request) {
 		a.paymentCallbackHTTP(w, r, strings.TrimPrefix(p, "/payment-callbacks/"))
 		return
 	}
-	if r.Method == "POST" {
+	if r.Method != "GET" {
 		t := a.token(r)
 		origin := r.Header.Get("Origin")
 		if t == "" || !hmac.Equal([]byte(r.Header.Get("X-CSRF-Token")), []byte(a.csrf(t))) || (origin != "" && origin != a.Config.Origin) {
@@ -309,6 +309,10 @@ func (a *App) serve(w http.ResponseWriter, r *http.Request) {
 	a.serveAuthorized(w, r, u, p, false)
 }
 func (a *App) serveAuthorized(w http.ResponseWriter, r *http.Request, u User, p string, admin bool) {
+	if p == "/admin/roles" || p == "/admin/staff" || strings.HasPrefix(p, "/admin/staff/") {
+		a.staffHTTP(w, r, u, p)
+		return
+	}
 	uid := u.ID
 	if admin {
 		uid = ""

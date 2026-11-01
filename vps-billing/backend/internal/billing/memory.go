@@ -14,6 +14,7 @@ type memoRequest struct {
 	Order       Order
 }
 type Memory struct {
+	staffRoles                 map[string]StaffRole
 	staffPolicies              map[string]staffPolicy
 	productConfigurations      map[string]ProductConfiguration
 	orderProductConfigurations map[string]orderProductConfiguration
