@@ -107,7 +107,8 @@ approved worker passes its handshake. Customers call
 `POST /api/v1/invoices/{id}/pay` with `{"method":"gateway","gateway_id":"card-us"}`
 and an `Idempotency-Key`. Core stores the attempt before contacting the worker.
 `GET /api/v1/invoices/{id}/payments/{payment_id}` checks ownership, uses
-`payment.query` when available, and otherwise returns stored state. Browser
+`payment.query` when available, and otherwise returns that attempt's stored state.
+A paid invoice alone does not prove that a particular attempt received funds. Browser
 returns and successful checkout creation never settle an invoice.
 
 Callbacks go to `POST /api/v1/payment-callbacks/{gateway_id}`. Only that slot may

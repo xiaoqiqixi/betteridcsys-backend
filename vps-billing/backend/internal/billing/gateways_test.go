@@ -128,6 +128,22 @@ func gatewayFlowContract(t *testing.T, f catalogFixture, adminPassword, customer
 			if flow == "instructions" && queries != 0 {
 				t.Fatal("undeclared query called")
 			}
+			if flow == "instructions" {
+				if _, err := f.store.(paymentResolutionStore).VoidPayment(t.Context(), f.admin, pid, "Customer selected another gateway"); err != nil {
+					t.Fatal(err)
+				}
+				replacement, _, err := f.store.ReservePayment(t.Context(), f.customer, invoice.ID, "replacement-"+invoice.ID, "other-gateway", "other-merchant")
+				if err != nil {
+					t.Fatal(err)
+				}
+				if _, err := f.store.SettlePayment(t.Context(), replacement.ID, syntheticPayment(replacement)); err != nil {
+					t.Fatal(err)
+				}
+				status, out = customer.request("GET", poll, nil, "")
+				if status != 200 || out["data"].(map[string]any)["status"] != "voided" || out["data"].(map[string]any)["invoice_status"] != "paid" {
+					t.Fatal("another gateway changed this attempt's status", status, out)
+				}
+			}
 			if flow == "qr" {
 				raw, signature := p.signed(t, e)
 				status, out = paymentHTTPNotify(t, &paymentHTTPHarness{server: srv}, "POST", "/api/v1/payment-callbacks/"+flow, raw, signature, "")

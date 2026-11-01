@@ -91,9 +91,5 @@ func (a *App) paymentStatusHTTP(w http.ResponseWriter, r *http.Request, actor Us
 	if invoiceStatus == "void" {
 		invoiceStatus = "cancelled"
 	}
-	// Offline instructions are confirmed by the existing staff payment action.
-	if invoiceStatus == "paid" && attempt.Checkout != nil && attempt.Checkout.Flow == "instructions" {
-		status = "succeeded"
-	}
 	jsonOut(w, 200, map[string]string{"payment_id": attempt.ID, "status": status, "invoice_status": invoiceStatus})
 }
