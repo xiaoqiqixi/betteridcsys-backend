@@ -38,8 +38,13 @@ def validate_bootstrap():
     if sys.platform != "linux" or os.geteuid() != 0:
         raise RuntimeError("Run this Linux operator executor explicitly as root.")
     base = os.path.dirname(os.path.abspath(__file__))
-    for name in ("core-operation.py", "core-manager.py", "update-manager.py", "plugin-manager.py"):
-        path = base + "/" + name
+    root = Path(base).parents[1]
+    if root.name == "vps-billing":
+        root = root.parent
+    paths = [base + "/" + name for name in ("core-operation.py", "core-manager.py", "update-manager.py", "plugin-manager.py")]
+    paths += [str(root / name) for name in ("scripts/backend_bundle.py", "scripts/frontend_pair.py", "scripts/pair_runtime.py",
+                                          "scripts/release_bundle.py", "contracts/frontend-bundle/frontend_bundle.py")]
+    for path in paths:
         descriptor = os.open("/", os.O_RDONLY | os.O_DIRECTORY | os.O_CLOEXEC)
         try:
             parts = path[1:].split("/")
@@ -125,7 +130,7 @@ def _sha_protected_file(path, trust, maximum):
     descriptor = updater.protected_open(path, trust=trust)
     try:
         before = os.fstat(descriptor)
-        require(0 < before.st_size <= maximum, "Protected file exceeds its hashing bound.")
+        require((0 < before.st_size <= maximum) or before.st_size == 0 and path.endswith("/manifests/go.sum"), "Protected file exceeds its hashing bound.")
         value, total = hashlib.sha256(), 0
         while True:
             raw = os.read(descriptor, 1 << 20)
@@ -174,6 +179,31 @@ def prepared_release(root, trust=updater._Trust()):
         updater.static_elf(read_file(root + "/" + binary, updater.MAX_FILE, trust))
     build = updater.strict_json(read_file(root + "/manifests/BUILD.json", updater.MAX_JSON, trust))
     require(build.get("source_commit") == receipt["source_sha"] and build.get("component_versions", {}).get("core") == receipt["version"] and build.get("release_kind") == "core" and build.get("target") == "linux/amd64", "Prepared BUILD identity differs from its receipt.")
+    if receipt.get("distribution_format") == "paired-bundles-v1":
+        policy = updater.paired_policy()
+        pin = policy.P.validate_pin(build.get("frontend_pair"))
+        require(build.get("schema") == 4 and build.get("distribution_format") == policy.FORMAT and
+                receipt.get("independent_publisher_signature") is True and build.get("cgo_enabled") is False,
+                "Signed paired preparation is required.")
+        back_raw = read_file(root + "/manifests/BACKEND.json", updater.MAX_JSON, trust)
+        front_raw = read_file(root + "/manifests/FRONTEND.json", updater.MAX_JSON, trust)
+        back, front = updater.strict_json(back_raw), updater.strict_json(front_raw)
+        policy.R.shape_identity(back, front, pin, receipt["source_sha"])
+        expected = policy.R.expected_inventory(back, front, back_raw, front_raw)
+        expected = {item["path"]: item["sha256"] for item in expected}
+        expected["manifests/BUILD.json"] = inventory["manifests/BUILD.json"]
+        require(expected == inventory and updater.digest(front_raw) == pin["manifest_sha256"] and
+                inventory.get("manifests/frontend/compatibility.json") == pin["compatibility_sha256"] and
+                build.get("binary_sha256") == {path: inventory[path] for path in policy.B.BINS} and
+                inventory.get("LICENSE") == updater.LICENSE_SHA256, "Prepared paired inventory differs from signed manifests.")
+        migrations = {}
+        for path in sorted(p for p in inventory if p.startswith("migrations/")):
+            require(re.fullmatch(r"migrations/[0-9]{3}_[a-z0-9_]+\.sql", path) and
+                    int(path.split("/")[1][:3]) == len(migrations) + 1, "Migrations must form a complete prefix.")
+            migrations[str(len(migrations) + 1)] = inventory[path]
+        require(migrations and "web/index.html" in inventory, "Paired runtime must include migrations and web assets.")
+        return {"version": receipt["version"], "source_sha": receipt["source_sha"], "receipt_sha256": updater.digest(raw),
+                "files_sha256": inventory, "migration_checksums": migrations}
     copies = build.get("source_files")
     required_deploy = {"deploy/scripts/backup-native.sh", "deploy/scripts/plugin-manager.py", "deploy/scripts/update-manager.py", "deploy/scripts/core-manager.py", "deploy/systemd/aster-api.service", "deploy/systemd/aster-smtp.service", "deploy/systemd/api.env.example", "deploy/nginx.native.conf"}
     if updater.stable(receipt["version"]) >= (0, 5, 2):

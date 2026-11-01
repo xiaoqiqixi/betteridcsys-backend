@@ -84,7 +84,7 @@ func TestUpdateHTTPHandoffWithOfficialProtocolLoopbackFixture(t *testing.T) {
 	base := "/repos/" + updates.Repository
 	archiveBytes := []byte("web must not download or execute this archive")
 	build := encode(map[string]any{"schema": 2, "release_kind": "core", "release_label": "0.4.1", "source_commit": source, "target": "linux/amd64", "cgo_enabled": false, "component_versions": map[string]string{"core": "0.4.1", "smtp": "1.0.0"}, "plugin_protocol": "aster.smtp/1", "smtp_core_compatibility": map[string]string{"min": "0.4.0", "max_exclusive": "0.5.0"}})
-	prov := encode(map[string]any{"schema": 1, "repository": updates.Repository, "repository_id": updates.RepositoryID, "tag": tag, "version": "0.4.1", "source_sha": source, "run_id": 100, "run_attempt": 2, "event": "push", "workflow_path": ".github/workflows/release-build.yml", "workflow_sha": source, "run_head_sha": source, "default_branch": "main", "default_sha": source, "artifact_name": "candidate-100-2", "trusted_blobs": map[string]string{".github/workflows/release-build.yml": strings.Repeat("d", 40)}, "assets": map[string]any{archive: map[string]any{"sha256": hash(archiveBytes), "size": len(archiveBytes)}, "BUILD.json": map[string]any{"sha256": hash(build), "size": len(build)}}})
+	prov := encode(map[string]any{"schema": 1, "repository": updates.Repository, "repository_id": updates.RepositoryID, "tag": tag, "version": "0.4.1", "source_sha": source, "run_id": 100, "run_attempt": 2, "event": "push", "workflow_path": ".github/workflows/release.yml", "workflow_sha": source, "run_head_sha": source, "default_branch": "main", "default_sha": source, "artifact_name": "candidate-100-2", "trusted_blobs": map[string]string{".github/workflows/release.yml": strings.Repeat("d", 40)}, "assets": map[string]any{archive: map[string]any{"sha256": hash(archiveBytes), "size": len(archiveBytes)}, "BUILD.json": map[string]any{"sha256": hash(build), "size": len(build)}}})
 	sums := []byte(hash(build) + "  BUILD.json\n" + hash(prov) + "  PROVENANCE.json\n" + hash(archiveBytes) + "  " + archive + "\n")
 	assetData := map[string][]byte{archive: archiveBytes, "BUILD.json": build, "PROVENANCE.json": prov, "SHA256SUMS": sums}
 	assets := []any{}
@@ -99,8 +99,8 @@ func TestUpdateHTTPHandoffWithOfficialProtocolLoopbackFixture(t *testing.T) {
 	payloads[base] = encode(map[string]any{"id": updates.RepositoryID, "full_name": updates.Repository})
 	payloads[base+"/releases?per_page=20"] = encode([]any{release})
 	payloads[base+"/git/ref/tags/"+tag] = encode(map[string]any{"ref": "refs/tags/" + tag, "object": map[string]string{"type": "commit", "sha": source}})
-	payloads[base+"/actions/runs/100/attempts/2"] = encode(map[string]any{"id": 100, "run_attempt": 2, "status": "completed", "conclusion": "success", "path": ".github/workflows/release-build.yml", "repository": map[string]any{"id": updates.RepositoryID, "full_name": updates.Repository}, "head_repository": map[string]any{"id": updates.RepositoryID, "full_name": updates.Repository}, "head_sha": source, "head_branch": tag, "event": "push", "workflow_id": 7})
-	payloads[base+"/actions/workflows/release-build.yml"] = encode(map[string]any{"id": 7, "path": ".github/workflows/release-build.yml", "state": "active"})
+	payloads[base+"/actions/runs/100/attempts/2"] = encode(map[string]any{"id": 100, "run_attempt": 2, "status": "completed", "conclusion": "success", "path": ".github/workflows/release.yml", "repository": map[string]any{"id": updates.RepositoryID, "full_name": updates.Repository}, "head_repository": map[string]any{"id": updates.RepositoryID, "full_name": updates.Repository}, "head_sha": source, "head_branch": tag, "event": "push", "workflow_id": 7})
+	payloads[base+"/actions/workflows/release.yml"] = encode(map[string]any{"id": 7, "path": ".github/workflows/release.yml", "state": "active"})
 	var fixtureMu sync.Mutex
 	providerRequests := 0
 	archiveRequests := 0

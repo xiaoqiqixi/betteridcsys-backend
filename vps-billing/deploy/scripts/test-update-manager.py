@@ -83,7 +83,10 @@ class Fixture:
         if component == "core" and core_version is not None:
             self.version = core_version
         self.tag = ("smtp-v" if component == "smtp" else "v") + self.version
-        self.source = {path: (REPO / path).read_bytes() for path in manager.INPUTS}
+        # Legacy on-disk format fixtures must not read the independently rewritten frontend source.
+        legacy_frontend = {"vps-billing/frontend/package.json": b'{"name":"legacy-fixture","version":"0.5.0"}\n',
+                           "vps-billing/frontend/package-lock.json": b'{"name":"legacy-fixture","lockfileVersion":3,"packages":{}}\n'}
+        self.source = {path: legacy_frontend[path] if path in legacy_frontend else (REPO / path).read_bytes() for path in manager.INPUTS}
         self.source["vps-billing/backend/pkg/pluginapi/protocol.go"] = b'package pluginapi\nconst CoreVersion = "0.4.1"\n'
         self.source["vps-billing/backend/plugins/smtp/VERSION"] = b"1.0.1\n"
         if raw:
@@ -144,7 +147,7 @@ class Fixture:
         if self.format == "raw-binaries-v1": self.intent.update(schema=2, distribution_format=self.format)
         self.envelope = {"schema": self.intent["schema"], "status": "awaiting_host_operator", "intent": self.intent}
         identity = {"id": manager.REPOSITORY_ID, "full_name": manager.REPOSITORY}
-        self.responses = {"/git/ref/tags/" + self.tag: {"ref": "refs/tags/" + self.tag, "object": {"type": "commit", "sha": SOURCE}}, "/compare/" + SOURCE + "...main": {"status": "identical", "merge_base_commit": {"sha": SOURCE}}, "/releases/tags/" + self.tag: {"id": 5678, "tag_name": self.tag, "draft": False, "prerelease": False, "target_commitish": SOURCE, "assets": [dict(name=a["name"], id=a["id"], size=a["size"], digest="sha256:" + a["sha256"], state="uploaded") for a in self.assets]}, "/actions/workflows/release-build.yml": {"id": 33, "path": manager.WORKFLOW, "state": "active"}, "/actions/runs/1234": {"id": 1234, "run_attempt": 1, "workflow_id": 33, "path": manager.WORKFLOW, "status": "completed", "conclusion": "success", "event": "push", "head_sha": SOURCE, "head_branch": self.tag, "repository": identity, "head_repository": identity}, "/git/trees/" + SOURCE + "?recursive=1": {"truncated": False, "tree": [{"path": path, "type": "blob", "mode": "100644", "sha": manager.blob_sha(raw)} for path, raw in self.source.items()]}}
+        self.responses = {"/git/ref/tags/" + self.tag: {"ref": "refs/tags/" + self.tag, "object": {"type": "commit", "sha": SOURCE}}, "/compare/" + SOURCE + "...main": {"status": "identical", "merge_base_commit": {"sha": SOURCE}}, "/releases/tags/" + self.tag: {"id": 5678, "tag_name": self.tag, "draft": False, "prerelease": False, "target_commitish": SOURCE, "assets": [dict(name=a["name"], id=a["id"], size=a["size"], digest="sha256:" + a["sha256"], state="uploaded") for a in self.assets]}, "/actions/workflows/release.yml": {"id": 33, "path": manager.WORKFLOW, "state": "active"}, "/actions/runs/1234": {"id": 1234, "run_attempt": 1, "workflow_id": 33, "path": manager.WORKFLOW, "status": "completed", "conclusion": "success", "event": "push", "head_sha": SOURCE, "head_branch": self.tag, "repository": identity, "head_repository": identity}, "/git/trees/" + SOURCE + "?recursive=1": {"truncated": False, "tree": [{"path": path, "type": "blob", "mode": "100644", "sha": manager.blob_sha(raw)} for path, raw in self.source.items()]}}
         for raw in self.source.values():
             blob = manager.blob_sha(raw)
             self.responses["/git/blobs/" + blob] = {"sha": blob, "size": len(raw), "encoding": "base64", "content": base64.b64encode(raw).decode()}

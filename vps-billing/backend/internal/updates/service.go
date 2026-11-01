@@ -12,8 +12,8 @@ import (
 	"time"
 )
 
-const Repository = "xiaoqiqixi/betteridcsys"
-const RepositoryID int64 = 1418618420
+const Repository = "xiaoqiqixi/betteridcsys-backend"
+const RepositoryID int64 = 1435344087
 
 var (
 	ErrUnavailable  = errors.New("official release metadata unavailable")
