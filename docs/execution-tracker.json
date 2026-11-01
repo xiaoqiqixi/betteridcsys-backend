@@ -12389,13 +12389,13 @@
         "host_startup": false
       },
       "isolated_process_integration": {
-        "state": "native_identity_failure_diagnosis_and_readonly_UI_actual_component_acceptance",
+        "state": "low_level_native_verified_managed_successor_CI_running_root_manager_local",
         "production_root_launcher_connected": false,
         "new_native_scenario_executed": true,
         "systemd": false,
         "migration_browser_acceptance": false,
-        "scope": "fixed private child command -> nonroot isolated HTTPS + real minimum SQL; lifetime and actual exit; not full managed activation",
-        "source_sha": "d0c325269b92b331f58d7c2bf2eca57cb0f1ee3d",
+        "scope": "Verified low-level isolated process/static UI/stop-expiry-parent-death on Ubuntu22/24. Original installed handoff and system account are in successor CI; production root manager local only; no systemd/browser/full migration approval.",
+        "source_sha": "8fa0566cb65f1e972abdcb46732c24ac0e2d2b5b",
         "pushed": true,
         "local_public_go_tests": 3,
         "native_workflow_contracts": 70,
@@ -12425,8 +12425,8 @@
             "ok  \taster/cloud/plugins/billingconnector\t1.464s"
           ]
         },
-        "implementation_commit": "ae6cdd2b13d58a4d49ad8ea71e28dca3297b9f88",
-        "ci_run": 41002207487,
+        "implementation_commit": "8fa0566cb65f1e972abdcb46732c24ac0e2d2b5b",
+        "ci_run": 41282985998,
         "mysql_cleanup": {
           "mysql": "8.4.13",
           "private_socket_only": true,
@@ -12579,7 +12579,7 @@
           }
         },
         "next_record": "EXECUTION-20261101.md",
-        "native_new_scenario_passed": false,
+        "native_new_scenario_passed": true,
         "parallel_diagnostics": {
           "native_contract_tests": 73,
           "image_transport": "fixed safe failure classification; original URL/TLS/signature/digest/no-retry limits unchanged",
@@ -12587,14 +12587,15 @@
           "source_commit": "47b24c9dc33009f00a88769f49c8ba1b9300da0b"
         },
         "successor_ci": {
-          "source_sha": "8fa0566cb65f1e972abdcb46732c24ac0e2d2b5b",
-          "run": 41282985998,
+          "source_sha": "785ea5da445de4d90711cf690e0cdeff9069ee7e",
+          "run": 41287022975,
           "state": "in_progress",
           "conclusion": "",
           "pushed": true,
-          "observed_passed": 12,
+          "observed_passed": 6,
           "observed_failed": 0,
-          "observed_running": 6
+          "observed_cancelled": 0,
+          "observed_running": 12
         },
         "local_followup": {
           "source_sha": "276c72ace46b55923aa3ade401e0db0b7827f548",
@@ -12640,7 +12641,7 @@
         },
         "parallel_route_fix": {
           "source_sha": "8fa0566cb65f1e972abdcb46732c24ac0e2d2b5b",
-          "state": "pushed_main_kernel_preflight_verified_full_native_CI_running",
+          "state": "same_source_full_CI_18_passed_native_22_24_verified",
           "verified_failure_22_24": "VERIFICATION_PROCESS_NETWORK_ROUTES",
           "kernel_main_table_absence_format": "source-confirmed legal zero-byte representation; actual old native bytes not exported",
           "regression_methods": 4,
@@ -12649,7 +12650,7 @@
           "all_ipv4_tables_netlink_check_required": true,
           "fast_linux_kernel_preflight_required": true,
           "production_network_security_changed": false,
-          "native_acceptance_pending": true,
+          "native_acceptance_pending": false,
           "kernel_preflight": {
             "ubuntu22": true,
             "ubuntu24": true,
@@ -12669,11 +12670,21 @@
                 "sha256": "f25735c27d4cd610d10bfb89f604915c3cc3182740ad421623cc7561e22ef9ac"
               }
             ]
+          },
+          "full_native_configuration": {
+            "ubuntu22": true,
+            "ubuntu24": true,
+            "source_sha": "8fa0566cb65f1e972abdcb46732c24ac0e2d2b5b",
+            "run": 41282985998,
+            "strict_tls": true,
+            "all_ipv4_tables_empty": true,
+            "actual_process_and_sql_drain": true,
+            "root_managed_launch_not_in_this_source": true
           }
         },
         "backend_record_ci": {
-          "source_sha": "758a2cc26d02562b3c5102dba24e591b4e4b656a",
-          "run": 41275174577,
+          "source_sha": "d8d9fa4e6c0205340163420d526c83a4b38c3a5b",
+          "run": 41284761546,
           "state": "success",
           "passed": 4
         },
@@ -12703,8 +12714,8 @@
         },
         "parallel_managed_handoff": {
           "source_sha": "9f7733a54eff79ec2c1b4ca6a56232611978b46f",
-          "state": "committed_local_main_native_positive_pending",
-          "pushed": false,
+          "state": "pushed_main_native_positive_in_successor_CI",
+          "pushed": true,
           "scope": [
             "original installed ELF/archive/target plan rederived",
             "original sealed-target lock held through complete root callback",
@@ -12743,7 +12754,7 @@
           "shellcheck_actionlint": true,
           "native_evidence_required": "verification_original_approval_launch",
           "native_positive_executed": false,
-          "native_fixture_uid_gid": 65532,
+          "native_fixture_uid_gid": "operation_owned_system_identity_in_785ea5d",
           "dedicated_system_account_installed": false,
           "production_systemd_manager_complete": false,
           "actual_original_account_browser_login": false,
@@ -12751,13 +12762,102 @@
           "financial_logic_changed": false,
           "original_non_finder_files_preserved": 221,
           "pending": [
-            "dedicated locked OS identity and installation ownership receipt",
-            "production fixed root manager and non-restarting systemd lifecycle",
-            "same-source Ubuntu22/24 original approval handoff acceptance",
+            "same-source Ubuntu22/24 original approval and dedicated identity acceptance",
+            "production root manager native acceptance and non-restarting systemd lifecycle",
             "actual restored-account browser acceptance",
             "full source export, single-active takeover and rollback acceptance"
           ]
-        }
+        },
+        "completed_route_fixed_ci": {
+          "source_sha": "8fa0566cb65f1e972abdcb46732c24ac0e2d2b5b",
+          "run": 41282985998,
+          "state": "completed",
+          "conclusion": "success",
+          "pushed": true,
+          "observed_passed": 18,
+          "observed_failed": 0,
+          "observed_running": 0,
+          "artifacts": [
+            {
+              "ubuntu": "22.04",
+              "artifact_id": 13075104040,
+              "bytes": 3297,
+              "sha256": "1bad7e53c61e63a14a1af1a713a9e8ed3a058d0c4ff477a1d4545513d4b2f808",
+              "size_digest_source_schema_and_boundary_verified": true
+            },
+            {
+              "ubuntu": "24.04",
+              "artifact_id": 13075840581,
+              "bytes": 3301,
+              "sha256": "de40dbe8eb7d5fe4c52fd00835f1c851f8d1a2a9791a6eb22017f12b6c5c85ad",
+              "size_digest_source_schema_and_boundary_verified": true
+            }
+          ]
+        },
+        "parallel_system_identity": {
+          "source_sha": "785ea5da445de4d90711cf690e0cdeff9069ee7e",
+          "state": "pushed_main_native_acceptance_running",
+          "pushed": true,
+          "ci_run": 41287022975,
+          "implementation": [
+            "fixed operation-owned locked expired nologin account without home",
+            "NSS files/systemd only with complete numeric uniqueness and group checks",
+            "original plan/data intent bound nonce and immutable account fingerprints",
+            "foreign same-name group refusal before side effects",
+            "owned account drift refusal without repair",
+            "actual installed handoff uses derived UID/GID and per-thread checks"
+          ],
+          "local_format_contracts": 8,
+          "local_cli_contracts": 10,
+          "native_contracts": 78,
+          "native_evidence_required": "verification_dedicated_system_identity",
+          "native_positive_passed": false,
+          "mac_host_accounts_changed": false,
+          "systemd_complete": false,
+          "migration_ready": false
+        },
+        "parallel_root_manager": {
+          "source_sha": "093ee93902a6aaf891de1962893bfe001b629c74",
+          "state": "committed_local_main_native_positive_pending",
+          "pushed": false,
+          "new_lines": 304,
+          "deleted_lines": 24,
+          "files": 8,
+          "scope": [
+            "fixed installed root entry holding installation and target locks",
+            "fresh in-flight original proof approval after full SQL/installation/account checks",
+            "no path UID command credential approval ticket or deadline override",
+            "original absolute expiry and fixed monotonic remaining time",
+            "TERM/INT closes control channel and waits for actual owned child exit",
+            "post-stop full original data and SQL active/pending connection inventory",
+            "native real production root manager strict TLS duplicate refusal stop and parent death cases"
+          ],
+          "local_tests": {
+            "cli": 11,
+            "system_record_formats": 8,
+            "native_workflow_contracts": 78,
+            "package": 26,
+            "installer": 19,
+            "installer_contract": 111,
+            "actionlint_with_shellcheck": true,
+            "python_syntax": true
+          },
+          "mysql_component_tree": {
+            "files": 327,
+            "unchanged_from_real_mysql_top_level_pass": 539,
+            "runtime_skips": 0,
+            "new_root_Linux_process_not_tested_on_mac": true
+          },
+          "native_evidence_required": "verification_installed_root_manager",
+          "native_positive_executed": false,
+          "systemd_complete": false,
+          "restored_account_browser_login_verified": false,
+          "migration_ready": false,
+          "financial_logic_changed": false
+        },
+        "next_actions": [
+          "Continue non-restarting systemd lifecycle, current exact-SHA native results, restored-account browser acceptance and stop/revocation closure; do not cancel running 785ea5d CI or shrink 269-item scope."
+        ]
       }
     }
   },
