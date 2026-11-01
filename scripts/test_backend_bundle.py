@@ -28,10 +28,12 @@ class BackendBundleCLI(unittest.TestCase):
                         GIT_AUTHOR_NAME='Fixture', GIT_COMMITTER_NAME='Fixture',
                         GIT_AUTHOR_EMAIL='fixture@example.invalid', GIT_COMMITTER_EMAIL='fixture@example.invalid',
                         GIT_AUTHOR_DATE='2026-10-27T00:00:00Z', GIT_COMMITTER_DATE='2026-10-27T00:00:00Z')
-        for name in ('backend_bundle.py', 'frontend_pair.py'):
+        for name in ('backend_bundle.py', 'frontend_pair.py', 'pair_runtime.py', 'release_bundle.py'):
             source = SCRIPTS / name
             if source.exists():
                 self.write('scripts/' + name, source.read_bytes())
+        self.write('contracts/frontend-bundle/frontend_bundle.py',
+                   (SCRIPTS.parent / 'contracts/frontend-bundle/frontend_bundle.py').read_bytes())
         self.write('LICENSE', b'Fixture license\n')
         self.write('README.md', b'Fixture backend\n')
         self.write('vps-billing/backend/go.mod', b'module fixture/backend\n\ngo 1.22\n')
@@ -46,7 +48,8 @@ class BackendBundleCLI(unittest.TestCase):
         self.write('vps-billing/deploy/systemd/aster-api.service', b'[Unit]\nDescription=Fixture\n')
         for name in ('backup-native.sh', 'core-manager.py', 'core-operation.py', 'plugin-manager.py', 'update-manager.py'):
             self.write('vps-billing/deploy/scripts/' + name, b'# fixture installer resource; never executed\n')
-        self.pin = dict(schema=1, repository='xiaoqiqixi/betteridcsys-frontend', repository_id=1435344023,
+        self.pin = dict(archive_sha256='c' * 64, manifest_sha256='d' * 64, artifact_sha256='e' * 64,
+                        artifact_id=800, run_id=700, run_attempt=1, schema=1, repository='xiaoqiqixi/betteridcsys-frontend', repository_id=1435344023,
                         source_sha='a' * 40, frontend_version='0.5.10', core_version='0.5.10', compatibility_sha256='b' * 64)
         self.write('FRONTEND_PAIR.json', json.dumps(self.pin).encode())
         self.git('init', '-q', '-b', 'main')

@@ -24,7 +24,7 @@ class PairedRuntimeCLI(unittest.TestCase):
         self.base = self.root.parent
         if (SCRIPTS / 'pair_runtime.py').exists():
             self.backend.write('scripts/pair_runtime.py', (SCRIPTS / 'pair_runtime.py').read_bytes())
-        shutil.copytree(SCRIPTS.parent / 'contracts/frontend-bundle', self.root / 'contracts/frontend-bundle')
+        shutil.copytree(SCRIPTS.parent / 'contracts/frontend-bundle', self.root / 'contracts/frontend-bundle', dirs_exist_ok=True)
         frontend = self.base / 'frontend-source'
         frontend.mkdir()
         package = dict(name='fixture-frontend', version='0.5.10')
@@ -39,14 +39,16 @@ class PairedRuntimeCLI(unittest.TestCase):
         (frontend / 'dist/index.html').write_text('<!doctype html><title>Paired static fixture</title>')
         (frontend / 'dist/app.js').write_text('console.log("static fixture");')
         self.backend.pin['compatibility_sha256'] = hashlib.sha256((frontend / 'compatibility.json').read_bytes()).hexdigest()
-        self.backend.write('FRONTEND_PAIR.json', json.dumps(self.backend.pin).encode())
-        self.backend.commit()
-        result = self.backend.build()
-        self.assertEqual(result.returncode, 0, result.stderr)
         self.frontend = self.base / 'frontend-output'
         result = subprocess.run([sys.executable, '-I', str(self.root / 'contracts/frontend-bundle/frontend_bundle.py'),
                                  'build', '--source-root', str(frontend), '--output', str(self.frontend),
                                  '--source-sha', 'a' * 40, '--source-date-epoch', '1793059200'], capture_output=True, text=True)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.backend.pin['archive_sha256'] = hashlib.sha256((self.frontend / 'aster-finance-frontend-0.5.10.tar.gz').read_bytes()).hexdigest()
+        self.backend.pin['manifest_sha256'] = hashlib.sha256((self.frontend / 'FRONTEND.json').read_bytes()).hexdigest()
+        self.backend.write('FRONTEND_PAIR.json', json.dumps(self.backend.pin).encode())
+        self.backend.commit()
+        result = self.backend.build()
         self.assertEqual(result.returncode, 0, result.stderr)
         self.output = self.base / 'runtime'
 

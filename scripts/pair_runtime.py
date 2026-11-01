@@ -62,6 +62,8 @@ def checked_frontend(args, pin):
     # Subsequent extraction uses those same in-memory bytes, not mutable inputs.
     manifest = P.regular(args.frontend_manifest, policy.MAX_MANIFEST)
     payload = P.regular(args.frontend_archive, policy.MAX_ARCHIVE)
+    P.require(B.digest(manifest) == pin['manifest_sha256'] and B.digest(payload) == pin['archive_sha256'],
+              'pinned_frontend_digest_mismatch')
     with tempfile.TemporaryDirectory(prefix='aster-frontend-content-') as tmp:
         root = Path(tmp).resolve()
         manifest_path, archive_path = root / 'FRONTEND.json', root / ('aster-finance-frontend-' + pin['frontend_version'] + '.tar.gz')

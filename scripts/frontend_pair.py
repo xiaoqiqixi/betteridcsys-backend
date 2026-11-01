@@ -57,15 +57,22 @@ def decode(raw):
                       parse_constant=lambda _: (_ for _ in ()).throw(ValueError('nonfinite_json_value')))
 
 
-def load_pin():
-    pin = decode(regular(ROOT / 'FRONTEND_PAIR.json'))
+def validate_pin(pin):
     require(isinstance(pin, dict) and set(pin) == {'schema', 'repository', 'repository_id', 'source_sha',
-            'frontend_version', 'core_version', 'compatibility_sha256'}, 'pin_schema_mismatch')
+            'frontend_version', 'core_version', 'compatibility_sha256', 'archive_sha256', 'manifest_sha256',
+            'artifact_id', 'artifact_sha256', 'run_id', 'run_attempt'}, 'pin_schema_mismatch')
     require(type(pin['schema']) is int and pin['schema'] == 1 and type(pin['repository_id']) is int and
             pin['repository_id'] == FRONTEND_ID and pin['repository'] == FRONTEND, 'fixed_frontend_identity_required')
     for key, pattern in (('source_sha', SHA), ('frontend_version', VERSION), ('core_version', VERSION),
-                         ('compatibility_sha256', r'[0-9a-f]{64}')):
+                         *((key, r'[0-9a-f]{64}') for key in ('compatibility_sha256', 'archive_sha256', 'manifest_sha256', 'artifact_sha256'))):
         require(isinstance(pin[key], str) and re.fullmatch(pattern, pin[key]), 'invalid_pin_' + key)
+    for key in ('artifact_id', 'run_id', 'run_attempt'):
+        require(type(pin[key]) is int and 0 < pin[key] < 2**53, 'invalid_pin_' + key)
+    return pin
+
+
+def load_pin():
+    pin = validate_pin(decode(regular(ROOT / 'FRONTEND_PAIR.json')))
     source = regular(ROOT / 'vps-billing/backend/pkg/pluginapi/protocol.go').decode('utf-8')
     versions = re.findall(r'^\s*CoreVersion\s*=\s*"([0-9.]+)"\s*$', source, re.M)
     require(versions == [pin['core_version']], 'backend_core_version_mismatch')
