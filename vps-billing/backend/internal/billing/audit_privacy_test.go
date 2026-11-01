@@ -35,6 +35,13 @@ func TestCustomerAuditHidesStaffAcrossAllViews(t *testing.T) {
 		if status != 200 || !strings.Contains(string(raw), admin.Email) || !strings.Contains(string(raw), secret) {
 			t.Fatal("admin history redacted", path, status, string(raw))
 		}
+		if path == "/api/v1/admin/audit-events" {
+			for _, row := range out["data"].(map[string]any)["items"].([]any) {
+				if row.(map[string]any)["owner_id"] != owner.ID {
+					t.Fatal("administrator owner_id lost", row)
+				}
+			}
+		}
 	}
 	events, _ := m.Audits(context.Background(), owner.ID)
 	if events[0].Detail != secret {
