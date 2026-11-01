@@ -70,3 +70,6 @@ var AccountFeatures string
 
 //go:embed 023_credit_precision.sql
 var CreditPrecision string
+
+//go:embed 024_commerce_billing.sql
+var CommerceBilling string

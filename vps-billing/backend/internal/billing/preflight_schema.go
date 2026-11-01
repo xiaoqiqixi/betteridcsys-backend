@@ -91,6 +91,7 @@ func preflightColumns(version int) map[string]map[string]string {
 			specs[k] = v
 		}
 	}
+	commerceBillingSchema(version, specs)
 	result := make(map[string]map[string]string, len(specs))
 	for table, spec := range specs {
 		result[table] = map[string]string{}
@@ -197,10 +198,12 @@ func preflightChecks(version int) map[string]map[string]string {
 	if schemaIncludes(version, migrations.CreditPrecision) {
 		checks["credit_ledger"]["credit_precision"] = "decimal_places >= 0 AND decimal_places <= 6"
 	}
+	commerceBillingChecks(version, checks)
 	return checks
 }
 
 var preflightDefaults = map[string]string{
+	"invoices.kind": "order", "invoices.commerce_version": "0", "invoices.subtotal_minor": "0", "invoices.credit_applied_minor": "0", "invoices.amount_paid_minor": "0", "invoices.refunded_minor": "0",
 	"users.currency": "CNY", "users.currency_locked": "0",
 	"invoices.settlement_review": "0", "payment_settlements.disposition": "settled",
 	"provisioning_jobs.attempts": "0",
@@ -227,7 +230,7 @@ func preflightColumnMatches(table, name, spec, kind, nullable, extra, generated 
 	if strings.HasPrefix(kind, "char(") || strings.HasPrefix(kind, "varchar(") || strings.HasPrefix(kind, "enum(") {
 		wantCharset, wantCollation := "utf8mb4", databaseCollation
 		switch table + "." + name {
-		case "coupons.code", "products.node_id", "commerce_requests.operation", "commerce_requests.request_key":
+		case "invoice_payments.attempt_id", "coupons.code", "products.node_id", "commerce_requests.operation", "commerce_requests.request_key":
 			wantCharset, wantCollation = "ascii", "ascii_bin"
 		case "users.email":
 			wantCharset, wantCollation = "ascii", "ascii_general_ci"
@@ -351,7 +354,7 @@ func validatePreflightTableShape(ctx context.Context, conn *sql.Conn, version in
 		if expected := checks[table][name]; expected != "" {
 			check := currencyMigrationCheck{"CHECK", enforced, clause}
 			matches := currencyMigrationCheckMatches(check, expected)
-			if commerceLedgerColumns[table] != "" || automationColumns[table] != "" {
+			if commerceLedgerColumns[table] != "" || automationColumns[table] != "" || commerceBillingColumns[table] != "" || name == "invoice_commerce_money" {
 				matches = commerceCheckMatches(check, expected)
 			}
 			if version >= 13 && (table == "product_configurations" || table == "order_product_configurations" || table == "provisioning_jobs") {
@@ -473,6 +476,11 @@ func validatePreflightTableKeys(ctx context.Context, conn *sql.Conn, version int
 	}
 	if schemaIncludes(version, migrations.Automation) {
 		for _, k := range []string{"automation_settings:id", "automation_runs:id", "automation_runs:job,scheduled_at"} {
+			required[k] = true
+		}
+	}
+	if schemaIncludes(version, migrations.CommerceBilling) {
+		for _, k := range []string{"order_items:id", "order_items:order_id,position", "invoice_lines:id", "invoice_lines:invoice_id,position", "invoice_lines:service_id,period_start", "invoice_payments:id", "invoice_payments:attempt_id", "invoice_payments:invoice_id,method,reference", "invoice_refunds:id"} {
 			required[k] = true
 		}
 	}
@@ -613,6 +621,11 @@ func validatePreflightTableKeys(ctx context.Context, conn *sql.Conn, version int
 	}
 	if schemaIncludes(version, migrations.CommerceLedger) {
 		for _, k := range []string{"credit_ledger:user_id:users:id:RESTRICT", "credit_ledger:invoice_id:invoices:id:RESTRICT"} {
+			fks[k] = true
+		}
+	}
+	if schemaIncludes(version, migrations.CommerceBilling) {
+		for _, k := range []string{"order_items:order_id:orders:id:RESTRICT", "order_items:product_id:products:id:RESTRICT", "invoice_lines:invoice_id:invoices:id:RESTRICT", "invoice_lines:service_id:services:id:RESTRICT", "invoice_payments:invoice_id:invoices:id:RESTRICT", "invoice_payments:attempt_id:payment_attempts:id:RESTRICT", "invoice_refunds:invoice_id:invoices:id:RESTRICT", "invoice_refunds:payment_id:invoice_payments:id:RESTRICT"} {
 			fks[k] = true
 		}
 	}
