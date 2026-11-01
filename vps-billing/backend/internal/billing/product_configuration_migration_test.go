@@ -1,14 +1,15 @@
 package billing
 
 import (
+	"aster/billing/migrations"
 	"reflect"
 	"strings"
 	"testing"
 )
 
 func TestProductConfigurationMigrationIsAdditiveAndPrivate(t *testing.T) {
-	if len(schemaVersions) != 14 {
-		t.Fatal("schema13 not registered", len(schemaVersions))
+	if len(schemaVersions) < 14 || schemaVersions[12] != migrations.ProductConfigurations || schemaVersions[13] != migrations.PaymentResolution {
+		t.Fatal("historical product configuration/payment migration registration changed")
 	}
 	statements := migrationStatements(schemaVersions[12])
 	if len(statements) != 3 {
@@ -51,7 +52,7 @@ func TestMySQLProductConfigurationMigrationPreservesHistoryWithoutBackfill(t *te
 		t.Fatal("repeat additive migration", err)
 	}
 	status, err := m.SchemaStatus(ctx)
-	if err != nil || status.Status != "current" || status.SchemaVersion != 14 {
+	if err != nil || status.Status != "current" || status.SchemaVersion != len(schemaVersions) {
 		t.Fatal(status, err)
 	}
 }
