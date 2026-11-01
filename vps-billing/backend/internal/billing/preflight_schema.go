@@ -364,7 +364,7 @@ func validatePreflightTableShape(ctx context.Context, conn *sql.Conn, version in
 		if expected := checks[table][name]; expected != "" {
 			check := currencyMigrationCheck{"CHECK", enforced, clause}
 			matches := currencyMigrationCheckMatches(check, expected)
-			if commerceLedgerColumns[table] != "" || automationColumns[table] != "" || commerceBillingColumns[table] != "" || commerceServiceColumns[table] != "" || name == "invoice_commerce_money" || strings.HasPrefix(name, "service_") {
+			if affiliateColumns[table] != "" || commerceLedgerColumns[table] != "" || automationColumns[table] != "" || commerceBillingColumns[table] != "" || commerceServiceColumns[table] != "" || name == "invoice_commerce_money" || strings.HasPrefix(name, "service_") {
 				matches = commerceCheckMatches(check, expected)
 			}
 			if version >= 13 && (table == "product_configurations" || table == "order_product_configurations" || table == "provisioning_jobs") {

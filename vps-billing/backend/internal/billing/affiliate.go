@@ -405,7 +405,7 @@ func (a *App) releaseAffiliate(ctx context.Context, settings financeapi.Automati
 			if _, err = tx.ExecContext(ctx, "UPDATE affiliate_commissions SET amount_minor=?,status=?,released_at=? WHERE id=?", amount, state, now.UTC(), v.id); err != nil {
 				return false, err
 			}
-			if _, err = tx.ExecContext(ctx, "INSERT INTO audit_events(id,user_id,action,target,created_at,actor_email,detail) VALUES(?,?,'affiliate.released',?,?,'','Commission hold completed')", ID(), uid, v.id, now.UTC()); err != nil {
+			if _, err = tx.ExecContext(ctx, "INSERT INTO audit_events(id,user_id,action,target,created_at,actor_email,detail) VALUES(?,?,'affiliate.released',?,?,'system','Commission hold completed')", ID(), uid, v.id, now.UTC()); err != nil {
 				return false, err
 			}
 			return true, tx.Commit()
