@@ -145,7 +145,7 @@ class RuntimeReleaseTests(unittest.TestCase):
     def test_0510_candidate_publication_binds_versions_schema_and_history_boundary(self):
         migrations = tuple(path.name for path in sorted(
             (Path(__file__).resolve().parents[2] / "backend/migrations").glob("*.sql")))
-        self.assertEqual(len(migrations), 25)
+        self.assertEqual(len(migrations), 26)
         api, env, event, files, artifact, _, _ = normal_flow(
             "core", raw=True, version="0.5.10", migration_names=migrations)
         build = pipeline.strict_json(files["BUILD.json"])
@@ -182,8 +182,8 @@ class RuntimeReleaseTests(unittest.TestCase):
         # 0.4.0/0.5.2 and retain their original compatibility/inventory semantics.
         migrations = tuple(path.name for path in sorted(
             (Path(__file__).resolve().parents[2] / "backend/migrations").glob("*.sql")))
-        self.assertEqual(len(migrations), 25)
-        self.assertEqual(migrations[-1], "025_affiliate_commissions.sql")
+        self.assertEqual(len(migrations), 26)
+        self.assertEqual(migrations[-1], "026_commerce_services.sql")
         api, env, event, files, _, kind, version = normal_flow(
             "core", raw=True, version="0.5.9", migration_names=migrations)
         self.assertEqual((kind, version), ("core", "0.5.9"))
