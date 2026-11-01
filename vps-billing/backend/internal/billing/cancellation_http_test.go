@@ -157,7 +157,7 @@ func (s *cancellationCallStore) CancelOrder(ctx context.Context, actor User, id,
 	return s.Store.CancelOrder(ctx, actor, id, reason)
 }
 
-func TestCancellationHTTPRefusesConnectedPaymentWithoutAdapterCall(t *testing.T) {
+func TestCancellationHTTPConsultsLockedAttemptsWithConnectedPayment(t *testing.T) {
 	recorder := &checkoutRecorder{}
 	registry, err := integrations.New(t.Context(), []integrations.Definition{{Manifest: integrations.Manifest{
 		ID: "payment.test", Kind: integrations.Payment, Name: "Test", Description: "Local test only", Capabilities: []string{"checkout"}, SupportedCurrencies: []string{"CNY"}, CurrencyDecimalPlaces: map[string]int{"CNY": 2},
@@ -173,15 +173,13 @@ func TestCancellationHTTPRefusesConnectedPaymentWithoutAdapterCall(t *testing.T)
 	defer srv.Close()
 	c := client(t, srv.URL, "demo@aster.local", "DemoCustomer!2026")
 	status, out := c.request("POST", "/api/v1/orders/"+o.ID+"/cancel", map[string]string{"reason": "No longer needed"}, "")
-	if status != 409 || out["error"].(map[string]any)["code"] != "CANCELLATION_UNAVAILABLE" || store.calls != 0 {
-		t.Fatal("connected adapter reached cancellation store", status, out, store.calls)
+	if status != 200 || store.calls != 1 {
+		t.Fatal("payment selection overrode safe transactional cancellation", status, out, store.calls)
 	}
 	recorder.mu.Lock()
 	defer recorder.mu.Unlock()
-	if len(recorder.requests) != 0 || len(m.audits) != 1 || len(m.orderEvents) != 1 || m.orders[0].Status != "pending_payment" {
-		t.Fatal("payment gate called adapter or changed history")
+	if len(recorder.requests) != 0 || len(m.audits) != 2 || len(m.orderEvents) != 2 || m.orders[0].Status != "cancelled" {
+		t.Fatal("cancellation called adapter or lost history")
 	}
-	if cancellationPaymentsDisabled(nil) || !cancellationPaymentsDisabled(integrations.Default()) {
-		t.Fatal("disabled payment metadata guard")
-	}
+
 }
