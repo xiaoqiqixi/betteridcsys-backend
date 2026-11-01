@@ -73,6 +73,11 @@ func preflightColumns(version int) map[string]map[string]string {
 	staffSchemaColumns(version, specs)
 	commerceSchemaColumns(version, specs)
 	accountSchemaColumns(version, specs)
+	if schemaIncludes(version, migrations.CommerceCoupons) {
+		for table, spec := range commerceCouponColumns {
+			specs[table] = spec
+		}
+	}
 	result := make(map[string]map[string]string, len(specs))
 	for table, spec := range specs {
 		result[table] = map[string]string{}
@@ -165,6 +170,9 @@ func preflightChecks(version int) map[string]map[string]string {
 	if schemaIncludes(version, migrations.AccountSecurity) {
 		checks["users"]["users_currency_locked"] = "currency_locked IN (0,1)"
 	}
+	if schemaIncludes(version, migrations.CommerceCoupons) {
+		checks["coupons"] = map[string]string{"coupon_revision_min": "revision >= 1", "coupon_revision_max": "revision <= 9007199254740991"}
+	}
 	return checks
 }
 
@@ -195,7 +203,7 @@ func preflightColumnMatches(table, name, spec, kind, nullable, extra, generated 
 	if strings.HasPrefix(kind, "char(") || strings.HasPrefix(kind, "varchar(") || strings.HasPrefix(kind, "enum(") {
 		wantCharset, wantCollation := "utf8mb4", databaseCollation
 		switch table + "." + name {
-		case "products.node_id", "commerce_requests.operation", "commerce_requests.request_key":
+		case "coupons.code", "products.node_id", "commerce_requests.operation", "commerce_requests.request_key":
 			wantCharset, wantCollation = "ascii", "ascii_bin"
 		case "users.email":
 			wantCharset, wantCollation = "ascii", "ascii_general_ci"
@@ -418,6 +426,11 @@ func validatePreflightTableKeys(ctx context.Context, conn *sql.Conn, version int
 		}
 	}
 
+	if schemaIncludes(version, migrations.CommerceCoupons) {
+		for _, key := range []string{"coupons:id", "coupons:code", "coupon_redemptions:id", "coupon_redemptions:order_id"} {
+			required[key] = true
+		}
+	}
 	if partial {
 		for key := range required {
 			table, _, _ := strings.Cut(key, ":")
@@ -543,6 +556,11 @@ func validatePreflightTableKeys(ctx context.Context, conn *sql.Conn, version int
 		}
 	}
 
+	if schemaIncludes(version, migrations.CommerceCoupons) {
+		for _, key := range []string{"coupon_redemptions:coupon_id:coupons:id:RESTRICT", "coupon_redemptions:user_id:users:id:RESTRICT", "coupon_redemptions:order_id:orders:id:RESTRICT"} {
+			fks[key] = true
+		}
+	}
 	if partial {
 		for key := range fks {
 			table, _, _ := strings.Cut(key, ":")

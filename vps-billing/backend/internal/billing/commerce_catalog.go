@@ -1,6 +1,7 @@
 package billing
 
 import (
+	"aster/billing/internal/commerce"
 	api "aster/billing/internal/financeapi"
 	"context"
 	"encoding/json"
@@ -52,9 +53,11 @@ func (a *App) commerceError(w http.ResponseWriter, r *http.Request, err error) {
 		fail(w, r, 409, "REVISION_CONFLICT", "Reload the current revision")
 	case errors.Is(err, ErrConflict):
 		fail(w, r, 409, "IDEMPOTENCY_KEY_REUSED", "This key was used with a different request")
-	case errors.Is(err, ErrCommerceInput):
+	case errors.Is(err, commerce.ErrQuoteChanged):
+		fail(w, r, 409, "QUOTE_CHANGED", "The quote changed or expired; request a new quote")
+	case errors.Is(err, ErrCommerceInput), errors.Is(err, commerce.ErrInput), errors.Is(err, commerce.ErrMoney):
 		fail(w, r, 400, "VALIDATION_ERROR", "Check the product, currency, price and option configuration")
-	case errors.Is(err, ErrCommerceUnavailable):
+	case errors.Is(err, ErrCommerceUnavailable), errors.Is(err, commerce.ErrProductUnavailable):
 		fail(w, r, 409, "PRODUCT_UNAVAILABLE", "Product is unavailable")
 	default:
 		a.internal(w, r, err)

@@ -12,6 +12,7 @@ type memoryCommerceRequest struct {
 	response    []byte
 }
 type memoryCommerceCatalog struct {
+	coupons  map[string]api.Coupon
 	products map[string]api.AdminProduct
 	images   map[string]api.AdminOsImage
 	requests map[string]memoryCommerceRequest
@@ -27,7 +28,7 @@ func (m *Memory) catalog06Locked() *memoryCommerceCatalog {
 	if m.commerceCatalog != nil {
 		return m.commerceCatalog
 	}
-	c := &memoryCommerceCatalog{products: map[string]api.AdminProduct{}, images: map[string]api.AdminOsImage{}, requests: map[string]memoryCommerceRequest{}}
+	c := &memoryCommerceCatalog{coupons: map[string]api.Coupon{}, products: map[string]api.AdminProduct{}, images: map[string]api.AdminOsImage{}, requests: map[string]memoryCommerceRequest{}}
 	for _, p := range m.plans {
 		visibility := "hidden"
 		if p.Available {

@@ -259,6 +259,14 @@ func (a *App) serve(w http.ResponseWriter, r *http.Request) {
 		jsonOut(w, 200, map[string]any{"user": nil, "csrf_token": a.csrf(t)})
 		return
 	}
+	if p == "/cart/quote" {
+		a.quote06HTTP(w, r)
+		return
+	}
+	if p == "/payment-gateways" {
+		a.paymentGateways06HTTP(w, r)
+		return
+	}
 	if (p == "/products" || strings.HasPrefix(p, "/products/")) && a.commerceCatalogHTTP(w, r, p, User{}) {
 		return
 	}
@@ -314,6 +322,9 @@ func (a *App) serve(w http.ResponseWriter, r *http.Request) {
 func (a *App) serveAuthorized(w http.ResponseWriter, r *http.Request, u User, p string, admin bool) {
 	if p == "/admin/roles" || p == "/admin/staff" || strings.HasPrefix(p, "/admin/staff/") {
 		a.staffHTTP(w, r, u, p)
+		return
+	}
+	if a.coupons06HTTP(w, r, u, p) {
 		return
 	}
 	if a.commerceCatalogHTTP(w, r, p, u) {

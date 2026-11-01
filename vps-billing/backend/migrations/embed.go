@@ -52,3 +52,6 @@ var CommerceCatalog string
 
 //go:embed 017_account_security.sql
 var AccountSecurity string
+
+//go:embed 018_commerce_coupons.sql
+var CommerceCoupons string
