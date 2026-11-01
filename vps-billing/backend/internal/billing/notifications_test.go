@@ -30,6 +30,14 @@ func TestEmailTemplateAllowListAndLocale(t *testing.T) {
 	if err != nil || msg.To != "reader@example.com" || !strings.Contains(msg.Text, "within 30 minutes") {
 		t.Fatal("localized email", msg, err)
 	}
+	for _, locale := range []string{"en", "zh-CN"} {
+		for _, key := range []string{"invoice_created", "invoice_reminder", "invoice_overdue", "payment_received"} {
+			msg, err := renderEmail(defaultEmailTemplate(key), financeapi.Profile{Name: "Reader", Email: "reader@example.com", Locale: locale}, "Example", map[string]string{"invoice_number": "INV-12345", "amount": "123.45", "currency": "USD", "due_at": "2026-11-10"})
+			if err != nil || !strings.Contains(msg.Text, "INV-12345") || !strings.Contains(msg.Text, "123.45 USD") {
+				t.Fatal("transactional details missing", key, locale, err)
+			}
+		}
+	}
 	v.Subject["en"] = "Header\r\nInjected: bad"
 	if validateEmailTemplate(v) {
 		t.Fatal("subject header injection")
@@ -72,6 +80,7 @@ func TestMySQLOutboxPreferencesSecurityAndConcurrentDelivery(t *testing.T) {
 		t.Fatal(err)
 	}
 	invoice := queueTestEmail(t, a, m, f.customer.ID, "invoice_created")
+	receipt := queueTestEmail(t, a, m, f.customer.ID, "payment_received")
 	reset := queueTestEmail(t, a, m, f.customer.ID, "password_reset")
 	var sent atomic.Int64
 	a.SMTP.sender = emailSenderFunc(func(_ context.Context, _ smtp.Config, msg smtp.Message) error { sent.Add(1); return nil })
@@ -90,7 +99,7 @@ func TestMySQLOutboxPreferencesSecurityAndConcurrentDelivery(t *testing.T) {
 	if sent.Load() != 1 {
 		t.Fatal("preferences or concurrent lease failed", sent.Load())
 	}
-	for _, id := range []string{invoice, reset} {
+	for _, id := range []string{invoice, receipt, reset} {
 		var done bool
 		var protected sql.NullString
 		if err := m.DB.QueryRow("SELECT sent_at IS NOT NULL,protected_variables FROM email_outbox WHERE id=?", id).Scan(&done, &protected); err != nil || !done || protected.Valid {

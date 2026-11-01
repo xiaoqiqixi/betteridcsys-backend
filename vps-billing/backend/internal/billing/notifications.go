@@ -42,6 +42,24 @@ func defaultEmailTemplate(key string) financeapi.EmailTemplate {
 	if securityEmail(key) {
 		en = "Hello {{.name}},\n\nUse this link within 30 minutes:\n{{.url}}\n\nIf you did not request this email, you can ignore it.\n{{.site_name}}"
 		zh = "您好，{{.name}}：\n\n请在 30 分钟内使用此链接：\n{{.url}}\n\n如果您未发起此请求，可忽略此邮件。\n{{.site_name}}"
+	} else {
+		switch key {
+		case "welcome":
+			en = "Hello {{.name}},\n\nYour account at {{.site_name}} is ready. Sign in with {{.email}} to manage your services and invoices.\n{{.url}}"
+			zh = "您好，{{.name}}：\n\n您的 {{.site_name}} 账户已创建。请使用 {{.email}} 登录，管理服务和账单。\n{{.url}}"
+		case "invoice_created", "invoice_reminder", "invoice_overdue":
+			en = "Hello {{.name}},\n\nInvoice {{.invoice_number}}: {{.amount}} {{.currency}}\nDue: {{.due_at}}\n\nSign in to review the invoice and payment options.\n{{.url}}\n\n{{.site_name}}"
+			zh = "您好，{{.name}}：\n\n账单 {{.invoice_number}}：{{.amount}} {{.currency}}\n到期时间：{{.due_at}}\n\n请登录查看账单及付款方式。\n{{.url}}\n\n{{.site_name}}"
+		case "payment_received":
+			en = "Hello {{.name}},\n\nWe received {{.amount}} {{.currency}} toward invoice {{.invoice_number}}. Sign in to see the remaining balance and payment history.\n{{.url}}\n\n{{.site_name}}"
+			zh = "您好，{{.name}}：\n\n账单 {{.invoice_number}} 已收到付款 {{.amount}} {{.currency}}。请登录查看剩余应付金额和付款记录。\n{{.url}}\n\n{{.site_name}}"
+		case "service_active", "service_suspended", "service_terminated":
+			en = "Hello {{.name}},\n\nService: {{.service_name}}\nHostname: {{.hostname}}\n{{.reason}}\n\nSign in to review your service status.\n{{.url}}\n\n{{.site_name}}"
+			zh = "您好，{{.name}}：\n\n服务：{{.service_name}}\n主机名：{{.hostname}}\n{{.reason}}\n\n请登录查看服务状态。\n{{.url}}\n\n{{.site_name}}"
+		case "ticket_opened", "ticket_reply":
+			en = "Hello {{.name}},\n\nTicket {{.ticket_number}}: {{.ticket_subject}}\n\n{{.body}}\n\nSign in to continue the conversation.\n{{.url}}\n\n{{.site_name}}"
+			zh = "您好，{{.name}}：\n\n工单 {{.ticket_number}}：{{.ticket_subject}}\n\n{{.body}}\n\n请登录继续回复。\n{{.url}}\n\n{{.site_name}}"
+		}
 	}
 	return financeapi.EmailTemplate{Key: key, Subject: map[string]string{"en": subject[0], "zh-CN": subject[1]}, Body: map[string]string{"en": en, "zh-CN": zh}, Enabled: true, Variables: emailVariables(key), Revision: 1}
 }
@@ -153,7 +171,7 @@ func readNotificationPreferences(ctx context.Context, q accountQueryer, id strin
 }
 func notificationAllowed(p financeapi.NotificationPreferences, key string) bool {
 	switch key {
-	case "invoice_created":
+	case "invoice_created", "payment_received":
 		return p.InvoiceCreated
 	case "invoice_reminder", "invoice_overdue":
 		return p.InvoiceReminder
@@ -240,6 +258,12 @@ func (a *App) deliverQueuedEmail(ctx context.Context, m *MySQL, item queuedEmail
 	site, err := a.readSiteSettings6(ctx, m.DB)
 	if err != nil {
 		return err
+	}
+	if !securityEmail(item.key) && vars["url"] == "" {
+		if vars == nil {
+			vars = map[string]string{}
+		}
+		vars["url"] = strings.TrimRight(a.Config.Origin, "/")
 	}
 	msg, err := renderEmail(t, p, site.SiteName, vars)
 	if err != nil {
