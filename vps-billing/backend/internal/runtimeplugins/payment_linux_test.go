@@ -98,6 +98,35 @@ func TestPaymentOptionalOperations(t *testing.T) {
 	}
 }
 
+func TestGatewayRegistryReportsHandshakeAndCompatibility(t *testing.T) {
+	f := newPaymentFixture(t)
+	var calls atomic.Int32
+	f.paymentServe(t, paymentProcessor{create: func(context.Context, paymentv1.Config, paymentv1.Intent) (paymentv1.Checkout, error) {
+		calls.Add(1)
+		return paymentCheckout(), nil
+	}})
+	check := func(want string, checked bool) {
+		t.Helper()
+		out, err := f.manager.PaymentGateways(t.Context())
+		if err != nil || len(out) != 1 || out[0].Status != want || (out[0].LastCheckedAt != nil) != checked || calls.Load() != 0 {
+			t.Fatal("gateway health", out, err)
+		}
+	}
+	check("ready", true)
+	f.policy.Payment.Enabled = false
+	writeJSON(t, f.manager.policy, f.policy)
+	check("stopped", false)
+	f.policy.Payment.Enabled = true
+	f.manifest.CoreMaxExclusive = "0.6.0"
+	raw := writeJSON(t, f.manifestPath, f.manifest)
+	f.policy.Payment.ManifestSHA256 = digestBytes(raw)
+	writeJSON(t, f.manager.policy, f.policy)
+	check("incompatible", false)
+	f.policy.Payment.ManifestSHA256 = strings.Repeat("f", 64)
+	writeJSON(t, f.manager.policy, f.policy)
+	check("misconfigured", false)
+}
+
 func (p paymentProcessor) Create(c context.Context, cfg paymentv1.Config, in paymentv1.Intent) (paymentv1.Checkout, error) {
 	if p.create == nil {
 		return paymentCheckout(), nil

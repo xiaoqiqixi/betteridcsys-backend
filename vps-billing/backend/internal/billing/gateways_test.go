@@ -7,12 +7,136 @@ import (
 	"aster/billing/pkg/pluginapi/paymentv1"
 	"context"
 	"net/http/httptest"
+	"sync"
 	"testing"
 	"time"
 )
 
 type gatewayTestRuntime struct {
 	slots map[string]*paymentHTTPRuntime
+}
+
+type gatewayFlowRuntime struct {
+	*gatewayTestRuntime
+	flow    string
+	mu      sync.Mutex
+	event   paymentv1.VerifiedEvent
+	queries int
+}
+
+func (g *gatewayFlowRuntime) CreatePayment(ctx context.Context, c paymentv1.Config, in paymentv1.Intent) (paymentv1.Checkout, error) {
+	out, err := g.gatewayTestRuntime.CreatePayment(ctx, c, in)
+	out.Flow, out.URL = g.flow, ""
+	if g.flow == "qr" {
+		out.QRPayload = "fixture:payment/" + in.AttemptID
+	} else {
+		out.Instructions, out.Reference, out.ExpiresAt = "Fixture receiving account\nInclude the reference.", in.AttemptID, time.Time{}
+	}
+	return out, err
+}
+func (g *gatewayFlowRuntime) QueryPayment(context.Context, paymentv1.Config, paymentv1.Query) (paymentv1.QueryResult, error) {
+	g.mu.Lock()
+	defer g.mu.Unlock()
+	g.queries++
+	e := g.event
+	return paymentv1.QueryResult{Status: "succeeded", Event: &e}, nil
+}
+func TestMemoryGatewayFlowAndQueryContracts(t *testing.T) {
+	gatewayFlowContract(t, memoryCatalogFixture(t), "DemoAdmin!2026", "DemoCustomer!2026")
+}
+func TestMySQLGatewayFlowAndQueryContracts(t *testing.T) {
+	gatewayFlowContract(t, mysqlCatalogFixture(t), "CatalogFixture!2026", "CatalogFixture!2026")
+}
+func gatewayFlowContract(t *testing.T, f catalogFixture, adminPassword, customerPassword string) {
+	if db, ok := f.store.(*MySQL); ok {
+		migrationExec(t, t.Context(), db.DB, "UPDATE plans SET available=TRUE WHERE id='starter'")
+		migrationExec(t, t.Context(), db.DB, "UPDATE plan_prices SET available=TRUE WHERE plan_id='starter' AND currency='CNY'")
+	}
+	for _, flow := range []string{"instructions", "qr"} {
+		t.Run(flow, func(t *testing.T) {
+			p := newPaymentHTTPRuntime(t)
+			p.selection.Slot = flow
+			p.manifest.Payment.Flow = flow
+			p.manifest.Payment.Name = map[string]string{"en": "Fixture"}
+			p.manifest.Payment.CheckoutHosts = []string{}
+			if flow == "qr" {
+				p.manifest.Capabilities = append(p.manifest.Capabilities, pluginapi.PaymentQueryCapability)
+			}
+			g := &gatewayFlowRuntime{gatewayTestRuntime: &gatewayTestRuntime{slots: map[string]*paymentHTTPRuntime{flow: p}}, flow: flow}
+			srv := httptest.NewServer(NewApp(f.store, Config{Demo: true, Origin: "http://localhost", Secret: ID() + ID(), PaymentRuntime: g}).Handler())
+			defer srv.Close()
+			customer := client(t, srv.URL, f.customer.Email, customerPassword)
+			admin := client(t, srv.URL, f.admin.Email, adminPassword)
+			_, invoice := (paymentFixture{store: f.store, owner: f.customer, ctx: t.Context()}).order(t)
+			body := map[string]string{"method": "gateway", "gateway_id": flow}
+			path := "/api/v1/invoices/" + invoice.ID + "/pay"
+			status, out := customer.request("POST", path, body, "flow-"+invoice.ID)
+			if status != 200 {
+				t.Fatal(status, out)
+			}
+			contracttest.Response(t, "POST", "/invoices/{id}/pay", out)
+			data := out["data"].(map[string]any)
+			pid := data["payment_id"].(string)
+			if data["status"] != flow || flow == "instructions" && data["expires_at"] != nil {
+				t.Fatal(data)
+			}
+			status, out = customer.request("POST", path, body, "flow-"+invoice.ID)
+			creates, _ := p.counts()
+			if status != 200 || out["data"].(map[string]any)["payment_id"] != pid || creates != 1 {
+				t.Fatal("checkout replay", status, out, creates)
+			}
+			poll := "/api/v1/invoices/" + invoice.ID + "/payments/" + pid
+			if status, _ := admin.request("GET", poll, nil, ""); status != 404 {
+				t.Fatal("payment poll crossed ownership", status)
+			}
+			if status, _ := customer.request("GET", "/api/v1/invoices/wrong/payments/"+pid, nil, ""); status != 404 {
+				t.Fatal("payment poll crossed invoice", status)
+			}
+			e := p.event(t, 0)
+			e.GatewayID = flow
+			g.mu.Lock()
+			g.event = e
+			g.event.AmountMinor++
+			g.mu.Unlock()
+			status, out = customer.request("GET", poll, nil, "")
+			if status != 200 || out["data"].(map[string]any)["status"] != "pending" {
+				t.Fatal("query invented settlement", status, out)
+			}
+			contracttest.Response(t, "GET", "/invoices/{id}/payments/{payment_id}", out)
+			status, out = admin.request("PATCH", "/api/v1/admin/integrations/gateways/"+flow, map[string]any{"revision": 1, "enabled": false}, "")
+			if status != 200 {
+				t.Fatal(status, out)
+			}
+			status, out = customer.request("GET", "/api/v1/payment-gateways", nil, "")
+			if status != 200 || len(out["data"].([]any)) != 0 {
+				t.Fatal("disabled offer visible", status, out)
+			}
+			g.mu.Lock()
+			g.event = e
+			g.mu.Unlock()
+			status, out = customer.request("GET", poll, nil, "")
+			want := "pending"
+			if flow == "qr" {
+				want = "succeeded"
+			}
+			if status != 200 || out["data"].(map[string]any)["status"] != want {
+				t.Fatal("existing attempt poll", status, out)
+			}
+			g.mu.Lock()
+			queries := g.queries
+			g.mu.Unlock()
+			if flow == "instructions" && queries != 0 {
+				t.Fatal("undeclared query called")
+			}
+			if flow == "qr" {
+				raw, signature := p.signed(t, e)
+				status, out = paymentHTTPNotify(t, &paymentHTTPHarness{server: srv}, "POST", "/api/v1/payment-callbacks/"+flow, raw, signature, "")
+				if status != 200 {
+					t.Fatal("poll/callback deduplication", status, out)
+				}
+			}
+		})
+	}
 }
 
 func (g *gatewayTestRuntime) PaymentSelection() (pluginapi.Manifest, pluginapi.Selection, error) {
