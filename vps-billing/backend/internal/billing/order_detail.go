@@ -51,7 +51,7 @@ func orderDetailPath(path string, admin bool) (string, bool) {
 	return id, !strings.Contains(id, "/")
 }
 
-func (a *App) orderDetailHTTP(w http.ResponseWriter, r *http.Request, uid, id string) {
+func (a *App) orderDetailHTTP(w http.ResponseWriter, r *http.Request, uid, id, email string) {
 	if r.Method != "GET" {
 		fail(w, r, 405, "METHOD_NOT_ALLOWED", "不支持此请求方式")
 		return
@@ -69,6 +69,9 @@ func (a *App) orderDetailHTTP(w http.ResponseWriter, r *http.Request, uid, id st
 	if errors.Is(err, ErrNotFound) {
 		fail(w, r, 404, "NOT_FOUND", "未找到此订单")
 		return
+	}
+	if uid != "" {
+		out.Audit = customerAudits(out.Audit, email)
 	}
 	a.result(w, r, out, err)
 }

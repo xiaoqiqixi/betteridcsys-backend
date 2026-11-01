@@ -216,7 +216,7 @@ func (a *App) decodeAuditCursor(value, uid string, q *AuditQuery) error {
 }
 
 func readAuditQuery(values url.Values, admin bool) (AuditQuery, error) {
-	allowed := map[string]bool{"limit": true, "cursor": true, "action": true, "actor_email": true, "owner_id": admin, "from": true, "until": true}
+	allowed := map[string]bool{"limit": true, "cursor": true, "action": true, "actor_email": admin, "owner_id": admin, "from": true, "until": true}
 	for key, items := range values {
 		if !allowed[key] || len(items) != 1 || items[0] == "" {
 			return AuditQuery{}, ErrAuditQuery
@@ -266,6 +266,9 @@ func (a *App) auditEventsHTTP(w http.ResponseWriter, r *http.Request, actor User
 		a.internal(w, r, err)
 		return
 	}
+	if actor.Role != "admin" {
+		page.Items = customerAudits(page.Items, actor.Email)
+	}
 	type event struct {
 		Audit
 		OwnerID string `json:"owner_id,omitempty"`
@@ -287,4 +290,22 @@ func (a *App) auditEventsHTTP(w http.ResponseWriter, r *http.Request, actor User
 		NextCursor string  `json:"next_cursor,omitempty"`
 		Limit      int     `json:"limit"`
 	}{items, page.HasMore, next, q.Limit})
+}
+
+// Old records do not persist actor roles. Only customer-authored order actions
+// with the viewer's own email are exposed; unknown actors default to staff.
+func customerAudits(rows []Audit, email string) []Audit {
+	out := append([]Audit{}, rows...)
+	for i := range out {
+		event := &out[i]
+		switch {
+		case event.ActorEmail == email && (event.Action == "order.created" || event.Action == "order.cancelled"):
+			event.ActorType = "customer"
+		case strings.HasPrefix(event.ActorEmail, "payment:"):
+			event.ActorType, event.ActorEmail, event.Detail = "system", "", ""
+		default:
+			event.ActorType, event.ActorEmail, event.Detail = "staff", "", ""
+		}
+	}
+	return out
 }

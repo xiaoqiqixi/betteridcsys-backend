@@ -337,7 +337,7 @@ func (a *App) serve(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if orderID, matched := orderDetailPath(p, admin); matched {
-		a.orderDetailHTTP(w, r, uid, orderID)
+		a.orderDetailHTTP(w, r, uid, orderID, u.Email)
 		return
 	}
 	if p == "/admin/customer-accounts" || strings.HasPrefix(p, "/admin/customer-accounts/") {
@@ -508,6 +508,9 @@ func (a *App) serve(w http.ResponseWriter, r *http.Request) {
 			uid = ""
 		}
 		v, e := a.Store.Audits(r.Context(), uid)
+		if u.Role != "admin" {
+			v = customerAudits(v, u.Email)
+		}
 		a.result(w, r, v, e)
 	case "/admin/customers":
 		v, e := a.Store.Users(r.Context())

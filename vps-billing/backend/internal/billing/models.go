@@ -107,13 +107,14 @@ type Service struct {
 	DiskGB         int            `json:"disk_gb"`
 }
 type Audit struct {
+	ActorType  string    `json:"actor_type,omitempty"`
 	ID         string    `json:"id"`
 	UserID     string    `json:"-"`
 	Action     string    `json:"action"`
 	Target     string    `json:"target"`
 	CreatedAt  time.Time `json:"created_at"`
-	ActorEmail string    `json:"actor_email"`
-	Detail     string    `json:"detail"`
+	ActorEmail string    `json:"actor_email,omitempty"`
+	Detail     string    `json:"detail,omitempty"`
 }
 type Session struct {
 	// Revision binds an in-flight password check to the account state it read.
