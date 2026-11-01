@@ -230,8 +230,9 @@ func (a *App) accountSessions(w http.ResponseWriter, r *http.Request, u User) {
 }
 
 type accountCursor struct {
-	At time.Time `json:"at"`
-	ID string    `json:"id"`
+	At     time.Time `json:"at"`
+	ID     string    `json:"id"`
+	Pinned bool      `json:"pinned,omitempty"`
 }
 
 func (a *App) cursorSignature(r *http.Request, uid, value string) string {
@@ -242,7 +243,7 @@ func (a *App) cursorSignature(r *http.Request, uid, value string) string {
 	return hex.EncodeToString(mac.Sum(nil))
 }
 func (a *App) makeAccountCursor(r *http.Request, uid string, at time.Time, id string) string {
-	raw, _ := json.Marshal(accountCursor{at, id})
+	raw, _ := json.Marshal(accountCursor{At: at, ID: id})
 	value := base64.RawURLEncoding.EncodeToString(raw)
 	return value + "." + a.cursorSignature(r, uid, value)
 }

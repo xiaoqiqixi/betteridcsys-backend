@@ -246,6 +246,9 @@ func (a *App) serve(w http.ResponseWriter, r *http.Request) {
 	if a.authAccountsHTTP(w, r, p) {
 		return
 	}
+	if p == "/announcements" && a.announcementsHTTP(w, r, User{}, p) {
+		return
+	}
 	if p == "/session" && r.Method == "GET" {
 		t := a.token(r)
 		var user *User
@@ -338,6 +341,9 @@ func (a *App) serve(w http.ResponseWriter, r *http.Request) {
 	a.serveAuthorized(w, r, u, p, false)
 }
 func (a *App) serveAuthorized(w http.ResponseWriter, r *http.Request, u User, p string, admin bool) {
+	if a.announcementsHTTP(w, r, u, p) {
+		return
+	}
 	if a.supportHTTP(w, r, u, p) {
 		return
 	}
