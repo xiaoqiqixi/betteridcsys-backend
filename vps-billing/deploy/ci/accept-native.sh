@@ -352,7 +352,7 @@ emit_json_fact PREFLIGHT_EMPTY_JSON preflight-empty.json
 "${cli_env[@]}" "MYSQL_DSN_FILE=$scratch/migrator.dsn" "$opt/releases/a/bin/aster-api" -migrate > "$scratch/migrate.log" 2>&1
 "${cli_env[@]}" "MYSQL_DSN_FILE=$scratch/migrator.dsn" "$opt/releases/a/bin/aster-api" -migrate >> "$scratch/migrate.log" 2>&1
 migration_count=$("${mysql_cmd[@]}" "$db" --execute='SELECT COUNT(*) FROM schema_migrations')
-[[ $migration_count == 22 ]] || fail 'The current source did not apply exactly twenty-two reviewed migrations.'
+[[ $migration_count == 23 ]] || fail 'The current source did not apply exactly twenty-three reviewed migrations.'
 [[ $("${mysql_cmd[@]}" "$db" --execute="SELECT COUNT(*) FROM plan_prices WHERE currency='USD'") == 0 ]] || fail 'Fresh migration installed unapproved USD prices.'
 for role in admin customer second; do
   account_role=customer; [[ $role != admin ]] || account_role=admin
@@ -367,7 +367,7 @@ report = json.loads(Path(sys.argv[1]).read_text())
 database = report['database']
 assert report['read_only'] is True and report['configuration_checked'] is True
 assert database['read_only'] is True and database['status'] == 'current'
-assert database['schema_version'] == 22 and len(database['migration_checksums']) == 22
+assert database['schema_version'] == 23 and len(database['migration_checksums']) == 23
 assert database['admin_count'] == 1 and database['pending_migrations'] == []
 assert database['table_visibility_verified'] is True
 PYCURRENT
