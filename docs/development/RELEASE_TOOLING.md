@@ -6,6 +6,8 @@
 
 `FRONTEND_PAIR.json` 固定前端提交、版本、兼容文件摘要、归档摘要、FRONTEND 清单摘要及 CI artifact ID / ZIP 摘要 / run ID / attempt。更新配对必须一次性审核这些值；不能改成分支、latest 或候选摘要白名单。当前 pin 是已有的 `aa86bf06…` 候选，不代表正在重写的前端已验收。CI artifact 会过期，过期即拒绝；届时应审核新的成功产物并提交新的完整 pin。
 
+并行支付协议提交 `5293d92` 已把 Core 升为 `0.6.0`；现有 pin 的 Core 兼容版本仍为 `0.5.10`。因此当前实际配对/打包会以 `backend_core_version_mismatch` 拒绝，相关 CI 不能宣称全绿。维护者决定等待重写前端落入其 main 再重新配对；不能临时扩大兼容范围、修改已验证前端清单或回退其他 agent 的版本变更。
+
 前端下载检查 `.github/workflows/ci.yml` 的成功 `frontend` job、完整仓库 ID、提交和重跑次数，校验 ZIP 及两个成员摘要，再运行 `contracts/frontend-bundle/frontend_bundle.py` 的固定摘要检查器。不读取前端 `src/`、路由或组件布局。
 
 `paired-bundles-v1` 有七个附件：
