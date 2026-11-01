@@ -252,8 +252,12 @@ func DecodeStrict(raw []byte, limit int, destination any) error {
 	case *PaymentCreateResponse:
 		required = []string{"protocol", "request_id", "status", "code"}
 		nested, nestedRequired = "checkout", []string{"provider_id", "session_id", "checkout_url", "expires_at"}
-	case *PaymentQueryResponse, *PaymentRefundResponse:
+	case *PaymentQueryResponse:
 		required = []string{"protocol", "request_id", "status", "code"}
+		nested, nestedRequired = "result", []string{"status"}
+	case *PaymentRefundResponse:
+		required = []string{"protocol", "request_id", "status", "code"}
+		nested, nestedRequired = "result", []string{"status", "refund_id"}
 	case *PaymentVerifyResponse:
 		required = []string{"protocol", "request_id", "status", "code"}
 		nested, nestedRequired = "event", []string{"attempt_id", "provider_id", "event_id", "transaction_id", "merchant_account_id", "account_id", "order_id", "invoice_id", "amount_minor", "currency", "currency_decimal_places", "settled_at", "status"}
@@ -264,8 +268,16 @@ func DecodeStrict(raw []byte, limit int, destination any) error {
 			return ErrInvalid
 		}
 		if value, present := fields[nested]; nested != "" && present {
-			if _, err := requireFields(value, nestedRequired); err != nil {
+			payload, err := requireFields(value, nestedRequired)
+			if err != nil {
 				return ErrInvalid
+			}
+			if _, query := destination.(*PaymentQueryResponse); query {
+				if event, present := payload["event"]; present {
+					if _, err := requireFields(event, []string{"attempt_id", "provider_id", "event_id", "transaction_id", "merchant_account_id", "account_id", "order_id", "invoice_id", "amount_minor", "currency", "currency_decimal_places", "settled_at", "status"}); err != nil {
+						return ErrInvalid
+					}
+				}
 			}
 		}
 	}

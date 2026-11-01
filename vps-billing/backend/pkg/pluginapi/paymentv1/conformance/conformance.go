@@ -25,7 +25,7 @@ func Test(t *testing.T, s Suite) {
 	t.Helper()
 	ctx, cancel := context.WithTimeout(t.Context(), 10*time.Second)
 	defer cancel()
-	if s.Manifest.Validate(pluginapi.CoreVersion) != nil || paymentv1.ValidateConfig(s.Config) != nil || paymentv1.ValidateIntent(s.Intent, *s.Manifest.Payment) != nil {
+	if s.Manifest.Protocol != pluginapi.PaymentProtocol || s.Manifest.Payment == nil || s.Processor == nil || s.Manifest.Validate(pluginapi.CoreVersion) != nil || paymentv1.ValidateConfig(s.Config) != nil || paymentv1.ValidateIntent(s.Intent, *s.Manifest.Payment) != nil {
 		t.Fatal("invalid conformance fixtures")
 	}
 	out, err := s.Processor.Create(ctx, s.Config, s.Intent)

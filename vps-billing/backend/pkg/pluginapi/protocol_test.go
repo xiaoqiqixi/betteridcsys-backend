@@ -117,6 +117,28 @@ func TestManifestCompatibility(t *testing.T) {
 	}
 }
 
+func TestQuerySettlementRequiresExplicitZeroPrecision(t *testing.T) {
+	event := paymentv1.VerifiedEvent{AttemptID: "attempt", ProviderID: "payment.example", GatewayID: "slot", EventID: "event", TransactionID: "transaction", MerchantAccountID: "merchant", AccountID: "account", OrderID: "order", InvoiceID: "invoice", AmountMinor: 100, Currency: "JPY", CurrencyDecimalPlaces: 0, SettledAt: time.Now(), Status: "settled"}
+	response := PaymentQueryResponse{Protocol: PaymentProtocol, RequestID: strings.Repeat("a", 64), Status: "accepted", Result: &paymentv1.QueryResult{Status: "succeeded", Event: &event}}
+	raw, _ := json.Marshal(response)
+	var out PaymentQueryResponse
+	if DecodeStrict(raw, MaxResponseBytes, &out) != nil {
+		t.Fatal("complete zero-precision evidence rejected")
+	}
+	var fields map[string]any
+	json.Unmarshal(raw, &fields)
+	evidence := fields["result"].(map[string]any)["event"].(map[string]any)
+	for _, key := range []string{"amount_minor", "currency", "currency_decimal_places", "settled_at"} {
+		original := evidence[key]
+		delete(evidence, key)
+		incomplete, _ := json.Marshal(fields)
+		if DecodeStrict(incomplete, MaxResponseBytes, &out) == nil {
+			t.Fatal("query invented omitted evidence", key)
+		}
+		evidence[key] = original
+	}
+}
+
 func TestLegacySMTPRangeIsNotGuessedForCurrentCore(t *testing.T) {
 	legacy := Manifest{Schema: 1, ID: "email.smtp", Version: "1.0.0", Protocol: SMTPProtocol, CoreMin: "0.4.0", CoreMaxExclusive: "0.5.0", Capabilities: []string{SMTPCapability}, Executable: "plugin", SHA256: strings.Repeat("a", 64)}
 	if legacy.Validate("0.4.0") != nil || legacy.Validate(CoreVersion) == nil {
