@@ -61,6 +61,12 @@ class NativeMigration(unittest.TestCase):
         status = (ROOT / 'docs/development/REPOSITORY_MIGRATION.md').read_text()
         self.assertIn('门禁 3、5、6', status)
         self.assertIn('未完成', status)
+        for name in ('INSTALL.md', 'UPGRADE.md'):
+            manual = (ROOT / 'vps-billing/docs' / name).read_text()
+            self.assertIn('独立发行与验签流程', manual.split('\n\n', 2)[1])
+            self.assertIn('不能用于从旧仓库重新下载或 prepare', manual)
+            self.assertIn('1435344087', manual)
+            self.assertTrue((ROOT / 'vps-billing/docs/../../docs/development/RELEASE_TOOLING.md').resolve().is_file())
 
     def test_check_uses_paired_checkout_policy_without_frontend_source_layout(self):
         check = (CI / 'check.sh').read_text()
