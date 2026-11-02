@@ -366,6 +366,16 @@ func TestOwnedBrowserMySQLFixture(t *testing.T) {
 			if e != nil {
 				t.Fatal("cannot create isolated pending order and audit history")
 			}
+			// The normal seven-day invoice is immediately eligible for the
+			// default seven-day reminder. Keep this read-only UI fixture outside
+			// every reminder window before taking its immutable row snapshot.
+			updated, e := m.DB.ExecContext(ctx, "UPDATE invoices SET due_at=DATE_ADD(UTC_TIMESTAMP(6), INTERVAL 90 DAY) WHERE order_id=? AND user_id=? AND status='unpaid'", order.ID, user.ID)
+			if e != nil {
+				t.Fatal("cannot seed the browser invoice outside automation windows")
+			}
+			if n, e := updated.RowsAffected(); e != nil || n != 1 {
+				t.Fatal("browser fixture requires one future unpaid invoice")
+			}
 			credentials["order"] = map[string]any{"id": order.ID, "number": order.Number,
 				"total": map[string]any{"amount_minor": originalCNY, "currency": "CNY", "decimal_places": 2}}
 		} else {
