@@ -82,3 +82,6 @@ var CommerceServices string
 
 //go:embed 027_service_contract_bounds.sql
 var ServiceContractBounds string
+
+//go:embed 028_affiliate_settings.sql
+var AffiliateSettings string

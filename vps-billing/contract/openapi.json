@@ -1090,6 +1090,444 @@
         }
       }
     },
+    "/admin/affiliate/settings": {
+      "get": {
+        "operationId": "adminGetAffiliateSettings",
+        "summary": "adminGetAffiliateSettings",
+        "tags": [
+          "Admin: Affiliates"
+        ],
+        "x-access": "staff",
+        "x-permission": "settings.write",
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data"
+                  ],
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/AffiliateSettings"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "operationId": "adminUpdateAffiliateSettings",
+        "summary": "adminUpdateAffiliateSettings",
+        "tags": [
+          "Admin: Affiliates"
+        ],
+        "x-access": "staff",
+        "x-permission": "settings.write",
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data"
+                  ],
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/AffiliateSettings"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AffiliateSettings"
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "X-CSRF-Token",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ]
+      }
+    },
+    "/admin/affiliates": {
+      "get": {
+        "operationId": "adminListAffiliates",
+        "summary": "adminListAffiliates",
+        "tags": [
+          "Admin: Affiliates"
+        ],
+        "x-access": "staff",
+        "x-permission": "clients.write",
+        "parameters": [
+          {
+            "name": "cursor",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "maxLength": 512
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100
+            }
+          },
+          {
+            "name": "q",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "maxLength": 120
+            }
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "active",
+                "suspended"
+              ]
+            }
+          }
+        ],
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "items": {
+                          "type": "array",
+                          "items": {
+                            "$ref": "#/components/schemas/AdminAffiliateSummary"
+                          }
+                        },
+                        "next_cursor": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        },
+                        "total": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 9007199254740991
+                        }
+                      },
+                      "required": [
+                        "items",
+                        "next_cursor"
+                      ],
+                      "additionalProperties": false
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/admin/affiliates/{id}": {
+      "get": {
+        "operationId": "adminGetAffiliate",
+        "summary": "adminGetAffiliate",
+        "tags": [
+          "Admin: Affiliates"
+        ],
+        "x-access": "staff",
+        "x-permission": "clients.write",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9_-]{1,64}$"
+            }
+          }
+        ],
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data"
+                  ],
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/AdminAffiliate"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "operationId": "adminUpdateAffiliate",
+        "summary": "adminUpdateAffiliate",
+        "tags": [
+          "Admin: Affiliates"
+        ],
+        "x-access": "staff",
+        "x-permission": "clients.write",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9_-]{1,64}$"
+            }
+          },
+          {
+            "name": "X-CSRF-Token",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data"
+                  ],
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/AdminAffiliate"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AffiliatePatch"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/admin/affiliates/{id}/payouts": {
+      "post": {
+        "operationId": "adminAffiliatePayout",
+        "summary": "adminAffiliatePayout",
+        "tags": [
+          "Admin: Affiliates"
+        ],
+        "x-access": "staff",
+        "x-permission": "clients.write",
+        "x-idempotent": true,
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9_-]{1,64}$"
+            }
+          },
+          {
+            "name": "X-CSRF-Token",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 8,
+              "maxLength": 128
+            }
+          }
+        ],
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data"
+                  ],
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/AdminAffiliate"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AffiliatePayout"
+              }
+            }
+          }
+        }
+      }
+    },
     "/admin/announcements": {
       "get": {
         "operationId": "adminListAnnouncements",
@@ -3829,6 +4267,14 @@
               "type": "string",
               "maxLength": 120
             }
+          },
+          {
+            "name": "client_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "$ref": "#/components/schemas/Id"
+            }
           }
         ],
         "security": [
@@ -4513,6 +4959,14 @@
             "schema": {
               "type": "string",
               "maxLength": 120
+            }
+          },
+          {
+            "name": "client_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "$ref": "#/components/schemas/Id"
             }
           }
         ],
@@ -6588,6 +7042,14 @@
             "schema": {
               "type": "string",
               "maxLength": 120
+            }
+          },
+          {
+            "name": "client_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "$ref": "#/components/schemas/Id"
             }
           }
         ],
@@ -11165,6 +11627,17 @@
           "Auth"
         ],
         "x-access": "public",
+        "parameters": [
+          {
+            "name": "referral_code",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "maxLength": 64
+            }
+          }
+        ],
         "security": [
           {}
         ],
@@ -11791,6 +12264,135 @@
           "actor_type",
           "subject",
           "ip"
+        ],
+        "additionalProperties": false
+      },
+      "AdminAffiliate": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "$ref": "#/components/schemas/Id"
+          },
+          "name": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string"
+          },
+          "code": {
+            "type": "string"
+          },
+          "referrals": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          },
+          "balances": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AffiliateBalance"
+            }
+          },
+          "rate_bp": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 10000
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "active",
+              "suspended"
+            ]
+          },
+          "created_at": {
+            "$ref": "#/components/schemas/Timestamp"
+          },
+          "note": {
+            "type": "string",
+            "maxLength": 2000
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "email",
+          "code",
+          "referrals",
+          "balances",
+          "rate_bp",
+          "status",
+          "created_at",
+          "note"
+        ],
+        "additionalProperties": false
+      },
+      "AdminAffiliateSummary": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "$ref": "#/components/schemas/Id"
+          },
+          "name": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string"
+          },
+          "code": {
+            "type": "string"
+          },
+          "referrals": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          },
+          "balances": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AffiliateBalance"
+            }
+          },
+          "rate_bp": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 10000
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "active",
+              "suspended"
+            ]
+          },
+          "created_at": {
+            "$ref": "#/components/schemas/Timestamp"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "email",
+          "code",
+          "referrals",
+          "balances",
+          "rate_bp",
+          "status",
+          "created_at"
         ],
         "additionalProperties": false
       },
@@ -13051,6 +13653,125 @@
         ],
         "additionalProperties": false
       },
+      "AffiliateBalance": {
+        "type": "object",
+        "properties": {
+          "currency": {
+            "$ref": "#/components/schemas/CurrencyCode"
+          },
+          "pending": {
+            "$ref": "#/components/schemas/Money"
+          },
+          "available": {
+            "$ref": "#/components/schemas/Money"
+          },
+          "paid_out": {
+            "$ref": "#/components/schemas/Money"
+          },
+          "debt": {
+            "$ref": "#/components/schemas/Money"
+          }
+        },
+        "required": [
+          "currency",
+          "pending",
+          "available",
+          "paid_out",
+          "debt"
+        ],
+        "additionalProperties": false
+      },
+      "AffiliateCurrencyAmount": {
+        "type": "object",
+        "properties": {
+          "currency": {
+            "$ref": "#/components/schemas/CurrencyCode"
+          },
+          "amount_minor": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          }
+        },
+        "required": [
+          "currency",
+          "amount_minor"
+        ],
+        "additionalProperties": false
+      },
+      "AffiliateCurrencyAmountInput": {
+        "type": "object",
+        "properties": {
+          "currency": {
+            "$ref": "#/components/schemas/CurrencyCode"
+          },
+          "amount_minor": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          }
+        },
+        "required": [
+          "currency",
+          "amount_minor"
+        ]
+      },
+      "AffiliatePatch": {
+        "type": "object",
+        "properties": {
+          "rate_bp": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 10000
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "active",
+              "suspended"
+            ]
+          },
+          "note": {
+            "type": "string",
+            "maxLength": 2000
+          }
+        },
+        "required": [
+          "rate_bp",
+          "status",
+          "note"
+        ]
+      },
+      "AffiliatePayout": {
+        "type": "object",
+        "properties": {
+          "currency": {
+            "$ref": "#/components/schemas/CurrencyCode"
+          },
+          "amount_minor": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 9007199254740991
+          },
+          "reference": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 120
+          }
+        },
+        "required": [
+          "currency",
+          "amount_minor",
+          "reference"
+        ]
+      },
       "AffiliateReferral": {
         "type": "object",
         "properties": {
@@ -13064,7 +13785,10 @@
             "type": "string"
           },
           "commissions": {
-            "$ref": "#/components/schemas/Money"
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Money"
+            }
           },
           "status": {
             "type": "string",
@@ -13083,10 +13807,211 @@
         ],
         "additionalProperties": false
       },
+      "AffiliateSettings": {
+        "type": "object",
+        "properties": {
+          "enabled": {
+            "type": "boolean"
+          },
+          "default_rate_bp": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 10000
+          },
+          "scope": {
+            "type": "string",
+            "enum": [
+              "first_payment",
+              "all_payments",
+              "first_months"
+            ]
+          },
+          "scope_months": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 120
+          },
+          "hold_days": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 365
+          },
+          "attribution_days": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 365
+          },
+          "min_withdraw": {
+            "maxItems": 200,
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AffiliateCurrencyAmount"
+            }
+          },
+          "max_per_referral": {
+            "maxItems": 200,
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AffiliateCurrencyAmount"
+            }
+          },
+          "allow_self_referral": {
+            "type": "boolean"
+          },
+          "clawback": {
+            "type": "string",
+            "enum": [
+              "reverse_pending",
+              "reverse_all"
+            ]
+          },
+          "product_overrides": {
+            "maxItems": 1000,
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "product_id": {
+                  "$ref": "#/components/schemas/Id"
+                },
+                "rate_bp": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 10000
+                }
+              },
+              "required": [
+                "product_id",
+                "rate_bp"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "revision": {
+            "$ref": "#/components/schemas/Revision"
+          }
+        },
+        "required": [
+          "enabled",
+          "default_rate_bp",
+          "scope",
+          "scope_months",
+          "hold_days",
+          "attribution_days",
+          "min_withdraw",
+          "max_per_referral",
+          "allow_self_referral",
+          "clawback",
+          "product_overrides",
+          "revision"
+        ],
+        "additionalProperties": false
+      },
+      "AffiliateSettingsInput": {
+        "type": "object",
+        "properties": {
+          "enabled": {
+            "type": "boolean"
+          },
+          "default_rate_bp": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 10000
+          },
+          "scope": {
+            "type": "string",
+            "enum": [
+              "first_payment",
+              "all_payments",
+              "first_months"
+            ]
+          },
+          "scope_months": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 120
+          },
+          "hold_days": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 365
+          },
+          "attribution_days": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 365
+          },
+          "min_withdraw": {
+            "maxItems": 200,
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AffiliateCurrencyAmount"
+            }
+          },
+          "max_per_referral": {
+            "maxItems": 200,
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AffiliateCurrencyAmount"
+            }
+          },
+          "allow_self_referral": {
+            "type": "boolean"
+          },
+          "clawback": {
+            "type": "string",
+            "enum": [
+              "reverse_pending",
+              "reverse_all"
+            ]
+          },
+          "product_overrides": {
+            "maxItems": 1000,
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "product_id": {
+                  "$ref": "#/components/schemas/Id"
+                },
+                "rate_bp": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 10000
+                }
+              },
+              "required": [
+                "product_id",
+                "rate_bp"
+              ]
+            }
+          },
+          "revision": {
+            "$ref": "#/components/schemas/Revision"
+          }
+        },
+        "required": [
+          "enabled",
+          "default_rate_bp",
+          "scope",
+          "scope_months",
+          "hold_days",
+          "attribution_days",
+          "min_withdraw",
+          "max_per_referral",
+          "allow_self_referral",
+          "clawback",
+          "product_overrides",
+          "revision"
+        ]
+      },
       "AffiliateSummary": {
         "type": "object",
         "properties": {
           "enabled": {
+            "type": "boolean"
+          },
+          "earning_enabled": {
             "type": "boolean"
           },
           "code": {
@@ -13101,41 +14026,59 @@
               "null"
             ]
           },
-          "commission_percent": {
-            "type": "number",
+          "rate_bp": {
+            "type": "integer",
             "minimum": 0,
-            "maximum": 100
+            "maximum": 10000
           },
           "referrals": {
             "type": "integer",
             "minimum": 0,
             "maximum": 9007199254740991
           },
-          "pending": {
-            "$ref": "#/components/schemas/Money"
+          "balances": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AffiliateBalance"
+            }
           },
-          "available": {
-            "$ref": "#/components/schemas/Money"
+          "scope": {
+            "type": "string",
+            "enum": [
+              "first_payment",
+              "all_payments",
+              "first_months"
+            ]
           },
-          "paid_out": {
-            "$ref": "#/components/schemas/Money"
+          "scope_months": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 120
           },
           "hold_days": {
             "type": "integer",
             "minimum": 0,
-            "maximum": 9007199254740991
+            "maximum": 365
+          },
+          "min_withdraw": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AffiliateCurrencyAmount"
+            }
           }
         },
         "required": [
           "enabled",
+          "earning_enabled",
           "code",
           "link",
-          "commission_percent",
+          "rate_bp",
           "referrals",
-          "pending",
-          "available",
-          "paid_out",
-          "hold_days"
+          "balances",
+          "scope",
+          "scope_months",
+          "hold_days",
+          "min_withdraw"
         ],
         "additionalProperties": false
       },

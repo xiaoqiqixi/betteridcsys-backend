@@ -204,6 +204,11 @@ func preflightChecks(version int) map[string]map[string]string {
 	if schemaIncludes(version, migrations.AffiliateCommissions) {
 		checks["affiliate_commissions"] = map[string]string{"affiliate_commission_money": "amount_minor >= 0 AND amount_minor <= 9007199254740991 AND withdrawn_minor >= 0 AND withdrawn_minor <= amount_minor", "affiliate_commission_rate": "basis_points >= 0 AND basis_points <= 10000", "affiliate_commission_precision": "decimal_places >= 0 AND decimal_places <= 6"}
 	}
+	if schemaIncludes(version, migrations.AffiliateSettings) {
+		for k, v := range affiliateSettingsChecks {
+			checks[k] = v
+		}
+	}
 	return checks
 }
 
@@ -364,7 +369,7 @@ func validatePreflightTableShape(ctx context.Context, conn *sql.Conn, version in
 		if expected := checks[table][name]; expected != "" {
 			check := currencyMigrationCheck{"CHECK", enforced, clause}
 			matches := currencyMigrationCheckMatches(check, expected)
-			if affiliateColumns[table] != "" || commerceLedgerColumns[table] != "" || automationColumns[table] != "" || commerceBillingColumns[table] != "" || commerceServiceColumns[table] != "" || name == "invoice_commerce_money" || strings.HasPrefix(name, "service_") {
+			if affiliateSettingsColumns[table] != "" || affiliateColumns[table] != "" || commerceLedgerColumns[table] != "" || automationColumns[table] != "" || commerceBillingColumns[table] != "" || commerceServiceColumns[table] != "" || name == "invoice_commerce_money" || strings.HasPrefix(name, "service_") {
 				matches = commerceCheckMatches(check, expected)
 			}
 			if version >= 13 && (table == "product_configurations" || table == "order_product_configurations" || table == "provisioning_jobs") {
@@ -457,6 +462,11 @@ func validatePreflightTableKeys(ctx context.Context, conn *sql.Conn, version int
 
 	if schemaIncludes(version, migrations.PaymentGateways) {
 		required["payment_gateway_settings:id"] = true
+	}
+	if schemaIncludes(version, migrations.AffiliateSettings) {
+		for _, k := range affiliateSettingsKeys {
+			required[k] = true
+		}
 	}
 	if schemaIncludes(version, migrations.AffiliateCommissions) {
 		required["affiliate_commissions:id"] = true
@@ -615,6 +625,11 @@ func validatePreflightTableKeys(ctx context.Context, conn *sql.Conn, version int
 	if schemaIncludes(version, migrations.StaffRoles) {
 		fks["staff_members:user_id:users:id:CASCADE"] = true
 		fks["staff_members:role_id:staff_roles:id:RESTRICT"] = true
+	}
+	if schemaIncludes(version, migrations.AffiliateSettings) {
+		for _, k := range affiliateSettingsFKs {
+			required[k] = true
+		}
 	}
 	if schemaIncludes(version, migrations.AffiliateCommissions) {
 		for _, k := range []string{"affiliate_commissions:affiliate_id:affiliates:user_id:RESTRICT", "affiliate_commissions:client_id:users:id:RESTRICT", "affiliate_commissions:invoice_id:invoices:id:RESTRICT"} {

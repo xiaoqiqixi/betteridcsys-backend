@@ -293,22 +293,10 @@ func (a *App) registerAccount(w http.ResponseWriter, r *http.Request) {
 		if err = saveProfileTx(r.Context(), tx, p); err != nil {
 			return nil, err
 		}
-		if in.ReferralCode != "" {
-			var referrer string
-			err = tx.QueryRowContext(r.Context(), "SELECT user_id FROM affiliates WHERE code=?", in.ReferralCode).Scan(&referrer)
-			if errors.Is(err, sql.ErrNoRows) {
-				return nil, problem(400, "INVALID_REFERRAL", "Referral code not found")
-			}
-			if err != nil {
-				return nil, err
-			}
-			if _, err = tx.ExecContext(r.Context(), "UPDATE account_profiles SET referrer_id=? WHERE user_id=?", referrer, id); err != nil {
-				return nil, err
-			}
-			if _, err = tx.ExecContext(r.Context(), "INSERT INTO affiliate_referrals(client_id,affiliate_id,created_at,converted) VALUES(?,?,UTC_TIMESTAMP(6),FALSE)", id, referrer); err != nil {
-				return nil, err
-			}
+		if err = attributeAffiliateTx(r.Context(), tx, id, in.Email, a.clientIP(r), a.affiliateRegistrationCode(r, in.ReferralCode)); err != nil {
+			return nil, err
 		}
+
 		if _, err = tx.ExecContext(r.Context(), "INSERT INTO sessions(token_hash,user_id,expires_at) VALUES(?,?,DATE_ADD(UTC_TIMESTAMP(6),INTERVAL ? HOUR))", digest(token), id, security.ClientSessionHours); err != nil {
 			return nil, err
 		}

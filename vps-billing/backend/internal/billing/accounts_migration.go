@@ -36,6 +36,11 @@ var accountFeatureFKs = []string{"ssh_keys:user_id:users:id:CASCADE", "api_token
 var affiliateColumns = map[string]string{"affiliate_commissions": "id:char(32)! affiliate_id:char(32)! client_id:char(32)! invoice_id:char(32)! currency:char(3)! decimal_places:int! basis_points:int! amount_minor:bigint! withdrawn_minor:bigint! status:enum('pending','available','withdrawn','cancelled')! created_at:datetime(6)! released_at:datetime(6)?"}
 
 func accountSchemaColumns(version int, specs map[string]string) {
+	if schemaIncludes(version, migrations.AffiliateSettings) {
+		for k, v := range affiliateSettingsColumns {
+			specs[k] = v
+		}
+	}
 	if schemaIncludes(version, migrations.AffiliateCommissions) {
 		for k, v := range affiliateColumns {
 			specs[k] = v

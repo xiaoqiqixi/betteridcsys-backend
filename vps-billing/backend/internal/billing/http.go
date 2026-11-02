@@ -284,6 +284,12 @@ func (a *App) serve(w http.ResponseWriter, r *http.Request) {
 			t = ID() + ID()
 			a.setCookie(w, t)
 		}
+		if user == nil {
+			if e := a.captureAffiliate(w, r); e != nil {
+				a.accountResult(w, r, nil, e)
+				return
+			}
+		}
 		a.writeSession(w, r, user, t)
 		return
 	}
@@ -357,6 +363,9 @@ func (a *App) serve(w http.ResponseWriter, r *http.Request) {
 	a.serveAuthorized(w, r, u, p, false)
 }
 func (a *App) serveAuthorized(w http.ResponseWriter, r *http.Request, u User, p string, admin bool) {
+	if admin && a.adminAffiliateHTTP(w, r, u, p) {
+		return
+	}
 	if !admin && p == "/orders" && r.Method == "POST" && !a.orderEmailVerified(w, r, u) {
 		return
 	}

@@ -12,13 +12,21 @@ import (
 
 func setAffiliatePolicy(t *testing.T, m *MySQL, bp int, recurring bool) {
 	t.Helper()
-	raw, _ := json.Marshal(map[string]any{"commission_basis_points": bp, "recurring": recurring})
-	if _, err := m.DB.Exec("UPDATE account_settings SET document=? WHERE name='affiliate_policy'", raw); err != nil {
+	s := financeapi.AffiliateSettings{Enabled: true, DefaultRateBp: int64(bp), Scope: "first_payment", ScopeMonths: 12, HoldDays: 1, AttributionDays: 30, MinWithdraw: []financeapi.AffiliateCurrencyAmount{}, MaxPerReferral: []financeapi.AffiliateCurrencyAmount{}, AllowSelfReferral: true, Clawback: "reverse_all"}
+	_ = json.Unmarshal([]byte(`[]`), &s.ProductOverrides)
+	if recurring {
+		s.Scope = "all_payments"
+	}
+	raw, _ := json.Marshal(s)
+	if _, err := m.DB.Exec("UPDATE affiliate_settings SET document=? WHERE id=1", raw); err != nil {
 		t.Fatal(err)
 	}
 }
 
 func seedAffiliateInvoice(t *testing.T, m *MySQL, uid string, at time.Time) string {
+	return seedAffiliateInvoiceKind(t, m, uid, at, "order")
+}
+func seedAffiliateInvoiceKind(t *testing.T, m *MySQL, uid string, at time.Time, kind string) string {
 	t.Helper()
 	id := ID()
 	raw, _ := json.Marshal(DefaultCurrencyFormat("CNY"))
@@ -29,6 +37,15 @@ func seedAffiliateInvoice(t *testing.T, m *MySQL, uid string, at time.Time) stri
 	defer tx.Rollback()
 	_, err = tx.Exec("INSERT INTO invoices(id,number,user_id,status,amount_minor,currency,issued_at,due_at,paid_at,currency_snapshot,amount_paid_minor,subtotal_minor,commerce_version) VALUES(?,?,?,'paid',3900,'CNY',?,?,?,?,3900,3900,6)", id, "INV-"+id, uid, at, at, at, raw)
 	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err = tx.Exec("UPDATE invoices SET kind=? WHERE id=?", kind, id); err != nil {
+		t.Fatal(err)
+	}
+	if _, err = tx.Exec("INSERT INTO invoice_lines(id,invoice_id,position,description,amount_minor) VALUES(?,?,0,'Affiliate fixture',3900)", ID(), id); err != nil {
+		t.Fatal(err)
+	}
+	if _, err = tx.Exec("INSERT INTO invoice_payments(id,invoice_id,method,amount_minor,refunded_minor,status,created_at) VALUES(?,?,'manual',3900,0,'succeeded',?)", ID(), id, at); err != nil {
 		t.Fatal(err)
 	}
 	if err = recordAffiliateCommissionTx(t.Context(), tx, id, at); err != nil {
@@ -45,7 +62,7 @@ func TestMySQLAffiliateOwnershipHoldAndAtomicWithdrawals(t *testing.T) {
 	m := f.Store.(*MySQL)
 	c := client(t, srv.URL, f.customer.Email, "AccountFixture!2026")
 	v := accountHTTP(t, c, "GET", "/affiliate", "/affiliate", nil, "").(map[string]any)
-	if v["enabled"] != false || v["code"] != nil || v["commission_percent"] != float64(0) {
+	if v["enabled"] != false || v["code"] != nil || v["rate_bp"] != float64(0) {
 		t.Fatal(v)
 	}
 	v = accountHTTP(t, c, "POST", "/affiliate/activate", "/affiliate/activate", map[string]any{}, "").(map[string]any)
@@ -53,15 +70,16 @@ func TestMySQLAffiliateOwnershipHoldAndAtomicWithdrawals(t *testing.T) {
 	if v["code"] != again["code"] {
 		t.Fatal("activation changed referral code")
 	}
+	setAffiliatePolicy(t, m, 0, false)
 	ref := client(t, srv.URL, "", "")
 	registered := accountHTTP(t, ref, "POST", "/auth/register", "/auth/register", map[string]any{"email": "referred-person@example.com", "password": "Referred password!2026", "name": "Referred", "country": "DE", "currency": "CNY", "locale": "en", "accept_terms": true, "referral_code": v["code"]}, "affiliate-signup").(map[string]any)
 	uid := registered["user"].(map[string]any)["id"].(string)
 	setAffiliatePolicy(t, m, 1000, false)
 	now := time.Now().UTC().Truncate(time.Microsecond)
 	seedAffiliateInvoice(t, m, uid, now.Add(-48*time.Hour))
-	seedAffiliateInvoice(t, m, uid, now.Add(-47*time.Hour))
+	seedAffiliateInvoiceKind(t, m, uid, now.Add(-47*time.Hour), "renewal")
 	v = accountHTTP(t, c, "GET", "/affiliate", "/affiliate", nil, "").(map[string]any)
-	if v["pending"].(map[string]any)["amount_minor"] != float64(390) {
+	if v["balances"].([]any)[0].(map[string]any)["pending"].(map[string]any)["amount_minor"] != float64(390) {
 		t.Fatal("first invoice policy", v)
 	}
 	refs := accountHTTP(t, c, "GET", "/affiliate/referrals?limit=1", "/affiliate/referrals", nil, "").(map[string]any)
@@ -79,7 +97,7 @@ func TestMySQLAffiliateOwnershipHoldAndAtomicWithdrawals(t *testing.T) {
 		t.Fatal(status, out)
 	}
 	contracttest.Error(t, out)
-	result, err := a.releaseAffiliate(f.ctx, financeapi.AutomationSettings{AffiliateHoldDays: 3}, now)
+	result, err := a.releaseAffiliate(f.ctx, financeapi.AutomationSettings{AffiliateHoldDays: 3}, now.Add(-36*time.Hour))
 	if err != nil || result.Processed != 0 {
 		t.Fatal("hold shortened", result, err)
 	}
@@ -89,7 +107,7 @@ func TestMySQLAffiliateOwnershipHoldAndAtomicWithdrawals(t *testing.T) {
 	}
 	for range 2 {
 		v = accountHTTP(t, c, "POST", "/affiliate/withdraw", "/affiliate/withdraw", map[string]any{"amount_minor": 300}, "affiliate-payout-1").(map[string]any)
-		if v["paid_out"].(map[string]any)["amount_minor"] != float64(300) {
+		if v["balances"].([]any)[0].(map[string]any)["paid_out"].(map[string]any)["amount_minor"] != float64(300) {
 			t.Fatal(v)
 		}
 	}
@@ -128,7 +146,7 @@ func TestMySQLAffiliateOwnershipHoldAndAtomicWithdrawals(t *testing.T) {
 		t.Fatal("duplicate credit", credit)
 	}
 	v = accountHTTP(t, ref, "GET", "/affiliate", "/affiliate", nil, "").(map[string]any)
-	if v["paid_out"].(map[string]any)["amount_minor"] != float64(0) {
+	if v["balances"].([]any)[0].(map[string]any)["paid_out"].(map[string]any)["amount_minor"] != float64(0) {
 		t.Fatal("foreign commission returned", v)
 	}
 	owner := client(t, srv.URL, f.admin.Email, "AccountFixture!2026")
@@ -190,13 +208,13 @@ func TestMySQLAffiliateRefundDuringHoldAndRecurringPolicy(t *testing.T) {
 	now := time.Now().UTC()
 	id := seedAffiliateInvoice(t, m, other.ID, now.Add(-48*time.Hour))
 	seedAffiliateInvoice(t, m, other.ID, now.Add(-48*time.Hour))
-	migrationExec(t, f.ctx, m.DB, "UPDATE invoices SET refunded_minor=3900,status='refunded' WHERE id=?", id)
+	seedAffiliateRefund(t, m, id, 3900, now.Add(-47*time.Hour))
 	result, err := a.releaseAffiliate(f.ctx, financeapi.AutomationSettings{AffiliateHoldDays: 1}, now)
 	if err != nil || result.Processed != 2 || result.Failed != 0 {
 		t.Fatal(result, err)
 	}
 	v, err := a.affiliateSummary(f.ctx, m.DB, f.customer.ID)
-	if err != nil || v.Available.AmountMinor != 390 || v.Pending.AmountMinor != 0 {
+	if err != nil || v.Balances[0].Available.AmountMinor != 390 || v.Balances[0].Pending.AmountMinor != 0 {
 		t.Fatal(v, err)
 	}
 	if a.Automation.jobs["release_affiliate"] == nil {
@@ -243,7 +261,7 @@ func TestMySQLAffiliateCommercePartialSettlementAndCreditRollback(t *testing.T) 
 		}
 	}
 	var commission int64
-	if err = m.DB.QueryRow("SELECT amount_minor FROM affiliate_commissions WHERE invoice_id=?", invoice.ID).Scan(&commission); err != nil || commission != invoice.AmountMinor/10 {
+	if err = m.DB.QueryRow("SELECT amount_minor FROM affiliate_commissions WHERE invoice_id=?", invoice.ID).Scan(&commission); err != nil || commission != 100 {
 		t.Fatal(commission, err)
 	}
 	// A second invoice enters commerce through a partial manual payment and
@@ -262,4 +280,17 @@ func TestMySQLAffiliateCommercePartialSettlementAndCreditRollback(t *testing.T) 
 	if err = m.DB.QueryRow("SELECT COUNT(*) FROM affiliate_commissions").Scan(&n); err != nil || n != 2 {
 		t.Fatal("commerce settlement replay", n, err)
 	}
+}
+
+func seedAffiliateRefund(t *testing.T, m *MySQL, invoice string, amount int64, at time.Time) string {
+	t.Helper()
+	var payment string
+	if err := m.DB.QueryRow("SELECT id FROM invoice_payments WHERE invoice_id=? AND method IN ('manual','gateway') ORDER BY id LIMIT 1", invoice).Scan(&payment); err != nil {
+		t.Fatal(err)
+	}
+	id := ID()
+	migrationExec(t, t.Context(), m.DB, "INSERT INTO invoice_refunds(id,invoice_id,payment_id,amount_minor,destination,status,reason,created_at,updated_at) VALUES(?,?,?,?,'credit','succeeded','Affiliate fixture refund',?,?)", id, invoice, payment, amount, at, at)
+	migrationExec(t, t.Context(), m.DB, "UPDATE invoice_payments SET refunded_minor=refunded_minor+?,status='refunded' WHERE id=?", amount, payment)
+	migrationExec(t, t.Context(), m.DB, "UPDATE invoices SET refunded_minor=refunded_minor+?,status='partially_refunded' WHERE id=?", amount, invoice)
+	return id
 }

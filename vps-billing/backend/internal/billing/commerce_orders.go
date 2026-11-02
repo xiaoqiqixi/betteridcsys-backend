@@ -367,6 +367,16 @@ func (m *MySQL) CreateOrder06(ctx context.Context, actor User, input api.CreateO
 		if err != nil {
 			return out, err
 		}
+		// Preserve quote item attribution for every product, option and setup
+		// line. Invoice line positions are not order item positions.
+		for position, line := range quote.Quote.Lines {
+			if line.ItemIndex == nil {
+				continue
+			}
+			if _, err = tx.ExecContext(ctx, `INSERT INTO affiliate_invoice_lines(invoice_line_id,product_id,order_item_id) SELECT l.id,oi.product_id,oi.id FROM invoice_lines l JOIN order_items oi ON oi.order_id=? AND oi.position=? WHERE l.invoice_id=? AND l.position=?`, oid, *line.ItemIndex, invoice.ID, position); err != nil {
+				return out, err
+			}
+		}
 		invoice.Subtotal = quote.Quote.Subtotal
 		if _, err = tx.ExecContext(ctx, "UPDATE invoices SET subtotal_minor=? WHERE id=?", invoice.Subtotal.AmountMinor, invoice.ID); err != nil {
 			return out, err

@@ -20,6 +20,31 @@ type ActivityEvent = struct {
 	IP        *string   `json:"ip"`
 }
 
+type AdminAffiliate = struct {
+	ID        Id                 `json:"id"`
+	Name      string             `json:"name"`
+	Email     string             `json:"email"`
+	Code      string             `json:"code"`
+	Referrals int64              `json:"referrals"`
+	Balances  []AffiliateBalance `json:"balances"`
+	RateBp    *int64             `json:"rate_bp"`
+	Status    string             `json:"status"`
+	CreatedAt Timestamp          `json:"created_at"`
+	Note      string             `json:"note"`
+}
+
+type AdminAffiliateSummary = struct {
+	ID        Id                 `json:"id"`
+	Name      string             `json:"name"`
+	Email     string             `json:"email"`
+	Code      string             `json:"code"`
+	Referrals int64              `json:"referrals"`
+	Balances  []AffiliateBalance `json:"balances"`
+	RateBp    *int64             `json:"rate_bp"`
+	Status    string             `json:"status"`
+	CreatedAt Timestamp          `json:"created_at"`
+}
+
 type AdminClient = struct {
 	ID            Id           `json:"id"`
 	Email         string       `json:"email"`
@@ -263,24 +288,92 @@ type AdminTicketSummary = struct {
 	AssigneeName *string        `json:"assignee_name"`
 }
 
+type AffiliateBalance = struct {
+	Currency  CurrencyCode `json:"currency"`
+	Pending   Money        `json:"pending"`
+	Available Money        `json:"available"`
+	PaidOut   Money        `json:"paid_out"`
+	Debt      Money        `json:"debt"`
+}
+
+type AffiliateCurrencyAmount = struct {
+	Currency    CurrencyCode `json:"currency"`
+	AmountMinor int64        `json:"amount_minor"`
+}
+
+type AffiliateCurrencyAmountInput = struct {
+	Currency    CurrencyCode `json:"currency"`
+	AmountMinor int64        `json:"amount_minor"`
+}
+
+type AffiliatePatch = struct {
+	RateBp *int64 `json:"rate_bp"`
+	Status string `json:"status"`
+	Note   string `json:"note"`
+}
+
+type AffiliatePayout = struct {
+	Currency    CurrencyCode `json:"currency"`
+	AmountMinor int64        `json:"amount_minor"`
+	Reference   string       `json:"reference"`
+}
+
 type AffiliateReferral = struct {
 	ID          Id        `json:"id"`
 	JoinedAt    Timestamp `json:"joined_at"`
 	Client      string    `json:"client"`
-	Commissions Money     `json:"commissions"`
+	Commissions []Money   `json:"commissions"`
 	Status      string    `json:"status"`
 }
 
+type AffiliateSettings = struct {
+	Enabled           bool                      `json:"enabled"`
+	DefaultRateBp     int64                     `json:"default_rate_bp"`
+	Scope             string                    `json:"scope"`
+	ScopeMonths       int64                     `json:"scope_months"`
+	HoldDays          int64                     `json:"hold_days"`
+	AttributionDays   int64                     `json:"attribution_days"`
+	MinWithdraw       []AffiliateCurrencyAmount `json:"min_withdraw"`
+	MaxPerReferral    []AffiliateCurrencyAmount `json:"max_per_referral"`
+	AllowSelfReferral bool                      `json:"allow_self_referral"`
+	Clawback          string                    `json:"clawback"`
+	ProductOverrides  []struct {
+		ProductID Id    `json:"product_id"`
+		RateBp    int64 `json:"rate_bp"`
+	} `json:"product_overrides"`
+	Revision Revision `json:"revision"`
+}
+
+type AffiliateSettingsInput = struct {
+	Enabled           bool                      `json:"enabled"`
+	DefaultRateBp     int64                     `json:"default_rate_bp"`
+	Scope             string                    `json:"scope"`
+	ScopeMonths       int64                     `json:"scope_months"`
+	HoldDays          int64                     `json:"hold_days"`
+	AttributionDays   int64                     `json:"attribution_days"`
+	MinWithdraw       []AffiliateCurrencyAmount `json:"min_withdraw"`
+	MaxPerReferral    []AffiliateCurrencyAmount `json:"max_per_referral"`
+	AllowSelfReferral bool                      `json:"allow_self_referral"`
+	Clawback          string                    `json:"clawback"`
+	ProductOverrides  []struct {
+		ProductID Id    `json:"product_id"`
+		RateBp    int64 `json:"rate_bp"`
+	} `json:"product_overrides"`
+	Revision Revision `json:"revision"`
+}
+
 type AffiliateSummary = struct {
-	Enabled           bool    `json:"enabled"`
-	Code              *string `json:"code"`
-	Link              *string `json:"link"`
-	CommissionPercent float64 `json:"commission_percent"`
-	Referrals         int64   `json:"referrals"`
-	Pending           Money   `json:"pending"`
-	Available         Money   `json:"available"`
-	PaidOut           Money   `json:"paid_out"`
-	HoldDays          int64   `json:"hold_days"`
+	Enabled        bool                      `json:"enabled"`
+	EarningEnabled bool                      `json:"earning_enabled"`
+	Code           *string                   `json:"code"`
+	Link           *string                   `json:"link"`
+	RateBp         int64                     `json:"rate_bp"`
+	Referrals      int64                     `json:"referrals"`
+	Balances       []AffiliateBalance        `json:"balances"`
+	Scope          string                    `json:"scope"`
+	ScopeMonths    int64                     `json:"scope_months"`
+	HoldDays       int64                     `json:"hold_days"`
+	MinWithdraw    []AffiliateCurrencyAmount `json:"min_withdraw"`
 }
 
 type Announcement = struct {
@@ -1285,6 +1378,28 @@ type AddSshKeyInput = struct {
 type AddSshKeyResponse = SshKey
 
 type DeleteSshKeyResponse = Ok
+
+type AdminGetAffiliateSettingsResponse = AffiliateSettings
+
+type AdminUpdateAffiliateSettingsInput = AffiliateSettings
+
+type AdminUpdateAffiliateSettingsResponse = AffiliateSettings
+
+type AdminListAffiliatesResponse = struct {
+	Items      []AdminAffiliateSummary `json:"items"`
+	NextCursor *string                 `json:"next_cursor"`
+	Total      int64                   `json:"total,omitempty"`
+}
+
+type AdminGetAffiliateResponse = AdminAffiliate
+
+type AdminUpdateAffiliateInput = AffiliatePatch
+
+type AdminUpdateAffiliateResponse = AdminAffiliate
+
+type AdminAffiliatePayoutInput = AffiliatePayout
+
+type AdminAffiliatePayoutResponse = AdminAffiliate
 
 type AdminListAnnouncementsResponse = []struct {
 	ID          Id            `json:"id"`

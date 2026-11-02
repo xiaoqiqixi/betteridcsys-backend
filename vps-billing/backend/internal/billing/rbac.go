@@ -95,6 +95,10 @@ func adminPermission(path, method string) string {
 		return ""
 	}
 	switch parts[0] {
+	case "affiliate":
+		return "settings.write"
+	case "affiliates":
+		return "clients.write"
 	case "overview":
 		return "overview.read"
 	case "audit-events":
