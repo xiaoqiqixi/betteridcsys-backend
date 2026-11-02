@@ -129,7 +129,8 @@ class Stack:
         require(os.geteuid() == 0 and os.environ.get("GITHUB_ACTIONS") == "true" and sys.platform == "linux", "real-stack runner requires disposable Linux Actions root")
         run = os.environ.get("GITHUB_RUN_ID", "") + "-" + os.environ.get("GITHUB_RUN_ATTEMPT", "")
         require(re.fullmatch(r"[0-9]+-[0-9]+", run), "invalid Actions identity")
-        self.root = Path("/run/aster-e2e-" + run)
+        # VM disks, snapshots and MySQL need disk-backed capacity, not /run tmpfs.
+        self.root = Path("/var/lib/aster-e2e-" + run)
         self.root.mkdir(mode=0o755)
         self.private = self.root / "private"
         self.private.mkdir(mode=0o700)
