@@ -347,27 +347,7 @@ func (c *Client) call(ctx context.Context, request Request, lookup bool) (Result
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Idempotency-Key", request.OperationID)
 	req.Header.Set("X-Aster-Request-SHA256", digest)
-	var dials atomic.Int32
-	dialer := net.Dialer{Timeout: 4 * time.Second, KeepAlive: -1}
-	transport := &http.Transport{
-		Proxy: nil, DisableKeepAlives: true, DisableCompression: true, ForceAttemptHTTP2: false,
-		TLSNextProto:    map[string]func(string, *tls.Conn) http.RoundTripper{},
-		TLSClientConfig: c.tls.Clone(), TLSHandshakeTimeout: 5 * time.Second,
-		ResponseHeaderTimeout: 7 * time.Second, MaxResponseHeaderBytes: 16 << 10,
-		DialContext: func(ctx context.Context, network, _ string) (net.Conn, error) {
-			if !dials.CompareAndSwap(0, 1) {
-				return nil, ErrUncertain
-			}
-			address, err := c.resolveAddress(ctx)
-			if err != nil {
-				return nil, err
-			}
-			return dialer.DialContext(ctx, network, address)
-		},
-	}
-	defer transport.CloseIdleConnections()
-	client := &http.Client{Transport: transport, Timeout: 12 * time.Second, CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }}
-	response, err := client.Do(req)
+	response, err := c.do(req)
 	if err != nil {
 		return Result{}, ErrUncertain
 	}
@@ -395,4 +375,30 @@ func exactKeys(raw []byte, keys ...string) bool {
 		}
 	}
 	return true
+}
+
+// do is shared by provisioning and the pinned service SDK. Each connection
+// revalidates DNS against the approved CIDRs and permits exactly one dial.
+func (c *Client) do(req *http.Request) (*http.Response, error) {
+	var dials atomic.Int32
+	dialer := net.Dialer{Timeout: 4 * time.Second, KeepAlive: -1}
+	transport := &http.Transport{
+		Proxy: nil, DisableKeepAlives: true, DisableCompression: true, ForceAttemptHTTP2: false,
+		TLSNextProto:    map[string]func(string, *tls.Conn) http.RoundTripper{},
+		TLSClientConfig: c.tls.Clone(), TLSHandshakeTimeout: 5 * time.Second,
+		ResponseHeaderTimeout: 7 * time.Second, MaxResponseHeaderBytes: 16 << 10,
+		DialContext: func(ctx context.Context, network, _ string) (net.Conn, error) {
+			if !dials.CompareAndSwap(0, 1) {
+				return nil, ErrUncertain
+			}
+			address, err := c.resolveAddress(ctx)
+			if err != nil {
+				return nil, err
+			}
+			return dialer.DialContext(ctx, network, address)
+		},
+	}
+	defer transport.CloseIdleConnections()
+	client := &http.Client{Transport: transport, Timeout: 12 * time.Second, CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }}
+	return client.Do(req)
 }
