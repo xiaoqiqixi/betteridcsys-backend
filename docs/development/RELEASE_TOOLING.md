@@ -4,7 +4,7 @@
 
 ## 配对与附件
 
-`FRONTEND_PAIR.json` 固定前端提交、版本、兼容文件摘要、归档摘要、FRONTEND 清单摘要及 CI artifact ID / ZIP 摘要 / run ID / attempt。更新配对必须一次性审核这些值；不能改成分支、latest 或候选摘要白名单。当前 pin 是前端 main 上的 `0d69f196fb5d648fe576c77635beb3863f683cc4`、Core `0.6.0`、CI artifact `13082524093`（run `41305066957` / attempt `1`），由并行维护者提交 `192354e` 更新。CI artifact 会过期，过期即拒绝；届时应审核新的成功产物并提交新的完整 pin。
+`FRONTEND_PAIR.json` 固定前端提交、版本、兼容文件摘要、归档摘要、FRONTEND 清单摘要及 CI artifact ID / ZIP 摘要 / run ID / attempt。更新配对必须一次性审核这些值；不能改成分支、latest 或候选摘要白名单。当前 pin 是前端 main 上的 `438f1803f9b9bf7d800de037a827a1284ef86293`、Core `0.6.0`、CI artifact `13121937365`（run `41401916672` / attempt `1`），包含可配置推广佣金、多币种余额和推广管理界面。CI artifact 会过期，过期即拒绝；届时应审核新的成功产物并提交新的完整 pin。
 
 配对更新发生在前端源码落入 main 后。已通过实际 `release_bundle.py fetch-frontend` 复核仓库 ID、精确工作流/job、固定 artifact 及归档摘要和 vendored 内容检查，先前的 `backend_core_version_mismatch` 已解除。包验证不代替真实 MySQL/HTTPS 浏览器验收或旧实例升级；这些仍必须有同源码 CI 证据。
 
