@@ -6,7 +6,7 @@ on:
 permissions:
   contents: read
 concurrency:
-  group: order-to-vm-${{ github.ref }}
+  group: order-to-vm-${{ github.ref }}-${{ github.event_name }}
   cancel-in-progress: false
 jobs:
   e2e-order-to-vm:
