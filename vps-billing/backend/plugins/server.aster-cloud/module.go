@@ -141,12 +141,12 @@ func (m *Module) Call(ctx context.Context, in serverv1.Request) (serverv1.Respon
 	out := serverv1.Response{Protocol: serverv1.Protocol, State: "done", OperationID: in.OperationID, Digest: in.Digest}
 	switch in.Method {
 	case "describe":
-		d := description()
+		d := Description()
 		out.Description = &d
 		return out, nil
 	case "validate_product":
 		var err error
-		out.Config, out.ConfigDigest, err = description().ProductSchema.Normalize(in.Config)
+		out.Config, out.ConfigDigest, err = Description().ProductSchema.Normalize(in.Config)
 		return out, err
 	case "test_connection", "images":
 		images, err := m.services.Images(ctx, strings.Repeat("0", 32))
@@ -191,7 +191,7 @@ func (m *Module) Call(ctx context.Context, in serverv1.Request) (serverv1.Respon
 		convert(value, &out.Snapshots)
 		return out, err
 	}
-	if !description().Has(in.Method) {
+	if !Description().Has(in.Method) {
 		return out, serverv1.ErrUnavailable
 	}
 	if previous, err := m.load(in.OperationID); err == nil {
@@ -208,11 +208,29 @@ func (m *Module) Call(ctx context.Context, in serverv1.Request) (serverv1.Respon
 	r := receipt{Request: in.Redacted(), Response: out}
 	r.Response.State = "uncertain"
 	if in.Method == "create" {
-		normalized, _, err := description().ProductSchema.Normalize(in.Config)
+		normalized, _, err := Description().ProductSchema.Normalize(in.Config)
 		if err != nil {
 			return out, err
 		}
 		r.Request.Config = normalized
+		if in.ResourceID != "" {
+			// Explicit retry of a definitively failed setup. Verify ownership and
+			// continue on the already allocated resource; never send create again.
+			remote, err := m.services.Service(ctx, in.ResourceID, in.OwnerRef)
+			if err != nil || remote.ResourceID != in.ResourceID || remote.OwnerRef != in.OwnerRef || stringField(in.Input, "image_id") == "" {
+				return out, serverv1.ErrConfiguration
+			}
+			r.Response.ResourceID = in.ResourceID
+			r.Response.State = "accepted"
+			r.Phase = "setup_ready"
+			if err = m.save(r, true); err != nil {
+				return out, err
+			}
+			if err = m.startSetup(ctx, &r); err != nil {
+				return out, serverv1.ErrUncertain
+			}
+			return r.Response, nil
+		}
 		if password, ok := in.Secrets["password"].(string); ok && password != "" {
 			hash, err := bcrypt.GenerateFromPassword([]byte(password), 12)
 			if err != nil {

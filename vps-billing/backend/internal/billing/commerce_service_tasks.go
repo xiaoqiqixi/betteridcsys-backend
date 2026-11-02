@@ -66,7 +66,7 @@ func readServiceTask06(ctx context.Context, q currencyQuerier, id, lock string) 
 func taskStateAllowed06(s serviceRecord06, action, source string) bool {
 	switch action {
 	case "provision":
-		return s.View.Status == "provisioning" && s.View.ResourceID == nil
+		return s.View.Status == "provisioning" && (s.View.ResourceID == nil || source == "module_retry")
 	case "suspend":
 		return s.View.Status == "active"
 	case "unsuspend":
@@ -219,6 +219,17 @@ func (m *MySQL) finishServiceTask06(ctx context.Context, id, status, code, resou
 			return out, nil
 		}
 		now := time.Now().UTC()
+		// A module may create a resource before asynchronous setup finishes. Keep
+		// that reference even when setup fails so an explicit retry cannot create
+		// a second resource for the same purchased service.
+		if task.Action == "provision" && resource != "" {
+			if !serverv1.ValidID(resource) || s.View.ResourceID != nil && *s.View.ResourceID != resource {
+				return out, serverv1.ErrUncertain
+			}
+			if _, err = tx.ExecContext(ctx, "UPDATE services SET resource_id=?,revision=revision+1 WHERE id=?", resource, s.View.ID); err != nil {
+				return out, err
+			}
+		}
 		if status == "succeeded" {
 			switch task.Action {
 			case "provision":

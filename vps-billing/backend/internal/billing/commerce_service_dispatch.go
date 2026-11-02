@@ -210,6 +210,9 @@ func (a *App) DispatchServiceTask06(ctx context.Context, id string, reconcileOnl
 func (a *App) recordModuleResult06(ctx context.Context, request serverv1.Request, result serverv1.Response, sendErr error) (api.ServiceTask, error) {
 	status, resource := "uncertain", ""
 	if sendErr == nil && result.Matches(request) {
+		if (request.Method == "create" || request.Method == "operation_status" && request.ResourceID == "") && serverv1.ValidID(result.ResourceID) {
+			resource = result.ResourceID
+		}
 		switch result.State {
 		case "accepted":
 			status = "running"
@@ -357,17 +360,19 @@ func (a *App) adminManagedService06(ctx context.Context, actor User, view api.Ad
 				var previous string
 				err = tx.QueryRowContext(ctx, "SELECT id FROM service_tasks WHERE service_id=? AND action='reinstall' AND status='failed' AND JSON_UNQUOTE(JSON_EXTRACT(payload,'$.source'))='bootstrap' ORDER BY created_at DESC,id DESC LIMIT 1", view.ID).Scan(&previous)
 				if errors.Is(err, sql.ErrNoRows) {
-					return out, serviceConflict06()
+					queuedPayload.Source = "module_retry"
+					err = nil
+				} else {
+					if err != nil {
+						return out, err
+					}
+					prior, err := readServiceTask06(ctx, tx, previous, "")
+					if err != nil {
+						return out, err
+					}
+					queuedAction, queuedPayload = "reinstall", prior.Payload
+					queuedPayload.RequestSHA256, queuedPayload.ReceiptKnown = "", false
 				}
-				if err != nil {
-					return out, err
-				}
-				prior, err := readServiceTask06(ctx, tx, previous, "")
-				if err != nil {
-					return out, err
-				}
-				queuedAction, queuedPayload = "reinstall", prior.Payload
-				queuedPayload.RequestSHA256, queuedPayload.ReceiptKnown = "", false
 			}
 			if _, err = tx.ExecContext(ctx, "UPDATE services SET status='provisioning',revision=revision+1 WHERE id=?", view.ID); err != nil {
 				return out, err

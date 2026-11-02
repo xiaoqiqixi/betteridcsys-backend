@@ -64,7 +64,7 @@ func Open(ctx context.Context, c Config, token, ca []byte, state string) (*Modul
 	return New(c.ControllerID, provision, service, state)
 }
 func number(n float64) *float64 { return &n }
-func description() serverv1.Description {
+func Description() serverv1.Description {
 	schema := serverv1.EmptySchema()
 	schema.Properties = map[string]serverv1.Field{
 		"preset_id":      {Type: "string", Title: "Preset", I18n: map[string]serverv1.FieldText{"en": {Title: "Controller preset"}, "zh-CN": {Title: "主控套餐标识"}}},
@@ -76,3 +76,5 @@ func description() serverv1.Description {
 	schema.Required = []string{"preset_id"}
 	return serverv1.Description{ID: ID, Name: serverv1.Text{"en": "Aster Cloud", "zh-CN": "星屿云"}, Version: Version, Capabilities: []string{"create", "suspend", "unsuspend", "terminate", "change_package", "power", "reinstall", "reset_password", "snapshot_create", "snapshot_restore", "snapshot_delete", "status", "operation_status", "console", "metrics", "snapshots", "images"}, ProductSchema: schema, OrderSchema: serverv1.EmptySchema(), CustomActions: []serverv1.CustomAction{}}
 }
+
+func description() serverv1.Description { return Description() }

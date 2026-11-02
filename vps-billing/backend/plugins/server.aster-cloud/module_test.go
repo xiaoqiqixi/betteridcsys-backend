@@ -223,4 +223,21 @@ func TestFailedSetupNeverCreatesAnotherResource(t *testing.T) {
 	if err != nil || out.State != "failed" || p.creates != 1 || p.sends != 1 {
 		t.Fatal(out, err, p.creates, p.sends)
 	}
+	if out.ResourceID != resource {
+		t.Fatal("partial allocation reference lost")
+	}
+	p.actionStatus = "succeeded"
+	r.OperationID = strings.Repeat("4", 32)
+	r.ResourceID = out.ResourceID
+	_ = r.Seal()
+	if _, err = m.Call(t.Context(), r); err != nil {
+		t.Fatal(err)
+	}
+	if err = m.Advance(t.Context()); err != nil {
+		t.Fatal(err)
+	}
+	out, err = m.Call(t.Context(), r)
+	if err != nil || out.State != "done" || p.creates != 1 || p.sends != 2 {
+		t.Fatal("explicit setup retry created a resource", out, err, p.creates, p.sends)
+	}
 }
