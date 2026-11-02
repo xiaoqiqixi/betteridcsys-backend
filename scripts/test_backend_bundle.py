@@ -81,6 +81,10 @@ class BackendBundleCLI(unittest.TestCase):
                          '--expected-source-sha', self.sha, '--expected-frontend-sha', self.pin['source_sha'])
 
     def test_real_go_build_preserves_pair_and_is_not_authenticated_or_installable(self):
+        server_unit = 'vps-billing/deploy/systemd/aster-server@.service'
+        server_unit_bytes = (SCRIPTS.parent / server_unit).read_bytes()
+        self.write(server_unit, server_unit_bytes)
+        self.commit()
         result = self.build()
         self.assertEqual(result.returncode, 0, result.stderr)
         built = json.loads(result.stdout)
@@ -97,11 +101,21 @@ class BackendBundleCLI(unittest.TestCase):
             names = source.getnames()
             self.assertIn('migrations/001_initial.sql', names)
             self.assertIn('licenses/go-runtime/LICENSE', names)
+            self.assertEqual(source.extractfile('deploy/systemd/aster-server@.service').read(), server_unit_bytes)
             self.assertFalse(any(name.startswith(('web/', 'dist/')) for name in names))
             self.assertTrue(source.extractfile('bin/aster-api').read().startswith(b'\x7fELF\x02\x01'))
         result = self.inspect()
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertIs(json.loads(result.stdout)['authenticated_source'], False)
+
+    def test_unapproved_server_unit_is_refused_before_output(self):
+        self.write('vps-billing/deploy/systemd/aster-server-unreviewed@.service',
+                   b'[Unit]\nDescription=Unapproved fixture\n')
+        self.commit()
+        result = self.build()
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn('unexpected_backend_resource', result.stderr)
+        self.assertFalse(self.output.exists())
 
     def test_bool_frontend_schema_cannot_substitute_for_integer_identity(self):
         result = self.build()
