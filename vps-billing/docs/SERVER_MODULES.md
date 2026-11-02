@@ -51,6 +51,8 @@ Schema 根为 `type: object`、`additionalProperties: false`，最多 64 个属�
 
 自定义动作包含 `id`、多语言 `name`、`danger`、多语言 `confirm` 和 `input_schema`；密码字段声明 `writeOnly: true`，核心从持久化输入中剥离，仅在本次 `Request.Secrets` 传递。危险动作需二次确认。不得把密码、令牌、请求体或提供方原始错误写入数据库、收据、日志或审计。一次性 URL 不写入持久化任务。
 
+快照是否必须停机由模块 `snapshots` 返回的 `requires_stopped` 决定。核心在直接操作和任务派发前读取并校验此限制；支持在线快照的平台可返回 `false`，星屿云模块仍返回 `true`。
+
 ## 打包、安装与批准
 
 构建本地 Linux amd64 归档，不安装、不启用，也不创建发布：

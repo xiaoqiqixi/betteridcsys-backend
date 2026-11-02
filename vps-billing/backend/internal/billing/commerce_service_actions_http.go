@@ -292,6 +292,9 @@ func (a *App) serviceActions06HTTP(w http.ResponseWriter, r *http.Request, u Use
 	}
 	if action == "snapshot_create" || action == "snapshot_restore" || action == "snapshot_delete" {
 		list, err := client.Snapshots(r.Context(), *s.ResourceID, s.ClientID)
+		if err == nil {
+			err = serviceSnapshotState06(remote, list)
+		}
 		if err != nil {
 			a.serviceControllerError06(w, r, err)
 			return true

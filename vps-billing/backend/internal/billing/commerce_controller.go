@@ -109,7 +109,7 @@ func serviceMetrics06(period string, raw serverv1.Metrics) (api.ServiceMetrics, 
 }
 func snapshots06(raw serverv1.Snapshots) (api.SnapshotList, error) {
 	out := api.SnapshotList{Items: []api.Snapshot{}, Limit: int64(raw.Limit), RequiresStopped: raw.RequiresStopped}
-	if raw.Limit < 0 || !raw.RequiresStopped {
+	if raw.Limit < 0 {
 		return out, serverv1.ErrUncertain
 	}
 	for _, s := range raw.Items {

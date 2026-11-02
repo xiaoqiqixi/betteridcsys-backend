@@ -400,9 +400,19 @@ func serviceRemoteState06(remote serverv1.Service, action string) error {
 			return serviceConflict06()
 		}
 	case "snapshot_create", "snapshot_restore", "snapshot_delete":
-		if remote.Power != "stopped" || remote.RescueActive {
+		if remote.RescueActive {
 			return serviceConflict06()
 		}
+	}
+	return nil
+}
+
+func serviceSnapshotState06(remote serverv1.Service, list serverv1.Snapshots) error {
+	if _, err := snapshots06(list); err != nil {
+		return err
+	}
+	if list.RequiresStopped && remote.Power != "stopped" {
+		return serviceConflict06()
 	}
 	return nil
 }

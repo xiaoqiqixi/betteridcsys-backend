@@ -25,6 +25,7 @@ type fakeServiceController06 struct {
 	lastParams               serviceParams06
 	actions                  map[string]string
 	lastRequest              serverv1.Request
+	liveSnapshots            bool
 }
 
 func (c *fakeServiceController06) Images(context.Context, string) ([]serverv1.Image, error) {
@@ -47,7 +48,9 @@ func (c *fakeServiceController06) Metrics(context.Context, string, string, strin
 	return serverv1.Metrics{StepSeconds: 60, Points: []serverv1.MetricPoint{{At: time.Now().UTC()}}}, nil
 }
 func (c *fakeServiceController06) Snapshots(context.Context, string, string) (serverv1.Snapshots, error) {
-	return serverv1.Snapshots{Items: []serverv1.Snapshot{{ID: strings.Repeat("b", 32), Name: "before-update", Status: "ready", CreatedAt: time.Now().UTC()}}, Limit: 3, RequiresStopped: true}, nil
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	return serverv1.Snapshots{Items: []serverv1.Snapshot{{ID: strings.Repeat("b", 32), Name: "before-update", Status: "ready", CreatedAt: time.Now().UTC()}}, Limit: 3, RequiresStopped: !c.liveSnapshots}, nil
 }
 func (c *fakeServiceController06) Call(ctx context.Context, r serverv1.Request) (serverv1.Response, error) {
 	out := serverv1.Response{Protocol: serverv1.Protocol, OperationID: r.OperationID, Digest: r.Digest, State: "done"}

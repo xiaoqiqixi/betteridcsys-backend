@@ -208,6 +208,16 @@ func (a *App) DispatchServiceTask06(ctx context.Context, id string, reconcileOnl
 		if err = serviceRemoteState06(remote, task.Action); err != nil {
 			return task.View, err
 		}
+		switch task.Action {
+		case "snapshot_create", "snapshot_restore", "snapshot_delete":
+			list, err := facade.Snapshots(ctx, *s.View.ResourceID, s.View.ClientID)
+			if err == nil {
+				err = serviceSnapshotState06(remote, list)
+			}
+			if err != nil {
+				return task.View, err
+			}
+		}
 	}
 	payload.RequestSHA256 = request.Digest
 	redacted := request.Redacted()
