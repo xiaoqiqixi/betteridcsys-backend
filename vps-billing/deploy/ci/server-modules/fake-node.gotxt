@@ -1,0 +1,70 @@
+// CI-only overlay compiled against cloud main, using its existing fake runner.
+package hypervisor
+
+import (
+	"aster/cloud/internal/nodeproto"
+	"crypto/x509"
+	"encoding/json"
+	"encoding/pem"
+	"net"
+	"net/http"
+	"os"
+	"path/filepath"
+	"testing"
+	"time"
+)
+
+func TestServerModuleFakeNode(t *testing.T) {
+	root := os.Getenv("ASTER_MODULE_SMOKE_ROOT")
+	if os.Getenv("GITHUB_ACTIONS") != "true" || root == "" || os.Geteuid() != 0 {
+		t.Fatal("disposable Linux CI fixture required")
+	}
+	m, runner, task := newFixture(t)
+	m.Config.Certificate = filepath.Join(root, "node.crt")
+	m.Config.PrivateKey = filepath.Join(root, "private/node.key")
+	m.Config.ControllerCA = filepath.Join(root, "ca.crt")
+	cert, err := os.ReadFile(filepath.Join(root, "node-client.crt"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	block, _ := pem.Decode(cert)
+	if block == nil {
+		t.Fatal("client certificate required")
+	}
+	leaf, err := x509.ParseCertificate(block.Bytes)
+	if err != nil {
+		t.Fatal(err)
+	}
+	m.Config.ExpectedControllerCertificateSHA256 = nodeproto.Digest(leaf.Raw)
+	config, err := ServerTLS(m.Config)
+	if err != nil {
+		t.Fatal(err)
+	}
+	listener, err := net.Listen("tcp", "127.0.0.1:20444")
+	if err != nil {
+		t.Fatal(err)
+	}
+	server := &http.Server{Handler: m.Handler(), TLSConfig: config, ReadHeaderTimeout: time.Second}
+	defer server.Close()
+	go server.ServeTLS(listener, m.Config.Certificate, m.Config.PrivateKey)
+	raw, _ := json.Marshal(map[string]any{"node_id": m.Config.NodeID, "datacenter_id": m.Config.DatacenterID, "group_id": m.Config.NodeGroupID, "resources": task.Resources, "image_sha256": m.Config.Images[task.Resources.ImageID].SHA256})
+	if err = os.WriteFile(filepath.Join(root, "node-ready.json"), raw, 0644); err != nil {
+		t.Fatal(err)
+	}
+	deadline := time.Now().Add(4 * time.Minute)
+	for time.Now().Before(deadline) {
+		if _, err = os.Stat(filepath.Join(root, "stop-node")); err == nil {
+			creates, starts, stops := runner.count(" define "), runner.count(" start "), runner.count(" shutdown ")
+			if creates != 1 || starts < 2 || stops < 1 {
+				t.Fatal("expected exactly one allocation and a power cycle", creates, starts, stops)
+			}
+			raw, _ = json.Marshal(map[string]int{"allocations": creates, "starts": starts, "stops": stops})
+			if err = os.WriteFile(filepath.Join(root, "node-evidence.json"), raw, 0644); err != nil {
+				t.Fatal(err)
+			}
+			return
+		}
+		time.Sleep(100 * time.Millisecond)
+	}
+	t.Fatal("finance did not complete the fake-node smoke")
+}
