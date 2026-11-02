@@ -241,3 +241,26 @@ func TestFailedSetupNeverCreatesAnotherResource(t *testing.T) {
 		t.Fatal("explicit setup retry created a resource", out, err, p.creates, p.sends)
 	}
 }
+
+func TestReceiptReadsRejectOversizedAndLinkedFiles(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "receipt.json")
+	f, err := os.OpenFile(path, os.O_CREATE|os.O_WRONLY, 0600)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err = f.Truncate(serverv1.MaximumPayload + 1); err != nil {
+		f.Close()
+		t.Fatal(err)
+	}
+	f.Close()
+	if _, err = readReceipt(path); err == nil {
+		t.Fatal("oversized receipt accepted")
+	}
+	target := filepath.Join(t.TempDir(), "linked.json")
+	if err = os.Symlink(path, target); err != nil {
+		t.Fatal(err)
+	}
+	if _, err = readReceipt(target); err == nil {
+		t.Fatal("linked receipt accepted")
+	}
+}

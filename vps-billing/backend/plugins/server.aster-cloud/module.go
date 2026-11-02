@@ -70,8 +70,15 @@ func (m *Module) Close() error          { return m.lock.Close() }
 func key(id string) string              { h := sha256.Sum256([]byte(id)); return hex.EncodeToString(h[:]) }
 func (m *Module) path(id string) string { return filepath.Join(m.directory, key(id)+".json") }
 func (m *Module) load(id string) (receipt, error) {
+	r, err := readReceipt(m.path(id))
+	if err == nil && r.Request.OperationID != id {
+		return r, serverv1.ErrUncertain
+	}
+	return r, err
+}
+func readReceipt(path string) (receipt, error) {
 	var r receipt
-	f, err := os.OpenFile(m.path(id), os.O_RDONLY|syscall.O_NOFOLLOW, 0)
+	f, err := os.OpenFile(path, os.O_RDONLY|syscall.O_NOFOLLOW|syscall.O_NONBLOCK, 0)
 	if err != nil {
 		return r, err
 	}
@@ -84,7 +91,7 @@ func (m *Module) load(id string) (receipt, error) {
 	if _, err = f.ReadAt(raw, 0); err != nil {
 		return r, serverv1.ErrUncertain
 	}
-	if json.Unmarshal(raw, &r) != nil || r.Request.OperationID != id || len(r.Request.Secrets) > 0 {
+	if json.Unmarshal(raw, &r) != nil || len(r.Request.Secrets) > 0 {
 		return r, serverv1.ErrUncertain
 	}
 	return r, nil
@@ -448,12 +455,8 @@ func (m *Module) Advance(ctx context.Context) error {
 		if count >= 100 {
 			break
 		}
-		raw, err := os.ReadFile(filepath.Join(m.directory, entry.Name()))
-		if err != nil {
-			return err
-		}
-		var r receipt
-		if len(raw) > serverv1.MaximumPayload || json.Unmarshal(raw, &r) != nil {
+		r, err := readReceipt(filepath.Join(m.directory, entry.Name()))
+		if err != nil || entry.Name() != key(r.Request.OperationID)+".json" {
 			return serverv1.ErrUncertain
 		}
 		if r.Phase == "terminal" {

@@ -40,21 +40,42 @@ func (s ProductSpec) Valid() bool {
 	}
 	schema := serverv1.EmptySchema()
 	for k, v := range s.Config {
-		f := serverv1.Field{}
-		switch v.(type) {
-		case string:
-			f.Type = "string"
-		case bool:
-			f.Type = "boolean"
-		case float64, int, int64, json.Number:
-			f.Type = "number"
-		default:
+		f, ok := configField(v)
+		if !ok {
 			return false
 		}
 		schema.Properties[k] = f
 	}
 	_, _, err := schema.Normalize(s.Config)
 	return err == nil
+}
+func configField(v any) (serverv1.Field, bool) {
+	f := serverv1.Field{}
+	switch value := v.(type) {
+	case string:
+		f.Type = "string"
+	case bool:
+		f.Type = "boolean"
+	case float64, int, int64, json.Number:
+		f.Type = "number"
+	case []any:
+		if len(value) > 100 {
+			return f, false
+		}
+		item := serverv1.Field{Type: "string", Enum: []any{""}}
+		if len(value) > 0 {
+			var ok bool
+			item, ok = configField(value[0])
+			if !ok || item.Type == "array" {
+				return f, false
+			}
+			item.Enum = append([]any{}, value...)
+		}
+		f.Type, f.Items = "array", &item
+	default:
+		return f, false
+	}
+	return f, true
 }
 func (s ProductSpec) Clone() ProductSpec { s.Config = cloneFields(s.Config); return s }
 func cloneFields(in serverv1.Fields) serverv1.Fields {
@@ -63,7 +84,11 @@ func cloneFields(in serverv1.Fields) serverv1.Fields {
 	}
 	out := serverv1.Fields{}
 	for k, v := range in {
-		out[k] = v
+		if values, ok := v.([]any); ok {
+			out[k] = append([]any{}, values...)
+		} else {
+			out[k] = v
+		}
 	}
 	return out
 }
