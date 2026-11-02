@@ -6,12 +6,15 @@ import (
 	"context"
 	"fmt"
 	"testing"
+	"time"
 )
 
 type Suite struct {
 	Processor serverv1.Processor
 	Config    serverv1.Fields
 	Input     map[string]serverv1.Fields
+	Actions   map[string]serverv1.Fields
+	Secrets   map[string]serverv1.Fields
 }
 
 func Test(t *testing.T, s Suite) {
@@ -35,7 +38,9 @@ func Test(t *testing.T, s Suite) {
 	if described.Description == nil || described.Description.Validate() != nil {
 		t.Fatal("invalid description")
 	}
-	call(serverv1.Request{Method: "test_connection"})
+	if call(serverv1.Request{Method: "test_connection"}).State != "done" {
+		t.Fatal("connection fixture unavailable")
+	}
 	normalized := call(serverv1.Request{Method: "validate_product", Config: s.Config})
 	if !serverv1.ValidDigest(normalized.ConfigDigest) {
 		t.Fatal("missing normalized config digest")
@@ -44,10 +49,23 @@ func Test(t *testing.T, s Suite) {
 	if e := create.Seal(); e != nil {
 		t.Fatal(e)
 	}
-	out := call(create)
-	if out.State == "accepted" {
-		out = call(serverv1.Request{Method: "operation_status", OperationID: create.OperationID, Digest: create.Digest})
+	settle := func(req serverv1.Request, out serverv1.Response) serverv1.Response {
+		t.Helper()
+		deadline := time.Now().Add(10 * time.Second)
+		for out.State == "accepted" && time.Now().Before(deadline) {
+			select {
+			case <-ctx.Done():
+				t.Fatal(ctx.Err())
+			case <-time.After(10 * time.Millisecond):
+			}
+			out = call(serverv1.Request{Method: "operation_status", OperationID: req.OperationID, Digest: req.Digest})
+		}
+		if out.State != "done" {
+			t.Fatal("operation did not finish", req.Method, out.State)
+		}
+		return out
 	}
+	out := settle(create, call(create))
 	if out.State != "done" || !serverv1.ValidID(out.ResourceID) {
 		t.Fatal("create did not produce a resource")
 	}
@@ -62,7 +80,7 @@ func Test(t *testing.T, s Suite) {
 		t.Fatal("operation id digest collision accepted")
 	}
 	call(serverv1.Request{Method: "status", ResourceID: out.ResourceID, OwnerRef: create.OwnerRef})
-	for i, method := range []string{"suspend", "unsuspend", "change_package", "renew", "power", "terminate"} {
+	for i, method := range []string{"suspend", "unsuspend", "change_package", "renew", "power"} {
 		if !described.Description.Has(method) {
 			continue
 		}
@@ -74,10 +92,33 @@ func Test(t *testing.T, s Suite) {
 		if method == "power" && req.Input == nil {
 			req.Input = serverv1.Fields{"action": "stop"}
 		}
-		result := call(req)
-		if result.State != "done" && result.State != "accepted" {
-			t.Fatal("lifecycle failed", method)
+		if e := req.Seal(); e != nil {
+			t.Fatal(e)
 		}
+		settle(req, call(req))
+	}
+	for i, action := range described.Description.CustomActions {
+		req := create
+		req.Method, req.ActionID, req.ResourceID = "action", action.ID, out.ResourceID
+		req.OperationID = fmt.Sprintf("%032x", i+200)
+		req.Input, req.Secrets = s.Actions[action.ID], s.Secrets[action.ID]
+		if e := req.Seal(); e != nil {
+			t.Fatal(e)
+		}
+		result := settle(req, call(req))
+		replay := settle(req, call(req))
+		if replay.ResourceID != result.ResourceID {
+			t.Fatal("custom action replay changed resource")
+		}
+	}
+	if described.Description.Has("terminate") {
+		req := create
+		req.Method, req.OperationID, req.ResourceID = "terminate", fmt.Sprintf("%032x", 500), out.ResourceID
+		req.Input = s.Input["terminate"]
+		if e := req.Seal(); e != nil {
+			t.Fatal(e)
+		}
+		settle(req, call(req))
 	}
 	cancelled, cancel := context.WithCancel(ctx)
 	cancel()

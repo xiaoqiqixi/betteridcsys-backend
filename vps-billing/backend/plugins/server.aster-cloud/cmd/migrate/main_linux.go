@@ -9,10 +9,11 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
-	_ "github.com/go-sql-driver/mysql"
+	"github.com/go-sql-driver/mysql"
 	"os"
 	"path/filepath"
 	"strings"
+	"syscall"
 	"time"
 )
 
@@ -69,6 +70,10 @@ func run() error {
 		if e != nil || !info.IsDir() || info.Mode().Perm()&0022 != 0 {
 			return fmt.Errorf("unsafe credential parent")
 		}
+		st, ok := info.Sys().(*syscall.Stat_t)
+		if !ok || st.Uid != 0 {
+			return fmt.Errorf("credential parent must belong to root")
+		}
 	}
 	dir := filepath.Join(base, plan.ConnectionID)
 	if _, err = os.Lstat(dir); !os.IsNotExist(err) {
@@ -90,7 +95,12 @@ func run() error {
 			return err
 		}
 	}
-	db, err := sql.Open("mysql", strings.TrimSpace(string(dsn)))
+	cfg, err := mysql.ParseDSN(strings.TrimSpace(string(dsn)))
+	if err != nil || cfg.DBName == "" || cfg.MultiStatements || cfg.AllowAllFiles || cfg.AllowCleartextPasswords || cfg.AllowOldPasswords || (cfg.Net != "unix" && cfg.TLSConfig != "true") {
+		return fmt.Errorf("protected database transport required")
+	}
+	cfg.ParseTime, cfg.Timeout, cfg.ReadTimeout, cfg.WriteTimeout = true, 5*time.Second, 30*time.Second, 30*time.Second
+	db, err := sql.Open("mysql", cfg.FormatDSN())
 	if err != nil {
 		return err
 	}

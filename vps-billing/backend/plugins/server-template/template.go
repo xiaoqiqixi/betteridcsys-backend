@@ -21,7 +21,7 @@ func New() *Processor {
 	return &Processor{receipts: map[string]serverv1.Response{}, services: map[string]serverv1.Service{}}
 }
 func Description() serverv1.Description {
-	return serverv1.Description{ID: ID, Version: "1.0.0", Name: serverv1.Text{"en": "Example server module", "zh-CN": "示例服务器模块"}, Capabilities: []string{"create", "suspend", "unsuspend", "terminate", "change_package", "renew", "power", "action", "status", "images"}, ProductSchema: serverv1.EmptySchema(), OrderSchema: serverv1.EmptySchema(), CustomActions: []serverv1.CustomAction{{ID: "ping", Name: serverv1.Text{"en": "Ping", "zh-CN": "测试"}, InputSchema: serverv1.EmptySchema()}}}
+	return serverv1.Description{ID: ID, Version: "1.0.0", Name: serverv1.Text{"en": "Example server module", "zh-CN": "示例服务器模块"}, Capabilities: []string{"create", "suspend", "unsuspend", "terminate", "change_package", "renew", "power", "action", "status", "operation_status", "images"}, ProductSchema: serverv1.EmptySchema(), OrderSchema: serverv1.EmptySchema(), CustomActions: []serverv1.CustomAction{{ID: "ping", Name: serverv1.Text{"en": "Ping", "zh-CN": "测试"}, InputSchema: serverv1.EmptySchema()}}}
 }
 func (p *Processor) Call(ctx context.Context, in serverv1.Request) (serverv1.Response, error) {
 	out := serverv1.Response{Protocol: serverv1.Protocol, State: "done", OperationID: in.OperationID, Digest: in.Digest}
