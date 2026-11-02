@@ -295,6 +295,9 @@ class Stack:
         failed = [check["name"] for check in doctor["checks"] if not check["passed"]]
         require(result.returncode == 0 and doctor["ready"], "node doctor failed: " + ", ".join(failed))
         self.spawn("node", [BIN / "aster-node", "--config", self.node_config])
+        node_context = ssl.create_default_context(cafile=self.root / "ca.crt")
+        node_context.load_cert_chain(self.root / "node-client.crt", self.private / "node-client.key")
+        self.evidence["node_capabilities"] = self.wait("authenticated node capabilities", lambda: json.loads(self.get("https://127.0.0.1:19444/v1/capabilities", context=node_context)))
         self.billing_token = self.password()
         self.admin_token = self.password()
         self.write(self.private / "billing.token", self.billing_token)
@@ -311,10 +314,11 @@ class Stack:
         self.command([BIN / "aster-controller", "maintenance", "--config", self.controller_config, "--node", "e2e-node", "--on=false"])
         self.spawn("controller", [BIN / "aster-controller", "serve", "--config", self.controller_config, "--console-origin", "https://localhost:19443"])
         self.wait("controller HTTPS", lambda: self.get("https://localhost:19443/v1/health", self.admin_token))
+        self.complete_step("controller-node-mtls-and-admission", node="e2e-node")
 
-    def get(self, url, token=None):
+    def get(self, url, token=None, context=None):
         request = urllib.request.Request(url, headers={"Authorization": "Bearer " + token} if token else {})
-        with urllib.request.urlopen(request, context=self.context, timeout=5) as response:
+        with urllib.request.urlopen(request, context=context or self.context, timeout=5) as response:
             return response.read()
 
     def finance(self):
