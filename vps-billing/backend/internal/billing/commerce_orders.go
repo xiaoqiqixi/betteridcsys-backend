@@ -3,6 +3,7 @@ package billing
 import (
 	"aster/billing/internal/commerce"
 	api "aster/billing/internal/financeapi"
+	"aster/billing/pkg/pluginapi/serverv1"
 	"context"
 	"database/sql"
 	"encoding/json"
@@ -23,16 +24,16 @@ type orderItemSnapshot06 struct {
 	Legacy       bool                `json:"legacy,omitempty"`
 }
 type serviceConfiguration06 struct {
-	PasswordHash    string            `json:"password_hash,omitempty"`
-	Kind            string            `json:"kind"`
-	ProductID       string            `json:"product_id"`
-	NodeID          string            `json:"node_id"`
-	RegionID        string            `json:"region_id"`
-	RemoteProductID *string           `json:"remote_product_id"`
-	Input           api.CartItemInput `json:"input"`
-	SSHKeys         []string          `json:"ssh_keys"`
-	UnitIndex       int64             `json:"unit_index"`
-	UnitCount       int64             `json:"unit_count"`
+	PasswordHash string                 `json:"password_hash,omitempty"`
+	Kind         string                 `json:"kind"`
+	ProductID    string                 `json:"product_id"`
+	NodeID       string                 `json:"node_id"`
+	RegionID     string                 `json:"region_id"`
+	Module       *storedProductModule06 `json:"module"`
+	Input        api.CartItemInput      `json:"input"`
+	SSHKeys      []string               `json:"ssh_keys"`
+	UnitIndex    int64                  `json:"unit_index"`
+	UnitCount    int64                  `json:"unit_count"`
 }
 
 func readOrder06(ctx context.Context, q currencyQuerier, owner, id string) (orderRecord06, error) {
@@ -228,6 +229,26 @@ func (m *MySQL) OrderPage06(ctx context.Context, owner, cursor, status, search s
 }
 
 func (m *MySQL) CreateOrder06(ctx context.Context, actor User, input api.CreateOrderInput, key string) (api.CreateOrderResponse, error) {
+	for _, item := range input.Items {
+		if len(item.ModuleFields) > 0 {
+			product, err := m.Product06(ctx, false, item.ProductID)
+			if err != nil {
+				return api.CreateOrderResponse{}, err
+			}
+			if product.OrderSchema == nil {
+				return api.CreateOrderResponse{}, ErrCommerceInput
+			}
+			var schema serverv1.Schema
+			if json.Unmarshal(jsonValue06(product.OrderSchema), &schema) != nil || schema.Validate() != nil {
+				return api.CreateOrderResponse{}, ErrCommerceInput
+			}
+			_, secret := schema.Split(item.ModuleFields)
+			if len(secret) > 0 {
+				return api.CreateOrderResponse{}, problem(400, "PASSWORD_REQUIRES_DIRECT_ACTION", "Credentials must be submitted through a direct service action after payment")
+			}
+		}
+
+	}
 	raw, _ := json.Marshal(input)
 	if !keyPattern.MatchString(key) || api.ValidateInput("createOrder", raw) != nil {
 		return api.CreateOrderResponse{}, ErrCommerceInput
@@ -509,7 +530,7 @@ func fulfillPaidOrder06(ctx context.Context, tx *sql.Tx, invoice api.AdminInvoic
 			if len([]rune(label)) > 80 {
 				label = string([]rune(label)[:80])
 			}
-			config := serviceConfiguration06{Kind: item.Product.Kind, ProductID: item.Product.ID, NodeID: item.Product.NodeID, RegionID: item.Product.RegionID, RemoteProductID: item.Product.RemoteProductID, Input: item.Input, SSHKeys: row.snapshot.SSHKeys, PasswordHash: row.snapshot.PasswordHash, UnitIndex: unit, UnitCount: item.Input.Quantity}
+			config := serviceConfiguration06{Kind: item.Product.Kind, ProductID: item.Product.ID, NodeID: item.Product.NodeID, RegionID: item.Product.RegionID, Module: item.Product.Module, Input: item.Input, SSHKeys: row.snapshot.SSHKeys, PasswordHash: row.snapshot.PasswordHash, UnitIndex: unit, UnitCount: item.Input.Quantity}
 			config.Input.Quantity = 1
 			config.Input.Hostname = hostname
 			configRaw, _ := json.Marshal(config)
@@ -519,7 +540,7 @@ func fulfillPaidOrder06(ctx context.Context, tx *sql.Tx, invoice api.AdminInvoic
 				osRaw, _ = json.Marshal(item.OSImage)
 			}
 			recurring := unitAmount06(item.RecurringMinor, item.Input.Quantity, unit)
-			_, err = tx.ExecContext(ctx, `INSERT INTO services(id,user_id,name,plan_name,region,status,next_due_at,price_minor,currency,cpu,memory_gb,disk_gb,currency_snapshot,product_id,cycle,recurring_minor,next_invoice_at,auto_renew,label,controller_id,specs_snapshot,os_snapshot,configuration_snapshot,created_at,anchor_day) VALUES(?,?,?,?,?,'provisioning',?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`, sid, invoice.ClientID, hostname, text06(item.Product.Name), region, due, recurring, invoice.Total.Currency, item.Product.Specs.CPUCores, (item.Product.Specs.MemoryMB+1023)/1024, item.Product.Specs.DiskGB, currencyRaw, item.Product.ID, item.Input.Cycle, recurring, nextInvoice, auto, label, item.Product.ControllerID, specsRaw, osRaw, configRaw, paid, paid.Day())
+			_, err = tx.ExecContext(ctx, `INSERT INTO services(id,user_id,name,plan_name,region,status,next_due_at,price_minor,currency,cpu,memory_gb,disk_gb,currency_snapshot,product_id,cycle,recurring_minor,next_invoice_at,auto_renew,label,module_id,connection_id,specs_snapshot,os_snapshot,configuration_snapshot,created_at,anchor_day) VALUES(?,?,?,?,?,'provisioning',?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`, sid, invoice.ClientID, hostname, text06(item.Product.Name), region, due, recurring, invoice.Total.Currency, item.Product.Specs.CPUCores, (item.Product.Specs.MemoryMB+1023)/1024, item.Product.Specs.DiskGB, currencyRaw, item.Product.ID, item.Input.Cycle, recurring, nextInvoice, auto, label, moduleID06(item.Product.Module), connectionID06(item.Product.Module), specsRaw, osRaw, configRaw, paid, paid.Day())
 			if err != nil {
 				return err
 			}

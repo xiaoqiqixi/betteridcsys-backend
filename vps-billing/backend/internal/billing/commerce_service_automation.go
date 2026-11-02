@@ -12,7 +12,7 @@ func (a *App) registerServiceDispatch06() {
 		if !ok {
 			return AutomationResult{}, ErrCommerceUnavailable
 		}
-		rows, err := m.DB.QueryContext(ctx, `SELECT t.id,t.status,t.action FROM service_tasks t JOIN services s ON s.id=t.service_id WHERE t.status IN ('queued','running','uncertain') AND s.controller_id IS NOT NULL AND (t.action<>'provision' OR t.status<>'queued' OR ?=TRUE) AND t.updated_at<=? ORDER BY t.updated_at,t.id LIMIT 50`, settings.AutoProvision, at.Add(-15*time.Second))
+		rows, err := m.DB.QueryContext(ctx, `SELECT t.id,t.status,t.action FROM service_tasks t JOIN services s ON s.id=t.service_id WHERE t.status IN ('queued','running','uncertain') AND s.connection_id IS NOT NULL AND (t.action<>'provision' OR t.status<>'queued' OR ?=TRUE) AND t.updated_at<=? ORDER BY t.updated_at,t.id LIMIT 50`, settings.AutoProvision, at.Add(-15*time.Second))
 		if err != nil {
 			return AutomationResult{}, err
 		}
@@ -48,20 +48,17 @@ func (a *App) registerServiceDispatch06() {
 		}
 		// Rotate one approved catalog per tick so many unavailable controllers cannot
 		// starve lifecycle work. Newly discovered images require administrator enablement.
-		if runtime, ok := a.Config.Services.(*ServiceControllers06); ok && runtime != nil && runtime.Services != nil && len(runtime.IDs) > 0 && ctx.Err() == nil {
-			controller := runtime.IDs[int(at.Unix()/60)%len(runtime.IDs)]
-			client, err := runtime.Services(ctx, controller)
-			if err == nil {
-				images, e := client.Images(ctx, digest("catalog:" + controller)[:32])
-				err = e
-				if err == nil {
-					err = m.SyncImages06(ctx, controller, images)
+		if err := a.syncModuleSlots06(ctx); err != nil {
+			result.Failed++
+		} else if list, e := m.connections06(ctx, ""); e == nil && len(list) > 0 {
+			c := list[int(at.Unix()/60)%len(list)]
+			if c.Enabled {
+				if e = a.syncConnectionImages06(ctx, c); e != nil {
+					result.Failed++
 				}
 			}
-			if err != nil {
-				result.Failed++
-			}
 		}
+
 		return result, nil
 	})
 }

@@ -34,6 +34,9 @@ func validateAppliedMigrations(ctx context.Context, conn *sql.Conn, sources []st
 // MySQL DDL commits independently. Resume only known statements whose existing
 // definitions match exactly; a matching object name alone is insufficient.
 func prepareMigrationStatement(ctx context.Context, conn *sql.Conn, version int, q string) (string, bool, error) {
+	if version > 0 && version <= len(schemaVersions) && schemaVersions[version-1] == migrations.ServerModules {
+		return prepareServerModulesMigration(ctx, conn, version, q)
+	}
 	if version > 0 && version <= len(schemaVersions) && schemaVersions[version-1] == migrations.AffiliateSettings {
 		if strings.HasPrefix(q, "INSERT IGNORE INTO affiliate_") {
 			return q, false, nil

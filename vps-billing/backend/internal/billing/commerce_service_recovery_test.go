@@ -3,7 +3,6 @@ package billing
 import (
 	"aster/billing/internal/contracttest"
 	api "aster/billing/internal/financeapi"
-	"aster/billing/serviceapi"
 	"bytes"
 	"encoding/json"
 	"net/http/httptest"
@@ -26,9 +25,9 @@ func TestMySQLCommerceServiceClaimLostAcknowledgementNeverDispatches(t *testing.
 	app := NewApp(wrapped, Config{Services: runtime, Secret: ID() + ID()})
 	key := ID()
 	input := api.PowerServiceInput{Action: "start"}
-	fp := app.serviceActionFingerprint06(sid, "start", input)
+	fp := app.serviceActionFingerprint06(sid, "start:", input)
 	fault.armed.Store(true)
-	task, _, fresh, err := wrapped.reserveServiceAction06(t.Context(), f.customer, false, view, "start", serviceapi.Params{}, serviceActionPayload06{Source: "customer"}, key, fp)
+	task, _, fresh, err := wrapped.reserveServiceAction06(t.Context(), f.customer, false, view, "start", serviceParams06{}, serviceActionPayload06{Source: "customer"}, key, fp)
 	if err == nil || fresh || fault.injected.Load() != 1 || fault.committed.Load() != 1 {
 		t.Fatal("ambiguous reservation authorized dispatch", fresh, err)
 	}
@@ -77,10 +76,10 @@ func TestMySQLCommerceAutomationProvisionBootstrapAndActivation(t *testing.T) {
 	controller, runtime := serviceControllerFixture06(t, m, f.customer.ID, sid)
 	image := api.OsImage{ID: ID(), Family: "debian", Name: "Debian", Version: "12", MinDiskGB: 10}
 	raw, _ := json.Marshal(image)
-	if _, err := m.DB.Exec(`INSERT INTO os_images(id,family,name,version,min_disk_gb,enabled,controller_id,remote_image_id,sha256) VALUES(?,'debian','Debian','12',10,TRUE,?,'debian-12',?)`, image.ID, runtime.IDs[0], strings.Repeat("1", 64)); err != nil {
+	if _, err := m.DB.Exec(`INSERT INTO os_images(id,family,name,version,min_disk_gb,enabled,controller_id,connection_id,remote_image_id,sha256) VALUES(?,'debian','Debian','12',10,TRUE,'',?,'debian-12',?)`, image.ID, "controller-test", strings.Repeat("1", 64)); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := m.DB.Exec(`UPDATE services SET status='provisioning',resource_id=NULL,os_snapshot=?,configuration_snapshot=JSON_SET(configuration_snapshot,'$.remote_product_id','approved-preset') WHERE id=?`, raw, sid); err != nil {
+	if _, err := m.DB.Exec(`UPDATE services SET status='provisioning',resource_id=NULL,os_snapshot=?,configuration_snapshot=configuration_snapshot WHERE id=?`, raw, sid); err != nil {
 		t.Fatal(err)
 	}
 	app := NewApp(m, Config{Services: runtime})
@@ -108,7 +107,7 @@ func TestMySQLCommerceAutomationProvisionBootstrapAndActivation(t *testing.T) {
 		t.Fatal(result, err)
 	}
 	s, err := m.Service06(t.Context(), f.customer.ID, sid)
-	if err != nil || s.Status != "provisioning" || s.ResourceID == nil {
+	if err != nil || s.Status != "provisioning" || s.ResourceID != nil {
 		t.Fatal("activated before setup", s, err)
 	}
 	if result, err := job(t.Context(), settings, at.Add(2*time.Minute)); err != nil || result.Failed != 0 {
@@ -122,7 +121,7 @@ func TestMySQLCommerceAutomationProvisionBootstrapAndActivation(t *testing.T) {
 		t.Fatal("setup did not use ephemeral credentials and selected image")
 	}
 	var payload string
-	if err = m.DB.QueryRow("SELECT CAST(payload AS CHAR) FROM service_tasks WHERE service_id=? AND action='reinstall'", sid).Scan(&payload); err != nil || strings.Contains(payload, password) || strings.Contains(payload, `"password"`) {
+	if err = m.DB.QueryRow("SELECT CAST(payload AS CHAR) FROM service_tasks WHERE service_id=? AND action='provision'", sid).Scan(&payload); err != nil || strings.Contains(payload, password) || strings.Contains(payload, `"password"`) {
 		t.Fatal("setup credential persisted", err)
 	}
 	if result, err := job(t.Context(), settings, at.Add(3*time.Minute)); err != nil || result.Failed != 0 {
@@ -140,7 +139,7 @@ func TestMySQLCommerceAutomationProvisionBootstrapAndActivation(t *testing.T) {
 	controller.mu.Lock()
 	provisions, actions := controller.provisions, controller.sends
 	controller.mu.Unlock()
-	if provisions != 1 || actions != 1 {
+	if provisions != 1 || actions != 0 {
 		t.Fatal("setup repeated", provisions, actions)
 	}
 }
@@ -160,7 +159,7 @@ func TestMySQLCommerceFailedBootstrapRequiresExplicitStaffRetry(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	setup, err := queueServiceTask06(t.Context(), tx, sid, "reinstall", serviceActionPayload06{Version: 1, Source: "bootstrap", Params: serviceapi.Params{ImageID: "debian-12"}}, time.Now().UTC())
+	setup, err := queueServiceTask06(t.Context(), tx, sid, "reinstall", serviceActionPayload06{Version: 1, Source: "bootstrap", Params: serviceParams06{ImageID: "debian-12"}}, time.Now().UTC())
 	if err != nil {
 		t.Fatal(err)
 	}

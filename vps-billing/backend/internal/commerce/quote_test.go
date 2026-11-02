@@ -5,6 +5,7 @@ import (
 	api "aster/billing/internal/financeapi"
 	"encoding/json"
 	"errors"
+	"strings"
 	"testing"
 	"time"
 )
@@ -167,5 +168,31 @@ func TestQuoteOptionsStockNoFallbackAndNoSecrets(t *testing.T) {
 				t.Fatal("invalid quote accepted")
 			}
 		})
+	}
+}
+
+func TestModuleOrderFieldsAreValidatedAndSecretsNeverEnterQuotes(t *testing.T) {
+	p := quoteProduct("USD", 2)
+	p.OrderSchema = &api.ModuleSchema{Type: "object", Properties: map[string]api.SchemaField{
+		"hostname_suffix": map[string]any{"type": "string", "enum": []any{"example.test"}},
+		"password":        map[string]any{"type": "string", "writeOnly": true},
+	}, Required: []string{"hostname_suffix"}}
+	input := quoteInput("USD")
+	input.Items[0].ModuleFields = map[string]any{"hostname_suffix": "example.test", "password": "NEVER-PERSIST-MODULE-SECRET"}
+	q, err := CalculateQuote(input, map[string]api.AdminProduct{p.ID: p}, 2, nil, CouponEligibility{}, time.Now())
+	if err != nil {
+		t.Fatal(err)
+	}
+	raw, _ := json.Marshal(q)
+	if strings.Contains(string(raw), "NEVER-PERSIST") || q.Items[0].Input.ModuleFields["password"] != nil || q.pricingInput[0].ModuleFields["password"] != nil {
+		t.Fatal("module credential entered quote")
+	}
+	input.Items[0].ModuleFields["hostname_suffix"] = "unapproved.test"
+	if _, err = CalculateQuote(input, map[string]api.AdminProduct{p.ID: p}, 2, nil, CouponEligibility{}, time.Now()); err == nil {
+		t.Fatal("invalid module enum accepted")
+	}
+	delete(input.Items[0].ModuleFields, "hostname_suffix")
+	if _, err = CalculateQuote(input, map[string]api.AdminProduct{p.ID: p}, 2, nil, CouponEligibility{}, time.Now()); err == nil {
+		t.Fatal("missing required module field accepted")
 	}
 }

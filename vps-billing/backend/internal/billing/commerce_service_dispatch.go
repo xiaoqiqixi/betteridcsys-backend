@@ -1,9 +1,8 @@
 package billing
 
 import (
-	"aster/billing/controllerapi"
 	api "aster/billing/internal/financeapi"
-	"aster/billing/serviceapi"
+	"aster/billing/pkg/pluginapi/serverv1"
 	"context"
 	"database/sql"
 	"encoding/json"
@@ -11,50 +10,6 @@ import (
 	"time"
 )
 
-func (m *MySQL) prepareProvision06(ctx context.Context, s serviceRecord06, id string) (serviceActionPayload06, error) {
-	p := serviceActionPayload06{Version: 1, Source: "provisioning"}
-	if s.View.ControllerID == nil || s.Configuration.RemoteProductID == nil || len(s.Configuration.SSHKeys) > 1 {
-		return p, serviceapi.ErrUnavailable
-	}
-	spec := controllerapi.ProductSpec{Mode: "preset", ControllerID: *s.View.ControllerID, RemoteProductID: *s.Configuration.RemoteProductID}
-	hash, err := spec.Digest()
-	if err != nil {
-		return p, err
-	}
-	hostname := ""
-	if s.View.Hostname != nil {
-		hostname = *s.View.Hostname
-	}
-	request := controllerapi.Request{Protocol: controllerapi.Protocol, OperationID: id, OrderID: s.View.ID, OwnerRef: s.View.ClientID, Hostname: controllerHostname06(hostname, s.View.ID), ConfigurationRevision: s.View.Revision, ConfigurationSHA256: hash, Product: spec}
-	_, p.RequestSHA256, err = request.BytesAndDigest()
-	if err != nil {
-		return p, err
-	}
-	p.Provision = &request
-	if s.View.OSImage != nil {
-		var controller string
-		if err = m.DB.QueryRowContext(ctx, "SELECT controller_id,remote_image_id FROM os_images WHERE id=? AND enabled=TRUE", s.View.OSImage.ID).Scan(&controller, &p.Params.ImageID); err != nil {
-			return p, serviceapi.ErrUnavailable
-		}
-		if controller != *s.View.ControllerID {
-			return p, serviceapi.ErrUnavailable
-		}
-		p.Bootstrap = true
-		p.Image = s.View.OSImage
-		if s.Configuration.PasswordHash != "" {
-			if !serviceapi.ValidPasswordHash(s.Configuration.PasswordHash) || len(s.Configuration.SSHKeys) != 0 {
-				return p, serviceapi.ErrUnavailable
-			}
-			p.Params.PasswordHash = s.Configuration.PasswordHash
-		}
-		if len(s.Configuration.SSHKeys) == 1 {
-			p.Params.SSHPublicKey = s.Configuration.SSHKeys[0]
-		}
-	} else if len(s.Configuration.SSHKeys) > 0 || s.Configuration.PasswordHash != "" {
-		return p, serviceapi.ErrUnavailable
-	}
-	return p, nil
-}
 func (m *MySQL) claimServiceTask06(ctx context.Context, id string, revision int64, payload serviceActionPayload06) (serviceTaskRecord06, bool, error) {
 	type claim struct {
 		Task  serviceTaskRecord06
@@ -117,6 +72,10 @@ func (m *MySQL) claimServiceTask06(ctx context.Context, id string, revision int6
 		}
 		payload.Version = 1
 		payload.Params = payload.Params.Redacted()
+		if payload.Request != nil {
+			redacted := payload.Request.Redacted()
+			payload.Request = &redacted
+		}
 		raw, err := json.Marshal(payload)
 		if err != nil {
 			return out, err
@@ -142,8 +101,8 @@ func (m *MySQL) serviceTaskState06(ctx context.Context, id string) (serviceTaskR
 	return t, s, err
 }
 
-// DispatchServiceTask06 is shared by the scheduler and the explicit root CLI.
-// reconcileOnly never sends a mutation; a claimed/uncertain task is never resent.
+// DispatchServiceTask06 claims a task before sending once. Every later call is
+// read-only reconciliation, including a worker restart after an unknown outcome.
 func (a *App) DispatchServiceTask06(ctx context.Context, id string, reconcileOnly, manual bool) (api.ServiceTask, error) {
 	m, ok := a.Store.(*MySQL)
 	if !ok {
@@ -162,14 +121,14 @@ func (a *App) DispatchServiceTask06(ctx context.Context, id string, reconcileOnl
 	if task.View.Status != "queued" {
 		return task.View, nil
 	}
-	if s.View.Kind != "cloud_server" {
+	if s.View.ModuleID == nil {
 		if !manual {
-			return task.View, serviceapi.ErrUnavailable
+			return task.View, serverv1.ErrUnavailable
 		}
 		switch task.Action {
-		case "provision", "suspend", "unsuspend", "terminate":
+		case "provision", "suspend", "unsuspend", "terminate", "resize", "renew":
 		default:
-			return task.View, serviceapi.ErrUnavailable
+			return task.View, serverv1.ErrUnavailable
 		}
 		claimed, fresh, err := m.claimServiceTask06(ctx, id, s.View.Revision, task.Payload)
 		if err != nil || !fresh {
@@ -177,165 +136,131 @@ func (a *App) DispatchServiceTask06(ctx context.Context, id string, reconcileOnl
 		}
 		return m.finishServiceTask06(ctx, id, "succeeded", "MANUAL", "")
 	}
-	runtime, ok := a.Config.Services.(*ServiceControllers06)
-	if !ok || runtime == nil {
-		return task.View, serviceapi.ErrUnavailable
+	runtime, ok := a.Config.Services.(*ServerModules06)
+	if !ok || runtime == nil || s.View.ConnectionID == nil {
+		return task.View, serverv1.ErrUnavailable
+	}
+	client, err := runtime.processor(ctx, *s.View.ConnectionID, *s.View.ModuleID)
+	if err != nil {
+		return task.View, err
 	}
 	payload := task.Payload
-	if task.Action == "provision" {
-		payload, err = m.prepareProvision06(ctx, s, id)
-		if err != nil {
-			return task.View, err
-		}
-		if runtime.Provisioning == nil {
-			return task.View, serviceapi.ErrUnavailable
-		}
-		client, err := runtime.Provisioning(ctx, payload.Provision.Product.ControllerID)
-		if err != nil {
-			return task.View, err
-		}
-		claimed, fresh, err := m.claimServiceTask06(ctx, id, s.View.Revision, payload)
-		if err != nil || !fresh {
-			return claimed.View, err
-		}
-		result, sendErr := client.Send(ctx, *payload.Provision)
-		return a.recordProvisionResult06(ctx, claimed, result, sendErr)
-	}
-	client, err := runtime.client(ctx, s.View)
-	if err != nil {
-		return task.View, err
-	}
-	remote, err := client.Service(ctx, *s.View.ResourceID, s.View.ClientID)
-	if err != nil {
-		return task.View, err
-	}
-	projected, err := serviceProjection06(s.View, remote)
-	if err != nil {
-		return task.View, err
-	}
-	if payload.Source == "bootstrap" {
-		projected.Capabilities.Reinstall = remote.Capabilities.Reinstall
-	}
-	if !serviceCapability06(projected, task.Action) {
-		return task.View, serviceapi.ErrUnavailable
-	}
-	if err = serviceRemoteState06(remote, task.Action); err != nil {
-		return task.View, err
-	}
-	params := payload.Params
-	switch task.Action {
-	case "terminate":
-		params.Confirmation = *s.View.ResourceID
-	case "unsuspend":
-		params.StartAfter = true
-	case "resize":
+	config := s.Configuration
+	if task.Action == "resize" {
 		if payload.Change == nil {
 			return task.View, ErrCommerceInput
 		}
-		specs := payload.Change.Product.Specs
-		params = serviceapi.Params{CPUCores: int(specs.CPUCores), MemoryMB: int(specs.MemoryMB), DiskGB: int(specs.DiskGB), SetBandwidth: true, BandwidthMbps: int(specs.BandwidthMbps), InboundBandwidthMbps: int(specs.BandwidthMbps)}
-	case "reinstall":
-		// First setup may generate an ephemeral credential. The customer can set a
-		// password later; neither this random value nor a retry copy is persisted.
-		if payload.Source == "bootstrap" && params.SSHPublicKey == "" && params.PasswordHash == "" {
-			params.Password = ID() + ID()
-		}
+		config = payload.Change.Configuration
 	}
-	request := serviceapi.ActionRequest{Protocol: serviceapi.Protocol, OperationID: id, OwnerRef: s.View.ClientID, Action: task.Action, Params: params}
-	_, payload.RequestSHA256, err = request.BytesAndDigest()
+	target := s
+	target.Configuration = config
+	request, err := serviceRequest06(target, id, task.Action, payload.Params)
 	if err != nil {
 		return task.View, err
 	}
-	payload.Params = params.Redacted()
+	if task.Action == "provision" {
+		var enabled bool
+		if err = m.DB.QueryRowContext(ctx, "SELECT enabled FROM server_connections WHERE id=? AND module_id=?", *s.View.ConnectionID, *s.View.ModuleID).Scan(&enabled); err != nil || !enabled {
+			return task.View, ErrCommerceUnavailable
+		}
+		// Image IDs are scoped to the directly bound connection.
+		if s.View.OSImage != nil {
+			var image string
+			err = m.DB.QueryRowContext(ctx, "SELECT remote_image_id FROM os_images WHERE id=? AND connection_id=? AND enabled=TRUE", s.View.OSImage.ID, *s.View.ConnectionID).Scan(&image)
+			if err != nil {
+				return task.View, ErrCommerceUnavailable
+			}
+			request.Input["image_id"] = image
+		}
+		if err = request.Seal(); err != nil {
+			return task.View, err
+		}
+	} else {
+		facade := &moduleService06{Processor: client, ServiceID: s.View.ID}
+		remote, err := facade.Service(ctx, *s.View.ResourceID, s.View.ClientID)
+		if err != nil {
+			return task.View, err
+		}
+		projected, err := serviceProjection06(s.View, remote)
+		if payload.Source == "bootstrap" {
+			projected.Capabilities.Reinstall = remote.Capabilities.Reinstall
+		}
+		if err != nil {
+			return task.View, err
+		}
+		if !serviceCapability06(projected, task.Action) {
+			return task.View, serverv1.ErrUnavailable
+		}
+		if err = serviceRemoteState06(remote, task.Action); err != nil {
+			return task.View, err
+		}
+	}
+	payload.RequestSHA256 = request.Digest
+	redacted := request.Redacted()
+	payload.Request = &redacted
 	claimed, fresh, err := m.claimServiceTask06(ctx, id, s.View.Revision, payload)
 	if err != nil || !fresh {
 		return claimed.View, err
 	}
-	if err = a.sendServiceAction06(ctx, s.View, client, request); err != nil {
-		return claimed.View, err
-	}
-	updated, err := readServiceTask06(ctx, m.DB, id, "")
-	return updated.View, err
-}
-func (a *App) recordProvisionResult06(ctx context.Context, t serviceTaskRecord06, result controllerapi.Result, sendErr error) (api.ServiceTask, error) {
-	status, resource := "uncertain", ""
-	if sendErr == nil && t.Payload.Provision != nil && result.Matches(*t.Payload.Provision) {
-		switch result.Status {
-		case "accepted":
-			status = "running"
-		case "succeeded":
-			if serviceapi.ValidID(result.ResourceID) {
-				status = "succeeded"
-				resource = result.ResourceID
-			}
-		case "rejected":
-			status = "failed"
-		}
-	}
+	result, sendErr := client.Call(ctx, request)
 	finish, cancel := context.WithTimeout(context.WithoutCancel(ctx), 5*time.Second)
 	defer cancel()
-	return a.Store.(*MySQL).finishServiceTask06(finish, t.View.ID, status, "", resource)
+	return a.recordModuleResult06(finish, request, result, sendErr)
+}
+func (a *App) recordModuleResult06(ctx context.Context, request serverv1.Request, result serverv1.Response, sendErr error) (api.ServiceTask, error) {
+	status, resource := "uncertain", ""
+	if sendErr == nil && result.Matches(request) {
+		switch result.State {
+		case "accepted":
+			status = "running"
+		case "failed":
+			status = "failed"
+		case "done":
+			status = "succeeded"
+			if request.Method == "create" || request.Method == "operation_status" && request.ResourceID == "" {
+				if !serverv1.ValidID(result.ResourceID) {
+					status = "uncertain"
+				} else {
+					resource = result.ResourceID
+				}
+			}
+		}
+	}
+	return a.Store.(*MySQL).finishServiceTask06(ctx, request.OperationID, status, "", resource)
 }
 func (a *App) reconcileServiceTask06(ctx context.Context, t serviceTaskRecord06, s serviceRecord06, manual bool) (api.ServiceTask, error) {
 	if t.View.Status != "running" && t.View.Status != "uncertain" {
 		return t.View, nil
 	}
 	m := a.Store.(*MySQL)
-	// A worker that vanished after claiming has no acknowledged controller
-	// receipt. Keep that distinction visible while trying read-only lookup.
 	if t.View.Status == "running" && !t.Payload.ReceiptKnown && time.Since(t.UpdatedAt) > 90*time.Second {
 		if _, err := m.finishServiceTask06(ctx, t.View.ID, "uncertain", "", ""); err != nil {
 			return t.View, err
 		}
 		t.View.Status = "uncertain"
 	}
-	if s.View.Kind != "cloud_server" {
+	if s.View.ModuleID == nil {
 		if !manual {
-			return t.View, serviceapi.ErrUnavailable
+			return t.View, serverv1.ErrUnavailable
 		}
 		return m.finishServiceTask06(ctx, t.View.ID, "succeeded", "MANUAL", "")
 	}
-	runtime, ok := a.Config.Services.(*ServiceControllers06)
-	if !ok || runtime == nil {
-		return t.View, serviceapi.ErrUnavailable
+	runtime, ok := a.Config.Services.(*ServerModules06)
+	if !ok || runtime == nil || s.View.ConnectionID == nil || !t.OperationID.Valid || t.OperationID.String != t.View.ID || !serverv1.ValidDigest(t.Payload.RequestSHA256) || t.Payload.Request == nil {
+		return t.View, serverv1.ErrUncertain
 	}
-	if !t.OperationID.Valid || t.OperationID.String != t.View.ID {
-		return t.View, serviceapi.ErrUncertain
+	stored := t.Payload.Request
+	if stored.OperationID != t.View.ID || stored.ServiceID != s.View.ID || stored.OwnerRef != s.View.ClientID || stored.Digest != t.Payload.RequestSHA256 {
+		return t.View, serverv1.ErrUncertain
 	}
-	if t.Action == "provision" {
-		if t.Payload.Provision == nil || runtime.Provisioning == nil {
-			return t.View, serviceapi.ErrUncertain
-		}
-		request := *t.Payload.Provision
-		_, hash, err := request.BytesAndDigest()
-		if err != nil || hash != t.Payload.RequestSHA256 || request.OwnerRef != s.View.ClientID || request.OrderID != s.View.ID {
-			return t.View, serviceapi.ErrUncertain
-		}
-		client, err := runtime.Provisioning(ctx, request.Product.ControllerID)
-		if err != nil {
-			return t.View, err
-		}
-		result, err := client.Lookup(ctx, request)
-		return a.recordProvisionResult06(ctx, t, result, err)
-	}
-	client, err := runtime.client(ctx, s.View)
+	client, err := runtime.processor(ctx, *s.View.ConnectionID, *s.View.ModuleID)
 	if err != nil {
 		return t.View, err
 	}
-	result, err := client.Operation(ctx, *s.View.ResourceID, s.View.ClientID, t.View.ID)
-	if err != nil {
-		_, _ = m.finishServiceTask06(ctx, t.View.ID, "uncertain", "", "")
-		return t.View, serviceapi.ErrUncertain
-	}
-	if result.OperationID != t.View.ID || result.Action != t.Action {
-		_, _ = m.finishServiceTask06(ctx, t.View.ID, "uncertain", "", "")
-		return t.View, serviceapi.ErrUncertain
-	}
-	status := result.Status
-	if status == "accepted" {
-		status = "running"
-	}
-	return m.finishServiceTask06(ctx, t.View.ID, status, "", "")
+	// Never reconstruct a mutation from stored input or credentials.
+	request := serverv1.Request{Protocol: serverv1.Protocol, Method: "operation_status", OperationID: t.View.ID, Digest: t.Payload.RequestSHA256, ServiceID: s.View.ID, OwnerRef: s.View.ClientID, ResourceID: stored.ResourceID}
+	result, err := client.Call(ctx, request)
+	return a.recordModuleResult06(ctx, request, result, err)
 }
 func (a *App) adminManagedService06(ctx context.Context, actor User, view api.AdminService, action string, payload serviceActionPayload06, key, fp string) (api.ServiceTask, error) {
 	m := a.Store.(*MySQL)
@@ -390,7 +315,7 @@ func (a *App) adminManagedService06(ctx context.Context, actor User, view api.Ad
 	switch action {
 	case "provision", "suspend", "unsuspend", "terminate":
 	default:
-		return api.ServiceTask{}, serviceapi.ErrUnavailable
+		return api.ServiceTask{}, serverv1.ErrUnavailable
 	}
 	type reserved struct {
 		Task  api.ServiceTask

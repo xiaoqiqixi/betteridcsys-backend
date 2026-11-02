@@ -1,10 +1,10 @@
 package billing
 
 import (
-	"aster/billing/controllerapi"
 	"aster/billing/internal/contracttest"
 	api "aster/billing/internal/financeapi"
-	"aster/billing/serviceapi"
+	"aster/billing/pkg/pluginapi"
+	"aster/billing/pkg/pluginapi/serverv1"
 	"context"
 	"encoding/json"
 	"net/http/httptest"
@@ -16,94 +16,151 @@ import (
 
 type fakeServiceController06 struct {
 	mu                       sync.Mutex
-	view                     serviceapi.Service
+	view                     serverv1.Service
+	description              *serverv1.Description
 	reads, sends, provisions int
 	sendErr                  error
 	actionStatus             string
 	operationStatus          string
-	lastParams               serviceapi.Params
+	lastParams               serviceParams06
 	actions                  map[string]string
-	lastRequest              controllerapi.Request
+	lastRequest              serverv1.Request
 }
 
-func (c *fakeServiceController06) Images(context.Context, string) ([]serviceapi.Image, error) {
-	return []serviceapi.Image{{ID: "debian-12", Name: "Debian", Version: "12", Family: "linux", MinDiskGB: 10, SHA256: strings.Repeat("1", 64)}}, nil
+func (c *fakeServiceController06) Images(context.Context, string) ([]serverv1.Image, error) {
+	return []serverv1.Image{{ID: "debian-12", Name: "Debian", Version: "12", Family: "linux", MinDiskGB: 10, SHA256: strings.Repeat("1", 64)}}, nil
 }
-func (c *fakeServiceController06) Service(_ context.Context, id, owner string) (serviceapi.Service, error) {
+func (c *fakeServiceController06) Service(_ context.Context, id, owner string) (serverv1.Service, error) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	c.reads++
 	v := c.view
 	if id != v.ResourceID || owner != v.OwnerRef {
-		return serviceapi.Service{}, serviceapi.ErrUnavailable
+		return serverv1.Service{}, serverv1.ErrUnavailable
 	}
 	return v, nil
 }
-func (c *fakeServiceController06) Action(_ context.Context, _ string, r serviceapi.ActionRequest) (serviceapi.ActionResult, bool, error) {
+func (c *fakeServiceController06) Console(context.Context, string, string) (serverv1.Console, error) {
+	return serverv1.Console{URL: "https://console.example.test/console/#opaque-single-use-ticket", ExpiresAt: time.Now().UTC().Add(time.Minute)}, nil
+}
+func (c *fakeServiceController06) Metrics(context.Context, string, string, string) (serverv1.Metrics, error) {
+	return serverv1.Metrics{StepSeconds: 60, Points: []serverv1.MetricPoint{{At: time.Now().UTC()}}}, nil
+}
+func (c *fakeServiceController06) Snapshots(context.Context, string, string) (serverv1.Snapshots, error) {
+	return serverv1.Snapshots{Items: []serverv1.Snapshot{{ID: strings.Repeat("b", 32), Name: "before-update", Status: "ready", CreatedAt: time.Now().UTC()}}, Limit: 3, RequiresStopped: true}, nil
+}
+func (c *fakeServiceController06) Call(ctx context.Context, r serverv1.Request) (serverv1.Response, error) {
+	out := serverv1.Response{Protocol: serverv1.Protocol, OperationID: r.OperationID, Digest: r.Digest, State: "done"}
+	switch r.Method {
+	case "describe":
+		c.mu.Lock()
+		defer c.mu.Unlock()
+		if c.description != nil {
+			out.Description = c.description
+			return out, nil
+		}
+		d := serverv1.Description{ID: "server.fake", Name: serverv1.Text{"en": "Fake module", "zh-CN": "测试模块"}, Version: "1.0.0", Capabilities: []string{"create", "suspend", "unsuspend", "terminate", "change_package", "renew", "power", "status", "console", "metrics", "snapshots", "images", "action"}, ProductSchema: serverv1.EmptySchema(), OrderSchema: serverv1.EmptySchema(), CustomActions: []serverv1.CustomAction{}}
+		d.CustomActions = c.view.CustomActions
+		out.Description = &d
+		return out, nil
+	case "test_connection":
+		return out, nil
+	case "validate_product":
+		out.Config, out.ConfigDigest, _ = serverv1.EmptySchema().Normalize(r.Config)
+		return out, nil
+	case "status":
+		v, e := c.Service(ctx, r.ResourceID, r.OwnerRef)
+		out.Service = &v
+		return out, e
+	case "console":
+		v, e := c.Console(ctx, r.ResourceID, r.OwnerRef)
+		out.Console = &v
+		return out, e
+	case "metrics":
+		v, e := c.Metrics(ctx, r.ResourceID, r.OwnerRef, r.Range)
+		out.Metrics = &v
+		return out, e
+	case "snapshots":
+		v, e := c.Snapshots(ctx, r.ResourceID, r.OwnerRef)
+		out.Snapshots = &v
+		return out, e
+	case "images":
+		v, e := c.Images(ctx, r.OwnerRef)
+		out.Images = v
+		return out, e
+	}
 	c.mu.Lock()
 	defer c.mu.Unlock()
-	c.sends++
-	c.lastParams = r.Params
+	if r.Method == "operation_status" {
+		if _, ok := c.actions[r.OperationID]; !ok {
+			return serverv1.Response{}, serverv1.ErrUncertain
+		}
+		out.State = c.operationStatus
+		if out.State == "" || out.State == "succeeded" {
+			out.State = "done"
+		}
+		if out.State == "rejected" {
+			out.State = "failed"
+		}
+		if c.actions[r.OperationID] == "create" {
+			out.ResourceID = c.view.ResourceID
+		}
+		return out, nil
+	}
+	if r.Verify() != nil {
+		return serverv1.Response{}, serverv1.ErrConfiguration
+	}
 	if c.actions == nil {
 		c.actions = map[string]string{}
 	}
-	c.actions[r.OperationID] = r.Action
-	if c.sendErr != nil {
-		return serviceapi.ActionResult{}, false, c.sendErr
+	if _, ok := c.actions[r.OperationID]; ok {
+		return serverv1.Response{}, serverv1.ErrUncertain
 	}
-	status := c.actionStatus
-	if status == "" {
-		status = "accepted"
+	c.actions[r.OperationID] = r.Method
+	if r.Method == "create" {
+		c.provisions++
+		c.lastRequest = r
+		out.ResourceID = c.view.ResourceID
+		// Simulate a module that finishes image setup before reporting create done.
+		if image, ok := r.Input["image_id"].(string); ok {
+			c.lastParams.ImageID = image
+			if hash, ok := r.Input["password_hash"].(string); ok {
+				c.lastParams.PasswordHash = hash
+				c.lastParams.Password = ""
+			} else {
+				c.lastParams.Password = "Ephemeral-Plugin-Only!"
+			}
+			out.State = "accepted"
+		}
+	} else {
+		c.sends++
+		_ = json.Unmarshal(jsonValue06(r.Input), &c.lastParams)
+		if password, ok := r.Secrets["password"].(string); ok {
+			c.lastParams.Password = password
+		}
+		out.State = c.actionStatus
+		if out.State == "" {
+			out.State = "accepted"
+		}
+		if out.State == "rejected" {
+			out.State = "failed"
+		}
 	}
-	return serviceapi.ActionResult{OperationID: r.OperationID, Status: status, Code: "ACCEPTED"}, false, nil
+	return out, c.sendErr
 }
-func (c *fakeServiceController06) Operation(_ context.Context, _, _, op string) (serviceapi.Operation, error) {
-	c.mu.Lock()
-	defer c.mu.Unlock()
-	status := c.operationStatus
-	if status == "" {
-		status = "succeeded"
-	}
-	at := time.Now().UTC()
-	return serviceapi.Operation{OperationID: op, Action: c.actions[op], Status: status, Code: "COMPLETED", FinishedAt: &at}, nil
-}
-func (c *fakeServiceController06) Console(context.Context, string, string) (serviceapi.Console, error) {
-	return serviceapi.Console{URL: "https://console.example.test/console/#opaque-single-use-ticket", ExpiresAt: time.Now().UTC().Add(time.Minute)}, nil
-}
-func (c *fakeServiceController06) Metrics(context.Context, string, string, string) (serviceapi.Metrics, error) {
-	return serviceapi.Metrics{StepSeconds: 60, Points: []serviceapi.MetricPoint{{At: time.Now().UTC()}}}, nil
-}
-func (c *fakeServiceController06) Snapshots(context.Context, string, string) (serviceapi.Snapshots, error) {
-	return serviceapi.Snapshots{Items: []serviceapi.Snapshot{{ID: strings.Repeat("b", 32), Name: "before-update", Status: "ready", CreatedAt: time.Now().UTC()}}, Limit: 3, RequiresStopped: true}, nil
-}
-func (c *fakeServiceController06) Send(_ context.Context, r controllerapi.Request) (controllerapi.Result, error) {
-	c.mu.Lock()
-	defer c.mu.Unlock()
-	c.provisions++
-	c.lastRequest = r
-	_, digest, err := r.BytesAndDigest()
-	if err != nil {
-		return controllerapi.Result{}, err
-	}
-	return controllerapi.Result{Protocol: controllerapi.Protocol, OperationID: r.OperationID, OrderID: r.OrderID, RequestSHA256: digest, Status: "succeeded", ResourceID: c.view.ResourceID}, c.sendErr
-}
-func (c *fakeServiceController06) Lookup(_ context.Context, r controllerapi.Request) (controllerapi.Result, error) {
-	c.mu.Lock()
-	defer c.mu.Unlock()
-	_, digest, err := r.BytesAndDigest()
-	if err != nil {
-		return controllerapi.Result{}, err
-	}
-	return controllerapi.Result{Protocol: controllerapi.Protocol, OperationID: r.OperationID, OrderID: r.OrderID, RequestSHA256: digest, Status: "succeeded", ResourceID: c.view.ResourceID}, nil
-}
-func serviceControllerFixture06(t *testing.T, m *MySQL, owner, sid string) (*fakeServiceController06, *ServiceControllers06) {
+func serviceControllerFixture06(t *testing.T, m *MySQL, owner, sid string) (*fakeServiceController06, *ServerModules06) {
 	t.Helper()
 	controller, resource := "controller-test", ID()
-	if _, err := m.DB.Exec(`UPDATE services SET controller_id=?,resource_id=?,configuration_snapshot=JSON_SET(configuration_snapshot,'$.kind','cloud_server'),status='active' WHERE id=?`, controller, resource, sid); err != nil {
+	if _, err := m.DB.Exec("INSERT IGNORE INTO server_connections(id,module_id,name,enabled) VALUES(?,'server.fake','Test connection',TRUE)", controller); err != nil {
 		t.Fatal(err)
 	}
-	c := &fakeServiceController06{view: serviceapi.Service{Protocol: serviceapi.Protocol, ResourceID: resource, OwnerRef: owner, Power: "stopped", IPv4: []string{"192.0.2.2"}, IPv6: []string{}, Specs: serviceapi.Specs{CPUCores: 2, MemoryMB: 2048, DiskGB: 40, BandwidthMbps: 100}, Capabilities: serviceapi.Capabilities{Power: true, Reinstall: true, ResetPassword: true, Console: true, Rescue: true, Snapshots: true, Metrics: true, Upgrade: true}, Traffic: serviceapi.Traffic{RXBytes: 1 << 30, TXBytes: 2 << 30, PeriodStart: time.Now().Add(-time.Hour), PeriodEnd: time.Now().Add(24 * time.Hour)}}}
-	runtime := &ServiceControllers06{Services: func(context.Context, string) (ServiceController06, error) { return c, nil }, Provisioning: func(context.Context, string) (ProvisioningController06, error) { return c, nil }, IDs: []string{controller}}
+	if _, err := m.DB.Exec(`UPDATE services SET module_id='server.fake',connection_id=?,resource_id=?,configuration_snapshot=JSON_SET(configuration_snapshot,'$.kind','cloud_server','$.module',JSON_OBJECT('module_id','server.fake','connection_id','controller-test','config',JSON_OBJECT(),'config_digest',REPEAT('a',64))),status='active' WHERE id=?`, controller, resource, sid); err != nil {
+		t.Fatal(err)
+	}
+	c := &fakeServiceController06{view: serverv1.Service{Protocol: serverv1.Protocol, ResourceID: resource, OwnerRef: owner, Power: "stopped", IPv4: []string{"192.0.2.2"}, IPv6: []string{}, Specs: serverv1.Specs{CPUCores: 2, MemoryMB: 2048, DiskGB: 40, BandwidthMbps: 100}, Capabilities: serverv1.Capabilities{Power: true, Reinstall: true, ResetPassword: true, Console: true, Rescue: false, Snapshots: true, Metrics: true, Upgrade: true}, Traffic: serverv1.Traffic{RXBytes: 1 << 30, TXBytes: 2 << 30, PeriodStart: time.Now().Add(-time.Hour), PeriodEnd: time.Now().Add(24 * time.Hour)}}}
+	runtime := &ServerModules06{Prepare: func(context.Context, string) (serverv1.Processor, error) { return c, nil }, Selections: func() ([]pluginapi.Selection, error) {
+		return []pluginapi.Selection{{Slot: controller, ID: "server.fake", Version: "1.0.0", Enabled: true}}, nil
+	}}
 	return c, runtime
 }
 func TestMySQLCommerceControllerReadModelsAndOwnership(t *testing.T) {
@@ -165,7 +222,7 @@ func TestMySQLCommerceControllerReadModelsAndOwnership(t *testing.T) {
 		t.Fatal("billing status erased controller capabilities")
 	}
 	controller.mu.Lock()
-	controller.view.Capabilities = serviceapi.Capabilities{}
+	controller.view.Capabilities = serverv1.Capabilities{}
 	controller.mu.Unlock()
 	for _, path := range []string{"/metrics", "/snapshots"} {
 		status, body := customer.request("GET", "/api/v1/services/"+sid+path, nil, "")
@@ -181,29 +238,29 @@ func TestMySQLCommerceControllerReadModelsAndOwnership(t *testing.T) {
 	contracttest.Error(t, body)
 	images, _ := controller.Images(t.Context(), f.customer.ID)
 	for range 2 {
-		if err := m.SyncImages06(t.Context(), runtime.IDs[0], images); err != nil {
+		if err := m.SyncImages06(t.Context(), "controller-test", images); err != nil {
 			t.Fatal(err)
 		}
 	}
 	var count int
 	var enabled bool
 	var family string
-	if err := m.DB.QueryRow("SELECT COUNT(*),MAX(enabled),MAX(family) FROM os_images WHERE controller_id=?", runtime.IDs[0]).Scan(&count, &enabled, &family); err != nil || count != 1 || enabled || family != "debian" {
+	if err := m.DB.QueryRow("SELECT COUNT(*),MAX(enabled),MAX(family) FROM os_images WHERE connection_id=?", "controller-test").Scan(&count, &enabled, &family); err != nil || count != 1 || enabled || family != "debian" {
 		t.Fatal(count, enabled, family, err)
 	}
-	if _, err := m.DB.Exec("UPDATE os_images SET enabled=TRUE WHERE controller_id=?", runtime.IDs[0]); err != nil {
+	if _, err := m.DB.Exec("UPDATE os_images SET enabled=TRUE WHERE connection_id=?", "controller-test"); err != nil {
 		t.Fatal(err)
 	}
 	images[0].SHA256 = strings.Repeat("2", 64)
-	if err := m.SyncImages06(t.Context(), runtime.IDs[0], images); err != nil {
+	if err := m.SyncImages06(t.Context(), "controller-test", images); err != nil {
 		t.Fatal(err)
 	}
-	if err := m.DB.QueryRow("SELECT enabled FROM os_images WHERE controller_id=?", runtime.IDs[0]).Scan(&enabled); err != nil || !enabled {
+	if err := m.DB.QueryRow("SELECT enabled FROM os_images WHERE connection_id=?", "controller-test").Scan(&enabled); err != nil || !enabled {
 		t.Fatal(enabled, err)
 	}
 }
 func TestCommerceControllerPreservesUnknownMeasurements(t *testing.T) {
-	v, err := serviceMetrics06("24h", serviceapi.Metrics{StepSeconds: 60, Points: []serviceapi.MetricPoint{{At: time.Now().UTC()}}})
+	v, err := serviceMetrics06("24h", serverv1.Metrics{StepSeconds: 60, Points: []serverv1.MetricPoint{{At: time.Now().UTC()}}})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -212,7 +269,7 @@ func TestCommerceControllerPreservesUnknownMeasurements(t *testing.T) {
 	if !strings.Contains(string(raw), `"cpu_percent":null`) {
 		t.Fatal(string(raw))
 	}
-	snapshots, err := snapshots06(serviceapi.Snapshots{Items: []serviceapi.Snapshot{{ID: ID(), Name: "unknown size", Status: "ready", CreatedAt: time.Now().UTC()}}, Limit: 1, RequiresStopped: true})
+	snapshots, err := snapshots06(serverv1.Snapshots{Items: []serverv1.Snapshot{{ID: ID(), Name: "unknown size", Status: "ready", CreatedAt: time.Now().UTC()}}, Limit: 1, RequiresStopped: true})
 	if err != nil {
 		t.Fatal(err)
 	}

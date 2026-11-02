@@ -1,30 +1,28 @@
 package billing
 
 import (
-	"aster/billing/controllerapi"
 	api "aster/billing/internal/financeapi"
-	"aster/billing/serviceapi"
+	"aster/billing/pkg/pluginapi/serverv1"
 	"context"
 	"database/sql"
 	"encoding/json"
 	"errors"
-	"strings"
 	"time"
 )
 
 // No password-bearing request may be stored here. RequestSHA256 is the SDK's
 // canonical digest; Params is always redacted before it crosses the SQL boundary.
 type serviceActionPayload06 struct {
-	Version       int                    `json:"version"`
-	Source        string                 `json:"source,omitempty"`
-	Reason        string                 `json:"reason,omitempty"`
-	Params        serviceapi.Params      `json:"params"`
-	RequestSHA256 string                 `json:"request_sha256,omitempty"`
-	ReceiptKnown  bool                   `json:"receipt_known,omitempty"`
-	Provision     *controllerapi.Request `json:"provision,omitempty"`
-	Change        *planChange06          `json:"change,omitempty"`
-	Bootstrap     bool                   `json:"bootstrap,omitempty"`
-	Image         *api.OsImage           `json:"image,omitempty"`
+	Version       int               `json:"version"`
+	Source        string            `json:"source,omitempty"`
+	Reason        string            `json:"reason,omitempty"`
+	Params        serviceParams06   `json:"params"`
+	RequestSHA256 string            `json:"request_sha256,omitempty"`
+	ReceiptKnown  bool              `json:"receipt_known,omitempty"`
+	Request       *serverv1.Request `json:"request,omitempty"`
+	Change        *planChange06     `json:"change,omitempty"`
+	Bootstrap     bool              `json:"bootstrap,omitempty"`
+	Image         *api.OsImage      `json:"image,omitempty"`
 }
 type serviceTaskRecord06 struct {
 	View              api.ServiceTask
@@ -85,10 +83,10 @@ func pendingServiceTasks06(ctx context.Context, tx *sql.Tx, sid, except string) 
 	err := tx.QueryRowContext(ctx, "SELECT COUNT(*) FROM service_tasks WHERE service_id=? AND id<>? AND status IN ('running','uncertain')", sid, except).Scan(&n)
 	return n > 0, err
 }
-func (m *MySQL) reserveServiceAction06(ctx context.Context, actor User, admin bool, expected api.AdminService, action string, params serviceapi.Params, payload serviceActionPayload06, key, fp string) (api.ServiceTask, serviceapi.ActionRequest, bool, error) {
+func (m *MySQL) reserveServiceAction06(ctx context.Context, actor User, admin bool, expected api.AdminService, action string, params serviceParams06, payload serviceActionPayload06, key, fp string) (api.ServiceTask, serverv1.Request, bool, error) {
 	type reservation struct {
 		Task    api.ServiceTask
-		Request serviceapi.ActionRequest
+		Request serverv1.Request
 		Fresh   bool
 	}
 	reserved, err := retryPayment(ctx, func() (reservation, error) {
@@ -127,14 +125,16 @@ func (m *MySQL) reserveServiceAction06(ctx context.Context, actor User, admin bo
 		}
 		id := ID()
 		now := time.Now().UTC()
-		out.Request = serviceapi.ActionRequest{Protocol: serviceapi.Protocol, OperationID: id, OwnerRef: s.View.ClientID, Action: action, Params: params}
-		_, hash, err := out.Request.BytesAndDigest()
+		out.Request, err = serviceRequest06(s, id, action, params)
+		hash := out.Request.Digest
 		if err != nil {
 			return out, err
 		}
 		payload.Version = 1
 		payload.Params = params.Redacted()
 		payload.RequestSHA256 = hash
+		redacted := out.Request.Redacted()
+		payload.Request = &redacted
 		raw, err := json.Marshal(payload)
 		if err != nil {
 			return out, err
@@ -221,12 +221,12 @@ func (m *MySQL) finishServiceTask06(ctx context.Context, id, status, code, resou
 		if status == "succeeded" {
 			switch task.Action {
 			case "provision":
-				if s.View.Kind == "cloud_server" {
-					if !serviceapi.ValidID(resource) {
-						return out, serviceapi.ErrUncertain
+				if s.View.ModuleID != nil {
+					if !serverv1.ValidID(resource) {
+						return out, serverv1.ErrUncertain
 					}
 					if s.View.ResourceID != nil && *s.View.ResourceID != resource {
-						return out, serviceapi.ErrUncertain
+						return out, serverv1.ErrUncertain
 					}
 					if _, err = tx.ExecContext(ctx, "UPDATE services SET resource_id=?,revision=revision+1 WHERE id=?", resource, s.View.ID); err != nil {
 						return out, err
@@ -266,10 +266,10 @@ func (m *MySQL) finishServiceTask06(ctx context.Context, id, status, code, resou
 					if err = serviceEvent06(ctx, tx, s.View, "service_suspended", reason); err != nil {
 						return out, err
 					}
-					// A renewal can settle while the controller is suspending. Reverse only
+					// A renewal can settle while the module is suspending. Reverse only
 					// an overdue suspension, using a new durable operation after confirmation.
 					if reason == "overdue" && s.Due.After(now) {
-						if _, err = queueServiceTask06(ctx, tx, s.View.ID, "unsuspend", serviceActionPayload06{Version: 1, Source: "payment", Reason: "overdue", Params: serviceapi.Params{StartAfter: true}}, now); err != nil {
+						if _, err = queueServiceTask06(ctx, tx, s.View.ID, "unsuspend", serviceActionPayload06{Version: 1, Source: "payment", Reason: "overdue", Params: serviceParams06{StartAfter: true}}, now); err != nil {
 							return out, err
 						}
 					}
@@ -291,7 +291,7 @@ func (m *MySQL) finishServiceTask06(ctx context.Context, id, status, code, resou
 				}
 			case "resize":
 				if task.Payload.Change == nil {
-					return out, serviceapi.ErrUncertain
+					return out, serverv1.ErrUncertain
 				}
 				change := task.Payload.Change
 				specs, _ := json.Marshal(change.Product.Specs)
@@ -313,14 +313,14 @@ func (m *MySQL) finishServiceTask06(ctx context.Context, id, status, code, resou
 			out.FinishedAt = &at
 		}
 		// Only locally chosen codes are recorded; provider messages never enter SQL.
-		message := "Controller operation pending"
+		message := "Module operation pending"
 		switch status {
 		case "succeeded":
-			message = "Controller operation completed"
+			message = "Module operation completed"
 		case "failed":
-			message = "Controller operation rejected or failed"
+			message = "Module operation rejected or failed"
 		case "uncertain":
-			message = "Controller outcome uncertain; read-only reconciliation required"
+			message = "Module outcome uncertain; read-only reconciliation required"
 		}
 		if code == "MANUAL" {
 			message = "Administrator confirmed the manual service operation"
@@ -338,29 +338,12 @@ func (m *MySQL) finishServiceTask06(ctx context.Context, id, status, code, resou
 		return out, tx.Commit()
 	})
 }
-func (a *App) sendServiceAction06(ctx context.Context, s api.AdminService, client ServiceController06, request serviceapi.ActionRequest) error {
-	result, _, err := client.Action(ctx, *s.ResourceID, request)
-	status := "uncertain"
-	if err == nil && result.OperationID == request.OperationID {
-		switch result.Status {
-		case "accepted":
-			status = "running"
-		case "rejected":
-			status = "failed"
-		}
-	}
-	var rejected *serviceapi.HTTPError
-	if errors.As(err, &rejected) && rejected.StatusCode != 409 {
-		status = "failed"
-	}
+func (a *App) sendServiceAction06(ctx context.Context, s api.AdminService, client serverv1.Processor, request serverv1.Request) error {
+	result, err := client.Call(ctx, request)
 	finish, cancel := context.WithTimeout(context.WithoutCancel(ctx), 5*time.Second)
 	defer cancel()
-	m := a.Store.(*MySQL)
-	_, saveErr := m.finishServiceTask06(finish, request.OperationID, status, "", "")
-	if saveErr != nil {
-		return serviceapi.ErrUncertain
-	}
-	return nil
+	_, err = a.recordModuleResult06(finish, request, result, err)
+	return err
 }
 func serviceConfirmation06(s api.AdminService, confirmation string) bool {
 	return confirmation == s.ID || s.Hostname != nil && confirmation == *s.Hostname
@@ -379,12 +362,16 @@ func serviceCapability06(v api.Service, action string) bool {
 		return v.Capabilities.Snapshots
 	case "resize":
 		return v.Capabilities.Upgrade
+	case "action":
+		return len(v.CustomActions) > 0
+	case "renew":
+		return true
 	case "suspend", "unsuspend", "terminate":
 		return true
 	}
 	return false
 }
-func serviceRemoteState06(remote serviceapi.Service, action string) error {
+func serviceRemoteState06(remote serverv1.Service, action string) error {
 	if remote.RescueActive && (action == "reinstall" || action == "reset_password" || action == "resize") {
 		return serviceConflict06()
 	}
@@ -406,15 +393,4 @@ func serviceRemoteState06(remote serviceapi.Service, action string) error {
 		}
 	}
 	return nil
-}
-func controllerHostname06(host string, id string) string {
-	label := strings.ToLower(strings.Split(host, ".")[0])
-	label = strings.Trim(label, "-")
-	if len(label) > 63 {
-		label = strings.TrimRight(label[:63], "-")
-	}
-	if label == "" {
-		label = "service-" + id[:12]
-	}
-	return label
 }

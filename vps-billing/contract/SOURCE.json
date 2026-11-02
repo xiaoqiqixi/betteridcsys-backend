@@ -2,5 +2,6 @@
   "repository": "xiaoqiqixi/betteridcsys-frontend",
   "path": "contract/openapi.json",
   "version": "0.6.0",
-  "sha256": "e07030c97de434238def8a70ddbb2a0b6d7d4fb65050e8f1089adaa50abc4fde"
+  "sha256": "f775abd68ff5fda20788a94247a407399306e5b31eaa770ad178f9be920765e8",
+  "commit": "7e7348b092123ec6522ea52eb40a0fad27fd8463"
 }

@@ -3,7 +3,7 @@ package billing
 import (
 	"aster/billing/internal/contracttest"
 	api "aster/billing/internal/financeapi"
-	"aster/billing/serviceapi"
+	"aster/billing/pkg/pluginapi/serverv1"
 	"encoding/json"
 	"errors"
 	"net/http/httptest"
@@ -20,7 +20,7 @@ func TestMySQLCommerceServiceActionsContractOwnershipAndSecrets(t *testing.T) {
 	activateServiceFixture06(t, m, sid)
 	controller, runtime := serviceControllerFixture06(t, m, f.customer.ID, sid)
 	image := ID()
-	if _, err := m.DB.Exec(`INSERT INTO os_images(id,family,name,version,min_disk_gb,enabled,controller_id,remote_image_id,sha256) VALUES(?,'debian','Debian','12',10,TRUE,?,'debian-12',?)`, image, runtime.IDs[0], strings.Repeat("1", 64)); err != nil {
+	if _, err := m.DB.Exec(`INSERT INTO os_images(id,family,name,version,min_disk_gb,enabled,controller_id,connection_id,remote_image_id,sha256) VALUES(?,'debian','Debian','12',10,TRUE,'',?,'debian-12',?)`, image, "controller-test", strings.Repeat("1", 64)); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := m.DB.Exec("INSERT INTO product_os_images(product_id,image_id) VALUES(?,?)", p.ID, image); err != nil {
@@ -120,7 +120,7 @@ func TestMySQLCommerceServiceActionsContractOwnershipAndSecrets(t *testing.T) {
 	// dispatching it again performs no mutation, and only lookup can resolve it.
 	controller.mu.Lock()
 	controller.view.Power = "stopped"
-	controller.sendErr = serviceapi.ErrUncertain
+	controller.sendErr = serverv1.ErrUncertain
 	before := controller.sends
 	controller.mu.Unlock()
 	key := ID()
@@ -201,7 +201,7 @@ func TestMySQLCommerceProvisionClaimConcurrencyAndOverdueRace(t *testing.T) {
 	m := f.store.(*MySQL)
 	sid, _ := paidService06(t, f)
 	controller, runtime := serviceControllerFixture06(t, m, f.customer.ID, sid)
-	if _, err := m.DB.Exec(`UPDATE services SET status='provisioning',resource_id=NULL,configuration_snapshot=JSON_SET(configuration_snapshot,'$.remote_product_id','approved-preset') WHERE id=?`, sid); err != nil {
+	if _, err := m.DB.Exec(`UPDATE services SET status='provisioning',resource_id=NULL,configuration_snapshot=configuration_snapshot WHERE id=?`, sid); err != nil {
 		t.Fatal(err)
 	}
 	var taskID string
@@ -231,7 +231,7 @@ func TestMySQLCommerceProvisionClaimConcurrencyAndOverdueRace(t *testing.T) {
 	sent := controller.provisions
 	request := controller.lastRequest
 	controller.mu.Unlock()
-	if sent != 1 || request.OrderID != sid || request.OwnerRef != f.customer.ID {
+	if sent != 1 || request.ServiceID != sid || request.OwnerRef != f.customer.ID {
 		t.Fatal("bad provisioning cardinality or owner", sent, request)
 	}
 	task, err := app.DispatchServiceTask06(t.Context(), taskID, true, true)

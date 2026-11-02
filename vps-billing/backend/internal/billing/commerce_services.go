@@ -30,7 +30,7 @@ func customerService06(v api.AdminService) api.Service {
 func readService06(ctx context.Context, q currencyQuerier, owner, id, lock string) (serviceRecord06, error) {
 	var out serviceRecord06
 	v := &out.View
-	query := `SELECT s.id,s.user_id,u.email,s.name,s.plan_name,s.region,s.status,s.product_id,s.cycle,s.recurring_minor,s.price_override_minor,s.currency,s.currency_snapshot,s.next_due_at,s.auto_renew,s.label,s.controller_id,s.resource_id,s.suspension_reason,s.cancellation_type,s.cancellation_reason,s.cancellation_requested_at,s.terminates_at,s.specs_snapshot,s.os_snapshot,s.configuration_snapshot,s.created_at,s.revision,s.anchor_day,s.last_change_at,s.cpu,s.memory_gb,s.disk_gb FROM services s JOIN users u ON u.id=s.user_id WHERE s.id=?`
+	query := `SELECT s.id,s.user_id,u.email,s.name,s.plan_name,s.region,s.status,s.product_id,s.cycle,s.recurring_minor,s.price_override_minor,s.currency,s.currency_snapshot,s.next_due_at,s.auto_renew,s.label,s.module_id,s.connection_id,s.resource_id,s.suspension_reason,s.cancellation_type,s.cancellation_reason,s.cancellation_requested_at,s.terminates_at,s.specs_snapshot,s.os_snapshot,s.configuration_snapshot,s.created_at,s.revision,s.anchor_day,s.last_change_at,s.cpu,s.memory_gb,s.disk_gb FROM services s JOIN users u ON u.id=s.user_id WHERE s.id=?`
 	args := []any{id}
 	if owner != "" {
 		query += " AND s.user_id=?"
@@ -42,7 +42,7 @@ func readService06(ctx context.Context, q currencyQuerier, owner, id, lock strin
 	var cancelType, cancelReason *string
 	var created, cancelled, terminates sql.NullTime
 	var memoryGB int64
-	err := q.QueryRowContext(ctx, query+lock, args...).Scan(&v.ID, &v.ClientID, &v.ClientEmail, &hostname, &v.ProductName, &v.Region, &v.Status, &out.ProductID, &v.Cycle, &v.Recurring.AmountMinor, &override, &v.Recurring.Currency, &formatRaw, &out.Due, &v.AutoRenew, &v.Label, &v.ControllerID, &v.ResourceID, &v.SuspensionReason, &cancelType, &cancelReason, &cancelled, &terminates, &specsRaw, &osRaw, &configRaw, &created, &v.Revision, &out.Anchor, &out.LastChange, &v.Specs.CPUCores, &memoryGB, &v.Specs.DiskGB)
+	err := q.QueryRowContext(ctx, query+lock, args...).Scan(&v.ID, &v.ClientID, &v.ClientEmail, &hostname, &v.ProductName, &v.Region, &v.Status, &out.ProductID, &v.Cycle, &v.Recurring.AmountMinor, &override, &v.Recurring.Currency, &formatRaw, &out.Due, &v.AutoRenew, &v.Label, &v.ModuleID, &v.ConnectionID, &v.ResourceID, &v.SuspensionReason, &cancelType, &cancelReason, &cancelled, &terminates, &specsRaw, &osRaw, &configRaw, &created, &v.Revision, &out.Anchor, &out.LastChange, &v.Specs.CPUCores, &memoryGB, &v.Specs.DiskGB)
 	if errors.Is(err, sql.ErrNoRows) {
 		return out, ErrNotFound
 	}
@@ -60,6 +60,7 @@ func readService06(ctx context.Context, q currencyQuerier, owner, id, lock strin
 		v.PriceOverride = &amount
 		v.Recurring = amount
 	}
+	v.CustomActions = []api.ServerCustomAction{}
 	v.Kind = "generic"
 	v.Specs.MemoryMB = memoryGB * 1024
 	for _, item := range []struct {

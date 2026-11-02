@@ -219,14 +219,7 @@ func main() {
 		state := plugins.State()
 		return updates.Current{CoreVersion: pluginapi.CoreVersion, SMTPVersion: state.Version, SMTPStatus: state.Status, PluginPolicyRevision: state.PolicyRevision, SMTPProtocol: state.SMTPProtocol, SMTPCoreMin: state.SMTPCoreMin, SMTPCoreMaxExclusive: state.SMTPCoreMaxExclusive}
 	})
-	serviceControllers, serviceErr := billing.LoadServiceControllers06(os.Getenv("SERVICE_CONTROLLER_POLICY_FILE"))
-	if serviceErr != nil {
-		fatal("invalid service controller host policy or private runtime credentials")
-	}
-	var serviceInspector billing.ServiceInspector06
-	if serviceControllers != nil {
-		serviceInspector = serviceControllers
-	}
+	serviceInspector := billing.NewServerModules06(plugins)
 	contractVersion, versionErr := commerceContractVersion(demo, os.Getenv("COMMERCE_API_VERSION"))
 	if versionErr != nil {
 		fatal("COMMERCE_API_VERSION must be 0.5 or 0.6")

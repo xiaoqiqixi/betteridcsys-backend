@@ -77,7 +77,7 @@ func (a *App) commerceError(w http.ResponseWriter, r *http.Request, err error) {
 	}
 }
 func publicProduct(p api.AdminProduct) api.Product {
-	return api.Product{ID: p.ID, Slug: p.Slug, Kind: p.Kind, TypeID: p.TypeID, RegionID: p.RegionID, NodeID: p.NodeID, Name: p.Name, Description: p.Description, Badges: p.Badges, Specs: p.Specs, Prices: p.Prices, Options: p.Options, OSImages: p.OSImages, Stock: p.Stock, Available: p.Available, SortOrder: p.SortOrder}
+	return api.Product{ID: p.ID, Slug: p.Slug, Kind: p.Kind, TypeID: p.TypeID, RegionID: p.RegionID, NodeID: p.NodeID, Name: p.Name, Description: p.Description, Badges: p.Badges, Specs: p.Specs, Prices: p.Prices, Options: p.Options, OSImages: p.OSImages, OrderSchema: p.OrderSchema, Stock: p.Stock, Available: p.Available, SortOrder: p.SortOrder}
 }
 func imagePublic(v api.AdminOsImage) api.OsImage {
 	return api.OsImage{ID: v.ID, Family: v.Family, Name: v.Name, Version: v.Version, MinDiskGB: v.MinDiskGB}
@@ -192,6 +192,12 @@ func (a *App) commerceCatalogHTTP(w http.ResponseWriter, r *http.Request, p stri
 		} else if !commerceBody(w, r, operation, &in) {
 			return true
 		}
+		if !duplicate && in.Module != nil {
+			if err := a.validateProductModule06(r.Context(), in.Module); err != nil {
+				a.serviceControllerError06(w, r, err)
+				return true
+			}
+		}
 		out, err := s.SaveProduct06(r.Context(), actor, id, in, key, duplicate)
 		if err != nil {
 			a.commerceError(w, r, err)
@@ -210,12 +216,6 @@ func validateProduct06(in api.AdminCreateProductInput, config CurrencyConfigurat
 		return ErrCommerceInput
 	}
 	if in.Name == nil || text06(in.Name) == "" || len(in.Options) > 100 || len(in.Prices) > 224 {
-		return ErrCommerceInput
-	}
-	if (in.ControllerID == nil) != (in.RemoteProductID == nil) {
-		return ErrCommerceInput
-	}
-	if in.ControllerID != nil && (len(*in.ControllerID) > 64 || len(*in.RemoteProductID) > 128 || *in.ControllerID == "" || *in.RemoteProductID == "") {
 		return ErrCommerceInput
 	}
 	found := false

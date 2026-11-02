@@ -2,6 +2,7 @@ package billing
 
 import (
 	api "aster/billing/internal/financeapi"
+	"aster/billing/pkg/pluginapi/serverv1"
 	"context"
 	"encoding/json"
 	"sort"
@@ -12,10 +13,11 @@ type memoryCommerceRequest struct {
 	response    []byte
 }
 type memoryCommerceCatalog struct {
-	coupons  map[string]api.Coupon
-	products map[string]api.AdminProduct
-	images   map[string]api.AdminOsImage
-	requests map[string]memoryCommerceRequest
+	coupons      map[string]api.Coupon
+	products     map[string]api.AdminProduct
+	images       map[string]api.AdminOsImage
+	requests     map[string]memoryCommerceRequest
+	descriptions map[string]serverv1.Description
 }
 
 func clone06[T any](value T) T {
@@ -184,6 +186,10 @@ func (m *Memory) SaveProduct06(ctx context.Context, actor User, id string, in ap
 			return out, ErrCommerceInput
 		}
 	}
+	module, orderSchema, err := normalizeModuleDescription06(in.Module, c.descriptions)
+	if err != nil {
+		return out, err
+	}
 	images := []api.OsImage{}
 	for _, iid := range in.OSImageIDs {
 		image, ok := c.images[iid]
@@ -195,7 +201,7 @@ func (m *Memory) SaveProduct06(ctx context.Context, actor User, id string, in ap
 	if create {
 		id = ID()
 	}
-	out = api.AdminProduct{ID: id, Slug: in.Slug, Kind: in.Kind, NodeID: in.NodeID, Name: in.Name, Description: in.Description, Badges: in.Badges, Specs: in.Specs, Prices: in.Prices, Options: in.Options, OSImages: images, Stock: in.Stock, SortOrder: in.SortOrder, Visibility: in.Visibility, ControllerID: in.ControllerID, RemoteProductID: in.RemoteProductID, Revision: revision}
+	out = api.AdminProduct{ID: id, Slug: in.Slug, Kind: in.Kind, NodeID: in.NodeID, Name: in.Name, Description: in.Description, Badges: in.Badges, Specs: in.Specs, Prices: in.Prices, Options: in.Options, OSImages: images, Stock: in.Stock, SortOrder: in.SortOrder, Visibility: in.Visibility, Module: module, OrderSchema: orderSchema, Revision: revision}
 	for _, n := range m.taxonomy.Nodes {
 		if n.ID == in.NodeID {
 			out.RegionID = n.RegionID

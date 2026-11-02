@@ -13,7 +13,7 @@ import (
 	"github.com/go-sql-driver/mysql"
 )
 
-const product06Columns = `p.id,p.slug,p.kind,r.type_id,n.region_id,p.node_id,p.name_i18n,p.description_i18n,p.badges,p.specs,p.stock,p.visibility,p.controller_id,p.remote_product_id,p.sort_order,p.revision,(n.enabled AND r.enabled AND t.enabled),(SELECT COUNT(*) FROM services s WHERE s.product_id=p.id AND s.status NOT IN ('terminated','cancelled'))`
+const product06Columns = `p.id,p.slug,p.kind,r.type_id,n.region_id,p.node_id,p.name_i18n,p.description_i18n,p.badges,p.specs,p.stock,p.visibility,p.module,p.order_schema,p.sort_order,p.revision,(n.enabled AND r.enabled AND t.enabled AND (p.module IS NULL OR JSON_TYPE(p.module)='NULL' OR EXISTS(SELECT 1 FROM server_connections c WHERE c.id=JSON_UNQUOTE(JSON_EXTRACT(p.module,'$.connection_id')) AND c.module_id=JSON_UNQUOTE(JSON_EXTRACT(p.module,'$.module_id')) AND c.enabled=TRUE))),(SELECT COUNT(*) FROM services s WHERE s.product_id=p.id AND s.status NOT IN ('terminated','cancelled'))`
 const product06Joins = ` FROM products p JOIN catalog_nodes n ON n.id=p.node_id JOIN catalog_regions r ON r.id=n.region_id JOIN catalog_types t ON t.id=r.type_id`
 
 // Materialize service counts once for a catalog list. The detail/locking path
@@ -46,16 +46,22 @@ func readProducts06(ctx context.Context, q currencyQuerier, admin bool, id, curr
 	out := []api.AdminProduct{}
 	for rows.Next() {
 		var p api.AdminProduct
-		var name, description, badges, specs []byte
+		var name, description, badges, specs, module, orderSchema []byte
 		var visible bool
-		if err = rows.Scan(&p.ID, &p.Slug, &p.Kind, &p.TypeID, &p.RegionID, &p.NodeID, &name, &description, &badges, &specs, &p.Stock, &p.Visibility, &p.ControllerID, &p.RemoteProductID, &p.SortOrder, &p.Revision, &visible, &p.ActiveServices); err != nil {
+		if err = rows.Scan(&p.ID, &p.Slug, &p.Kind, &p.TypeID, &p.RegionID, &p.NodeID, &name, &description, &badges, &specs, &p.Stock, &p.Visibility, &module, &orderSchema, &p.SortOrder, &p.Revision, &visible, &p.ActiveServices); err != nil {
 			rows.Close()
 			return nil, err
+		}
+		if len(module) == 0 {
+			module = []byte("null")
+		}
+		if len(orderSchema) == 0 {
+			orderSchema = []byte("null")
 		}
 		for _, v := range []struct {
 			raw    []byte
 			target any
-		}{{name, &p.Name}, {description, &p.Description}, {badges, &p.Badges}, {specs, &p.Specs}} {
+		}{{name, &p.Name}, {description, &p.Description}, {badges, &p.Badges}, {specs, &p.Specs}, {module, &p.Module}, {orderSchema, &p.OrderSchema}} {
 			if err = json.Unmarshal(v.raw, v.target); err != nil {
 				rows.Close()
 				return nil, err
@@ -264,7 +270,7 @@ func productInput06(p api.AdminProduct) api.AdminCreateProductInput {
 	for _, i := range p.OSImages {
 		ids = append(ids, i.ID)
 	}
-	return api.AdminCreateProductInput{Revision: p.Revision, Slug: p.Slug, Kind: p.Kind, NodeID: p.NodeID, Name: p.Name, Description: p.Description, Badges: p.Badges, Specs: p.Specs, Prices: p.Prices, Options: p.Options, OSImageIDs: ids, Stock: p.Stock, Visibility: p.Visibility, ControllerID: p.ControllerID, RemoteProductID: p.RemoteProductID, SortOrder: p.SortOrder}
+	return api.AdminCreateProductInput{Revision: p.Revision, Slug: p.Slug, Kind: p.Kind, NodeID: p.NodeID, Name: p.Name, Description: p.Description, Badges: p.Badges, Specs: p.Specs, Prices: p.Prices, Options: p.Options, OSImageIDs: ids, Stock: p.Stock, Visibility: p.Visibility, Module: productBinding06(p.Module), SortOrder: p.SortOrder}
 }
 func (m *MySQL) SaveProduct06(ctx context.Context, actor User, id string, in api.AdminCreateProductInput, key string, duplicate bool) (api.AdminProduct, error) {
 	var out api.AdminProduct
@@ -326,14 +332,19 @@ func (m *MySQL) SaveProduct06(ctx context.Context, actor User, id string, in api
 	if err = validateProduct06(in, config, taxonomy); err != nil {
 		return out, err
 	}
+	module, orderSchema, err := normalizeProductModule06(ctx, tx, in.Module)
+	if err != nil {
+		return out, err
+	}
 	if create {
 		id = ID()
 	}
 	for _, iid := range in.OSImageIDs {
 		var minDisk int64
 		var enabled bool
-		err = tx.QueryRowContext(ctx, "SELECT min_disk_gb,enabled FROM os_images WHERE BINARY id=BINARY ? FOR SHARE", iid).Scan(&minDisk, &enabled)
-		if errors.Is(err, sql.ErrNoRows) || err == nil && (minDisk > in.Specs.DiskGB || in.Visibility == "public" && !enabled) {
+		var connection string
+		err = tx.QueryRowContext(ctx, "SELECT min_disk_gb,enabled,connection_id FROM os_images WHERE BINARY id=BINARY ? FOR SHARE", iid).Scan(&minDisk, &enabled, &connection)
+		if errors.Is(err, sql.ErrNoRows) || err == nil && (minDisk > in.Specs.DiskGB || in.Visibility == "public" && !enabled || in.Module != nil && connection != in.Module.ConnectionID) {
 			return out, ErrCommerceInput
 		}
 		if err != nil {
@@ -345,9 +356,9 @@ func (m *MySQL) SaveProduct06(ctx context.Context, actor User, id string, in api
 	specs, _ := json.Marshal(in.Specs)
 	badges, _ := json.Marshal(in.Badges)
 	if create {
-		_, err = tx.ExecContext(ctx, "INSERT INTO products(id,slug,kind,node_id,name_i18n,description_i18n,specs,badges,stock,visibility,controller_id,remote_product_id,sort_order,revision) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?)", id, in.Slug, in.Kind, in.NodeID, name, description, specs, badges, in.Stock, in.Visibility, in.ControllerID, in.RemoteProductID, in.SortOrder, revision)
+		_, err = tx.ExecContext(ctx, "INSERT INTO products(id,slug,kind,node_id,name_i18n,description_i18n,specs,badges,stock,visibility,module,order_schema,sort_order,revision) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?)", id, in.Slug, in.Kind, in.NodeID, name, description, specs, badges, in.Stock, in.Visibility, jsonValue06(module), jsonValue06(orderSchema), in.SortOrder, revision)
 	} else {
-		_, err = tx.ExecContext(ctx, "UPDATE products SET slug=?,kind=?,node_id=?,name_i18n=?,description_i18n=?,specs=?,badges=?,stock=?,visibility=?,controller_id=?,remote_product_id=?,sort_order=?,revision=? WHERE id=?", in.Slug, in.Kind, in.NodeID, name, description, specs, badges, in.Stock, in.Visibility, in.ControllerID, in.RemoteProductID, in.SortOrder, revision, id)
+		_, err = tx.ExecContext(ctx, "UPDATE products SET slug=?,kind=?,node_id=?,name_i18n=?,description_i18n=?,specs=?,badges=?,stock=?,visibility=?,module=?,order_schema=?,sort_order=?,revision=? WHERE id=?", in.Slug, in.Kind, in.NodeID, name, description, specs, badges, in.Stock, in.Visibility, jsonValue06(module), jsonValue06(orderSchema), in.SortOrder, revision, id)
 	}
 	if err != nil {
 		var mysqlErr *mysql.MySQLError
@@ -429,7 +440,7 @@ func (m *MySQL) Images06(ctx context.Context) ([]api.AdminOsImage, error) {
 	return readImages06(ctx, m.DB)
 }
 func readImages06(ctx context.Context, q currencyQuerier) ([]api.AdminOsImage, error) {
-	rows, err := q.QueryContext(ctx, "SELECT id,family,name,version,min_disk_gb,enabled,controller_id,remote_image_id,sha256 FROM os_images ORDER BY id")
+	rows, err := q.QueryContext(ctx, "SELECT id,family,name,version,min_disk_gb,enabled,connection_id,remote_image_id,sha256 FROM os_images ORDER BY id")
 	if err != nil {
 		return nil, err
 	}
@@ -437,7 +448,7 @@ func readImages06(ctx context.Context, q currencyQuerier) ([]api.AdminOsImage, e
 	out := []api.AdminOsImage{}
 	for rows.Next() {
 		var i api.AdminOsImage
-		if err = rows.Scan(&i.ID, &i.Family, &i.Name, &i.Version, &i.MinDiskGB, &i.Enabled, &i.ControllerID, &i.RemoteImageID, &i.SHA256); err != nil {
+		if err = rows.Scan(&i.ID, &i.Family, &i.Name, &i.Version, &i.MinDiskGB, &i.Enabled, &i.ConnectionID, &i.RemoteImageID, &i.SHA256); err != nil {
 			return nil, err
 		}
 		out = append(out, i)
@@ -457,7 +468,7 @@ func (m *MySQL) PatchImage06(ctx context.Context, actor User, id string, name *s
 	if _, err = lockActiveAdministrator(ctx, tx, actor.ID); err != nil {
 		return out, err
 	}
-	err = tx.QueryRowContext(ctx, "SELECT id,family,name,version,min_disk_gb,enabled,controller_id,remote_image_id,sha256 FROM os_images WHERE BINARY id=BINARY ? FOR UPDATE", id).Scan(&out.ID, &out.Family, &out.Name, &out.Version, &out.MinDiskGB, &out.Enabled, &out.ControllerID, &out.RemoteImageID, &out.SHA256)
+	err = tx.QueryRowContext(ctx, "SELECT id,family,name,version,min_disk_gb,enabled,connection_id,remote_image_id,sha256 FROM os_images WHERE BINARY id=BINARY ? FOR UPDATE", id).Scan(&out.ID, &out.Family, &out.Name, &out.Version, &out.MinDiskGB, &out.Enabled, &out.ConnectionID, &out.RemoteImageID, &out.SHA256)
 	if errors.Is(err, sql.ErrNoRows) {
 		return out, ErrNotFound
 	}

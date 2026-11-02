@@ -93,6 +93,7 @@ func preflightColumns(version int) map[string]map[string]string {
 	}
 	commerceBillingSchema(version, specs)
 	commerceServicesSchema(version, specs)
+	serverModulesSchema(version, specs)
 	result := make(map[string]map[string]string, len(specs))
 	for table, spec := range specs {
 		result[table] = map[string]string{}
@@ -216,6 +217,7 @@ func preflightChecks(version int) map[string]map[string]string {
 }
 
 var preflightDefaults = map[string]string{
+	"server_connections.enabled": "1", "server_connections.status": "unconfigured", "server_connections.revision": "1", "os_images.connection_id": "",
 	"services.cycle": "monthly", "services.recurring_minor": "0", "services.auto_renew": "1", "services.label": "", "services.revision": "1", "services.anchor_day": "1",
 	"invoices.kind": "order", "invoices.commerce_version": "0", "invoices.subtotal_minor": "0", "invoices.credit_applied_minor": "0", "invoices.amount_paid_minor": "0", "invoices.refunded_minor": "0",
 	"users.currency": "CNY", "users.currency_locked": "0",
@@ -465,6 +467,9 @@ func validatePreflightTableKeys(ctx context.Context, conn *sql.Conn, version int
 
 	if schemaIncludes(version, migrations.PaymentGateways) {
 		required["payment_gateway_settings:id"] = true
+	}
+	if schemaIncludes(version, migrations.ServerModules) {
+		required["server_connections:id"] = true
 	}
 	if schemaIncludes(version, migrations.AffiliateSettings) {
 		for _, k := range affiliateSettingsKeys {

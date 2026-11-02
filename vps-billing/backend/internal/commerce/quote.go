@@ -2,6 +2,7 @@ package commerce
 
 import (
 	api "aster/billing/internal/financeapi"
+	"aster/billing/pkg/pluginapi/serverv1"
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
@@ -115,6 +116,22 @@ func CalculateQuote(input api.CreateQuoteInput, products map[string]api.AdminPro
 		base, ok := findPrice(p.Prices, input.Currency, cart.Cycle)
 		if !ok || base.DecimalPlaces != decimals {
 			return out, ErrProductUnavailable
+		}
+		if p.OrderSchema == nil {
+			if len(cart.ModuleFields) > 0 {
+				return out, ErrInput
+			}
+		} else {
+			var schema serverv1.Schema
+			raw, _ := json.Marshal(p.OrderSchema)
+			if json.Unmarshal(raw, &schema) != nil {
+				return out, ErrInput
+			}
+			normalized, _, err := schema.Normalize(cart.ModuleFields)
+			if err != nil {
+				return out, ErrInput
+			}
+			cart.ModuleFields, _ = schema.Split(normalized)
 		}
 		item := QuotedItem{Product: p, Input: cart, OptionsSummary: []string{}}
 		// Secrets are never part of a quote, snapshots, digests or diagnostics.

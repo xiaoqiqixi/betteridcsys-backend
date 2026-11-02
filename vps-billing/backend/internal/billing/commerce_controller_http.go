@@ -2,7 +2,7 @@ package billing
 
 import (
 	api "aster/billing/internal/financeapi"
-	"aster/billing/serviceapi"
+	"aster/billing/pkg/pluginapi/serverv1"
 	"errors"
 	"net/http"
 	"strings"
@@ -10,23 +10,13 @@ import (
 )
 
 func (a *App) serviceControllerError06(w http.ResponseWriter, r *http.Request, err error) {
-	var remote *serviceapi.HTTPError
 	switch {
-	case errors.Is(err, serviceapi.ErrUnavailable):
-		fail(w, r, 501, "FEATURE_UNAVAILABLE", "Controller capability is unavailable")
-	case errors.Is(err, serviceapi.ErrConfiguration):
+	case errors.Is(err, serverv1.ErrUnavailable):
+		fail(w, r, 501, "FEATURE_UNAVAILABLE", "Module capability is unavailable")
+	case errors.Is(err, serverv1.ErrConfiguration):
 		a.commerceError(w, r, ErrCommerceInput)
-	case errors.As(err, &remote):
-		switch remote.StatusCode {
-		case 409:
-			fail(w, r, 409, "SERVICE_STATE_CONFLICT", "Controller state does not permit this operation")
-		case 501:
-			fail(w, r, 501, "FEATURE_UNAVAILABLE", "Controller capability is unavailable")
-		default:
-			fail(w, r, 502, "CONTROLLER_UNAVAILABLE", "Controller request could not be completed")
-		}
-	case errors.Is(err, serviceapi.ErrUncertain):
-		fail(w, r, 502, "CONTROLLER_UNAVAILABLE", "Controller response is unavailable; inspect the task before any further operation")
+	case errors.Is(err, serverv1.ErrUncertain):
+		fail(w, r, 502, "MODULE_UNAVAILABLE", "Module response is unavailable; inspect the task before any further operation")
 	default:
 		a.commerceError(w, r, err)
 	}
@@ -49,7 +39,7 @@ func (a *App) serviceReads06HTTP(w http.ResponseWriter, r *http.Request, u User,
 	}
 	m, ok := a.Store.(*MySQL)
 	if !ok {
-		a.serviceControllerError06(w, r, serviceapi.ErrUnavailable)
+		a.serviceControllerError06(w, r, serverv1.ErrUnavailable)
 		return true
 	}
 	v, err := m.Service06(r.Context(), u.ID, parts[1])
@@ -57,9 +47,9 @@ func (a *App) serviceReads06HTTP(w http.ResponseWriter, r *http.Request, u User,
 		a.commerceError(w, r, err)
 		return true
 	}
-	runtime, ok := a.Config.Services.(*ServiceControllers06)
+	runtime, ok := a.Config.Services.(*ServerModules06)
 	if !ok || runtime == nil {
-		a.serviceControllerError06(w, r, serviceapi.ErrUnavailable)
+		a.serviceControllerError06(w, r, serverv1.ErrUnavailable)
 		return true
 	}
 	client, err := runtime.client(r.Context(), v)
@@ -79,16 +69,16 @@ func (a *App) serviceReads06HTTP(w http.ResponseWriter, r *http.Request, u User,
 	}
 	capable := op == "console" && projected.Capabilities.Console || op == "metrics" && projected.Capabilities.Metrics || op == "snapshots" && projected.Capabilities.Snapshots
 	if !capable {
-		a.serviceControllerError06(w, r, serviceapi.ErrUnavailable)
+		a.serviceControllerError06(w, r, serverv1.ErrUnavailable)
 		return true
 	}
 	var result any
 	switch op {
 	case "console":
-		var ticket serviceapi.Console
+		var ticket serverv1.Console
 		ticket, err = client.Console(r.Context(), *v.ResourceID, v.ClientID)
 		if err == nil && (!ticket.ExpiresAt.After(time.Now()) || ticket.ExpiresAt.After(time.Now().Add(90*time.Second))) {
-			err = serviceapi.ErrUncertain
+			err = serverv1.ErrUncertain
 		}
 		result = api.ConsoleTicket{URL: ticket.URL, ExpiresAt: stamp06(ticket.ExpiresAt)}
 		w.Header().Set("Cache-Control", "no-store")
@@ -97,17 +87,17 @@ func (a *App) serviceReads06HTTP(w http.ResponseWriter, r *http.Request, u User,
 		if period == "" {
 			period = "24h"
 		}
-		if !serviceapi.ValidRange(period) {
+		if !serverv1.ValidRange(period) {
 			a.commerceError(w, r, ErrCommerceInput)
 			return true
 		}
-		var metrics serviceapi.Metrics
+		var metrics serverv1.Metrics
 		metrics, err = client.Metrics(r.Context(), *v.ResourceID, v.ClientID, period)
 		if err == nil {
 			result, err = serviceMetrics06(period, metrics)
 		}
 	case "snapshots":
-		var snapshots serviceapi.Snapshots
+		var snapshots serverv1.Snapshots
 		snapshots, err = client.Snapshots(r.Context(), *v.ResourceID, v.ClientID)
 		if err == nil {
 			result, err = snapshots06(snapshots)

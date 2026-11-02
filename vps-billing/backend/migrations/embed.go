@@ -85,3 +85,6 @@ var ServiceContractBounds string
 
 //go:embed 028_affiliate_settings.sql
 var AffiliateSettings string
+
+//go:embed 029_server_modules.sql
+var ServerModules string

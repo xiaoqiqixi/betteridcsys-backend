@@ -3708,10 +3708,10 @@
         }
       }
     },
-    "/admin/integrations/controllers": {
+    "/admin/integrations/connections": {
       "get": {
-        "operationId": "adminListControllers",
-        "summary": "Cloud controllers",
+        "operationId": "adminListServerConnections",
+        "summary": "Server connection slots",
         "tags": [
           "Admin: Integrations"
         ],
@@ -3736,7 +3736,7 @@
                     "data": {
                       "type": "array",
                       "items": {
-                        "$ref": "#/components/schemas/CloudController"
+                        "$ref": "#/components/schemas/ServerConnection"
                       }
                     }
                   }
@@ -3757,10 +3757,10 @@
         }
       }
     },
-    "/admin/integrations/controllers/{id}/check": {
-      "post": {
-        "operationId": "adminCheckController",
-        "summary": "Health-check a controller",
+    "/admin/integrations/connections/{id}": {
+      "patch": {
+        "operationId": "adminUpdateServerConnection",
+        "summary": "Update a server connection",
         "tags": [
           "Admin: Integrations"
         ],
@@ -3802,7 +3802,177 @@
                   ],
                   "properties": {
                     "data": {
-                      "$ref": "#/components/schemas/CloudController"
+                      "$ref": "#/components/schemas/ServerConnection"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "revision": {
+                    "$ref": "#/components/schemas/Revision"
+                  },
+                  "name": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 80
+                  },
+                  "enabled": {
+                    "type": "boolean"
+                  }
+                },
+                "required": [
+                  "revision"
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    "/admin/integrations/connections/{id}/sync-images": {
+      "post": {
+        "operationId": "adminSyncConnectionImages",
+        "summary": "Sync templates from a server connection",
+        "tags": [
+          "Admin: Integrations"
+        ],
+        "x-access": "staff",
+        "x-permission": "integrations.write",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9_-]{1,64}$"
+            }
+          },
+          {
+            "name": "X-CSRF-Token",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/AdminOsImage"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/admin/integrations/connections/{id}/test": {
+      "post": {
+        "operationId": "adminTestServerConnection",
+        "summary": "Test a server connection",
+        "tags": [
+          "Admin: Integrations"
+        ],
+        "x-access": "staff",
+        "x-permission": "integrations.write",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9_-]{1,64}$"
+            }
+          },
+          {
+            "name": "X-CSRF-Token",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data"
+                  ],
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/ServerConnection"
                     }
                   }
                 }
@@ -3972,6 +4142,55 @@
                 "required": [
                   "revision"
                 ]
+              }
+            }
+          }
+        }
+      }
+    },
+    "/admin/integrations/modules": {
+      "get": {
+        "operationId": "adminListServerModules",
+        "summary": "Installed server modules",
+        "tags": [
+          "Admin: Integrations"
+        ],
+        "x-access": "staff",
+        "x-permission": "integrations.write",
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/ServerModule"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
               }
             }
           }
@@ -5256,7 +5475,7 @@
     "/admin/os-images": {
       "get": {
         "operationId": "adminListOsImages",
-        "summary": "Images synced from cloud controllers",
+        "summary": "Templates synced from server connections",
         "tags": [
           "Admin: Catalog"
         ],
@@ -5613,16 +5832,71 @@
                       "retired"
                     ]
                   },
-                  "controller_id": {
-                    "type": [
-                      "string",
-                      "null"
-                    ]
-                  },
-                  "remote_product_id": {
-                    "type": [
-                      "string",
-                      "null"
+                  "module": {
+                    "anyOf": [
+                      {
+                        "type": "object",
+                        "properties": {
+                          "module_id": {
+                            "type": "string",
+                            "pattern": "^server\\.[a-z0-9][a-z0-9._-]{0,55}$"
+                          },
+                          "connection_id": {
+                            "$ref": "#/components/schemas/Id"
+                          },
+                          "config": {
+                            "type": "object",
+                            "propertyNames": {
+                              "type": "string",
+                              "pattern": "^[a-zA-Z][a-zA-Z0-9_]{0,63}$"
+                            },
+                            "additionalProperties": {
+                              "anyOf": [
+                                {
+                                  "anyOf": [
+                                    {
+                                      "type": "string",
+                                      "maxLength": 4000
+                                    },
+                                    {
+                                      "type": "number"
+                                    },
+                                    {
+                                      "type": "boolean"
+                                    }
+                                  ]
+                                },
+                                {
+                                  "maxItems": 100,
+                                  "type": "array",
+                                  "items": {
+                                    "anyOf": [
+                                      {
+                                        "type": "string",
+                                        "maxLength": 4000
+                                      },
+                                      {
+                                        "type": "number"
+                                      },
+                                      {
+                                        "type": "boolean"
+                                      }
+                                    ]
+                                  }
+                                }
+                              ]
+                            }
+                          }
+                        },
+                        "required": [
+                          "module_id",
+                          "connection_id",
+                          "config"
+                        ]
+                      },
+                      {
+                        "type": "null"
+                      }
                     ]
                   },
                   "sort_order": {
@@ -5644,8 +5918,7 @@
                   "os_image_ids",
                   "stock",
                   "visibility",
-                  "controller_id",
-                  "remote_product_id",
+                  "module",
                   "sort_order"
                 ]
               }
@@ -5871,16 +6144,71 @@
                       "retired"
                     ]
                   },
-                  "controller_id": {
-                    "type": [
-                      "string",
-                      "null"
-                    ]
-                  },
-                  "remote_product_id": {
-                    "type": [
-                      "string",
-                      "null"
+                  "module": {
+                    "anyOf": [
+                      {
+                        "type": "object",
+                        "properties": {
+                          "module_id": {
+                            "type": "string",
+                            "pattern": "^server\\.[a-z0-9][a-z0-9._-]{0,55}$"
+                          },
+                          "connection_id": {
+                            "$ref": "#/components/schemas/Id"
+                          },
+                          "config": {
+                            "type": "object",
+                            "propertyNames": {
+                              "type": "string",
+                              "pattern": "^[a-zA-Z][a-zA-Z0-9_]{0,63}$"
+                            },
+                            "additionalProperties": {
+                              "anyOf": [
+                                {
+                                  "anyOf": [
+                                    {
+                                      "type": "string",
+                                      "maxLength": 4000
+                                    },
+                                    {
+                                      "type": "number"
+                                    },
+                                    {
+                                      "type": "boolean"
+                                    }
+                                  ]
+                                },
+                                {
+                                  "maxItems": 100,
+                                  "type": "array",
+                                  "items": {
+                                    "anyOf": [
+                                      {
+                                        "type": "string",
+                                        "maxLength": 4000
+                                      },
+                                      {
+                                        "type": "number"
+                                      },
+                                      {
+                                        "type": "boolean"
+                                      }
+                                    ]
+                                  }
+                                }
+                              ]
+                            }
+                          }
+                        },
+                        "required": [
+                          "module_id",
+                          "connection_id",
+                          "config"
+                        ]
+                      },
+                      {
+                        "type": "null"
+                      }
                     ]
                   },
                   "sort_order": {
@@ -5902,8 +6230,7 @@
                   "os_image_ids",
                   "stock",
                   "visibility",
-                  "controller_id",
-                  "remote_product_id",
+                  "module",
                   "sort_order"
                 ]
               }
@@ -10200,6 +10527,148 @@
         }
       }
     },
+    "/services/{id}/actions/{action_id}": {
+      "post": {
+        "operationId": "runServiceAction",
+        "summary": "Run a module custom action",
+        "tags": [
+          "Services"
+        ],
+        "x-access": "client",
+        "x-idempotent": true,
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9_-]{1,64}$"
+            }
+          },
+          {
+            "name": "action_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9_-]{1,64}$"
+            }
+          },
+          {
+            "name": "X-CSRF-Token",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 8,
+              "maxLength": 128
+            }
+          }
+        ],
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data"
+                  ],
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/ServiceTask"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "input": {
+                    "type": "object",
+                    "propertyNames": {
+                      "type": "string",
+                      "pattern": "^[a-zA-Z][a-zA-Z0-9_]{0,63}$"
+                    },
+                    "additionalProperties": {
+                      "anyOf": [
+                        {
+                          "anyOf": [
+                            {
+                              "type": "string",
+                              "maxLength": 4000
+                            },
+                            {
+                              "type": "number"
+                            },
+                            {
+                              "type": "boolean"
+                            }
+                          ]
+                        },
+                        {
+                          "maxItems": 100,
+                          "type": "array",
+                          "items": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "maxLength": 4000
+                              },
+                              {
+                                "type": "number"
+                              },
+                              {
+                                "type": "boolean"
+                              }
+                            ]
+                          }
+                        }
+                      ]
+                    }
+                  }
+                },
+                "required": [
+                  "input"
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
     "/services/{id}/cancellation": {
       "post": {
         "operationId": "requestCancellation",
@@ -10357,7 +10826,7 @@
     "/services/{id}/console": {
       "post": {
         "operationId": "openServiceConsole",
-        "summary": "One-time console ticket (501 until the controller supports it)",
+        "summary": "One-time console ticket when supported by the module",
         "tags": [
           "Services"
         ],
@@ -12861,8 +13330,8 @@
           "enabled": {
             "type": "boolean"
           },
-          "controller_id": {
-            "type": "string"
+          "connection_id": {
+            "$ref": "#/components/schemas/Id"
           },
           "remote_image_id": {
             "type": "string"
@@ -12878,7 +13347,7 @@
           "version",
           "min_disk_gb",
           "enabled",
-          "controller_id",
+          "connection_id",
           "remote_image_id",
           "sha256"
         ],
@@ -13075,6 +13544,16 @@
               "$ref": "#/components/schemas/OsImage"
             }
           },
+          "order_schema": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ModuleSchema"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "stock": {
             "anyOf": [
               {
@@ -13103,16 +13582,77 @@
               "retired"
             ]
           },
-          "controller_id": {
-            "type": [
-              "string",
-              "null"
-            ]
-          },
-          "remote_product_id": {
-            "type": [
-              "string",
-              "null"
+          "module": {
+            "anyOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "module_id": {
+                    "type": "string",
+                    "pattern": "^server\\.[a-z0-9][a-z0-9._-]{0,55}$"
+                  },
+                  "connection_id": {
+                    "$ref": "#/components/schemas/Id"
+                  },
+                  "config": {
+                    "type": "object",
+                    "propertyNames": {
+                      "type": "string",
+                      "pattern": "^[a-zA-Z][a-zA-Z0-9_]{0,63}$"
+                    },
+                    "additionalProperties": {
+                      "anyOf": [
+                        {
+                          "anyOf": [
+                            {
+                              "type": "string",
+                              "maxLength": 4000
+                            },
+                            {
+                              "type": "number"
+                            },
+                            {
+                              "type": "boolean"
+                            }
+                          ]
+                        },
+                        {
+                          "maxItems": 100,
+                          "type": "array",
+                          "items": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "maxLength": 4000
+                              },
+                              {
+                                "type": "number"
+                              },
+                              {
+                                "type": "boolean"
+                              }
+                            ]
+                          }
+                        }
+                      ]
+                    }
+                  },
+                  "config_digest": {
+                    "type": "string",
+                    "pattern": "^[0-9a-f]{64}$"
+                  }
+                },
+                "required": [
+                  "module_id",
+                  "connection_id",
+                  "config",
+                  "config_digest"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "null"
+              }
             ]
           },
           "active_services": {
@@ -13138,12 +13678,12 @@
           "prices",
           "options",
           "os_images",
+          "order_schema",
           "stock",
           "available",
           "sort_order",
           "visibility",
-          "controller_id",
-          "remote_product_id",
+          "module",
           "active_services",
           "revision"
         ],
@@ -13220,6 +13760,12 @@
           },
           "capabilities": {
             "$ref": "#/components/schemas/ServiceCapabilities"
+          },
+          "custom_actions": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ServerCustomAction"
+            }
           },
           "rescue": {
             "anyOf": [
@@ -13396,10 +13942,25 @@
             "format": "email",
             "pattern": "^(?:[A-Za-z0-9_'+\\-]+\\.)*[A-Za-z0-9_'+\\-]*[A-Za-z0-9_+-]@(?:[A-Za-z0-9][A-Za-z0-9\\-]*\\.)+[A-Za-z]{2,}$"
           },
-          "controller_id": {
-            "type": [
-              "string",
-              "null"
+          "module_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^server\\.[a-z0-9][a-z0-9._-]{0,55}$"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "connection_id": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Id"
+              },
+              {
+                "type": "null"
+              }
             ]
           },
           "resource_id": {
@@ -13449,6 +14010,7 @@
           "power",
           "created_at",
           "capabilities",
+          "custom_actions",
           "rescue",
           "specs",
           "os_image",
@@ -13464,7 +14026,8 @@
           "renewal_options",
           "client_id",
           "client_email",
-          "controller_id",
+          "module_id",
+          "connection_id",
           "resource_id",
           "provisioning_job_id",
           "price_override",
@@ -14495,6 +15058,49 @@
           "product_id": {
             "$ref": "#/components/schemas/Id"
           },
+          "module_fields": {
+            "type": "object",
+            "propertyNames": {
+              "type": "string",
+              "pattern": "^[a-zA-Z][a-zA-Z0-9_]{0,63}$"
+            },
+            "additionalProperties": {
+              "anyOf": [
+                {
+                  "anyOf": [
+                    {
+                      "type": "string",
+                      "maxLength": 4000
+                    },
+                    {
+                      "type": "number"
+                    },
+                    {
+                      "type": "boolean"
+                    }
+                  ]
+                },
+                {
+                  "maxItems": 100,
+                  "type": "array",
+                  "items": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "maxLength": 4000
+                      },
+                      {
+                        "type": "number"
+                      },
+                      {
+                        "type": "boolean"
+                      }
+                    ]
+                  }
+                }
+              ]
+            }
+          },
           "cycle": {
             "$ref": "#/components/schemas/BillingCycle"
           },
@@ -14943,58 +15549,6 @@
           "disabled",
           "closed"
         ]
-      },
-      "CloudController": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string",
-            "pattern": "^[a-z0-9][a-z0-9-]{0,31}$"
-          },
-          "name": {
-            "type": "string",
-            "maxLength": 80
-          },
-          "endpoint": {
-            "type": "string",
-            "maxLength": 400
-          },
-          "enabled": {
-            "type": "boolean"
-          },
-          "status": {
-            "type": "string",
-            "enum": [
-              "healthy",
-              "degraded",
-              "unreachable",
-              "unconfigured"
-            ]
-          },
-          "last_checked_at": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/Timestamp"
-              },
-              {
-                "type": "null"
-              }
-            ]
-          },
-          "credential_configured": {
-            "type": "boolean"
-          }
-        },
-        "required": [
-          "id",
-          "name",
-          "endpoint",
-          "enabled",
-          "status",
-          "last_checked_at",
-          "credential_configured"
-        ],
-        "additionalProperties": false
       },
       "ConsoleTicket": {
         "type": "object",
@@ -15928,6 +16482,42 @@
         ],
         "additionalProperties": false
       },
+      "ModuleSchema": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "const": "object"
+          },
+          "properties": {
+            "type": "object",
+            "propertyNames": {
+              "type": "string",
+              "pattern": "^[a-zA-Z][a-zA-Z0-9_]{0,63}$"
+            },
+            "additionalProperties": {
+              "$ref": "#/components/schemas/SchemaField"
+            }
+          },
+          "required": {
+            "maxItems": 100,
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": {
+            "type": "boolean",
+            "const": false
+          }
+        },
+        "required": [
+          "type",
+          "properties",
+          "additionalProperties"
+        ],
+        "additionalProperties": false
+      },
       "Money": {
         "type": "object",
         "properties": {
@@ -16667,6 +17257,16 @@
               "$ref": "#/components/schemas/OsImage"
             }
           },
+          "order_schema": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ModuleSchema"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "stock": {
             "anyOf": [
               {
@@ -16702,6 +17302,7 @@
           "prices",
           "options",
           "os_images",
+          "order_schema",
           "stock",
           "available",
           "sort_order"
@@ -16715,7 +17316,7 @@
           "dedicated_server",
           "generic"
         ],
-        "description": "cloud_server is provisioned through a cloud controller."
+        "description": "Display category; provisioning is determined by the product module binding."
       },
       "ProductOption": {
         "type": "object",
@@ -17174,6 +17775,379 @@
           "admin"
         ]
       },
+      "SchemaField": {
+        "oneOf": [
+          {
+            "type": "object",
+            "properties": {
+              "title": {
+                "type": "string",
+                "maxLength": 200
+              },
+              "description": {
+                "type": "string",
+                "maxLength": 2000
+              },
+              "x-i18n": {
+                "type": "object",
+                "propertyNames": {
+                  "type": "string",
+                  "enum": [
+                    "zh-CN",
+                    "en"
+                  ]
+                },
+                "additionalProperties": {
+                  "type": "object",
+                  "properties": {
+                    "title": {
+                      "type": "string",
+                      "maxLength": 200
+                    },
+                    "description": {
+                      "type": "string",
+                      "maxLength": 2000
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              },
+              "type": {
+                "type": "string",
+                "const": "string"
+              },
+              "enum": {
+                "minItems": 1,
+                "maxItems": 100,
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "minLength": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              },
+              "maxLength": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 4000
+              },
+              "default": {
+                "type": "string"
+              },
+              "writeOnly": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "type"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "title": {
+                "type": "string",
+                "maxLength": 200
+              },
+              "description": {
+                "type": "string",
+                "maxLength": 2000
+              },
+              "x-i18n": {
+                "type": "object",
+                "propertyNames": {
+                  "type": "string",
+                  "enum": [
+                    "zh-CN",
+                    "en"
+                  ]
+                },
+                "additionalProperties": {
+                  "type": "object",
+                  "properties": {
+                    "title": {
+                      "type": "string",
+                      "maxLength": 200
+                    },
+                    "description": {
+                      "type": "string",
+                      "maxLength": 2000
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              },
+              "type": {
+                "type": "string",
+                "const": "integer"
+              },
+              "enum": {
+                "minItems": 1,
+                "maxItems": 100,
+                "type": "array",
+                "items": {
+                  "type": "integer",
+                  "minimum": -9007199254740991,
+                  "maximum": 9007199254740991
+                }
+              },
+              "minimum": {
+                "type": "number"
+              },
+              "maximum": {
+                "type": "number"
+              },
+              "default": {
+                "type": "integer",
+                "minimum": -9007199254740991,
+                "maximum": 9007199254740991
+              }
+            },
+            "required": [
+              "type"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "title": {
+                "type": "string",
+                "maxLength": 200
+              },
+              "description": {
+                "type": "string",
+                "maxLength": 2000
+              },
+              "x-i18n": {
+                "type": "object",
+                "propertyNames": {
+                  "type": "string",
+                  "enum": [
+                    "zh-CN",
+                    "en"
+                  ]
+                },
+                "additionalProperties": {
+                  "type": "object",
+                  "properties": {
+                    "title": {
+                      "type": "string",
+                      "maxLength": 200
+                    },
+                    "description": {
+                      "type": "string",
+                      "maxLength": 2000
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              },
+              "type": {
+                "type": "string",
+                "const": "number"
+              },
+              "enum": {
+                "minItems": 1,
+                "maxItems": 100,
+                "type": "array",
+                "items": {
+                  "type": "number"
+                }
+              },
+              "minimum": {
+                "type": "number"
+              },
+              "maximum": {
+                "type": "number"
+              },
+              "default": {
+                "type": "number"
+              }
+            },
+            "required": [
+              "type"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "title": {
+                "type": "string",
+                "maxLength": 200
+              },
+              "description": {
+                "type": "string",
+                "maxLength": 2000
+              },
+              "x-i18n": {
+                "type": "object",
+                "propertyNames": {
+                  "type": "string",
+                  "enum": [
+                    "zh-CN",
+                    "en"
+                  ]
+                },
+                "additionalProperties": {
+                  "type": "object",
+                  "properties": {
+                    "title": {
+                      "type": "string",
+                      "maxLength": 200
+                    },
+                    "description": {
+                      "type": "string",
+                      "maxLength": 2000
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              },
+              "type": {
+                "type": "string",
+                "const": "boolean"
+              },
+              "enum": {
+                "minItems": 1,
+                "maxItems": 2,
+                "type": "array",
+                "items": {
+                  "type": "boolean"
+                }
+              },
+              "default": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "type"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "title": {
+                "type": "string",
+                "maxLength": 200
+              },
+              "description": {
+                "type": "string",
+                "maxLength": 2000
+              },
+              "x-i18n": {
+                "type": "object",
+                "propertyNames": {
+                  "type": "string",
+                  "enum": [
+                    "zh-CN",
+                    "en"
+                  ]
+                },
+                "additionalProperties": {
+                  "type": "object",
+                  "properties": {
+                    "title": {
+                      "type": "string",
+                      "maxLength": 200
+                    },
+                    "description": {
+                      "type": "string",
+                      "maxLength": 2000
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              },
+              "type": {
+                "type": "string",
+                "const": "array"
+              },
+              "items": {
+                "type": "object",
+                "properties": {
+                  "type": {
+                    "type": "string",
+                    "enum": [
+                      "string",
+                      "integer",
+                      "number",
+                      "boolean"
+                    ]
+                  },
+                  "enum": {
+                    "minItems": 1,
+                    "maxItems": 100,
+                    "type": "array",
+                    "items": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "maxLength": 4000
+                        },
+                        {
+                          "type": "number"
+                        },
+                        {
+                          "type": "boolean"
+                        }
+                      ]
+                    }
+                  }
+                },
+                "required": [
+                  "type",
+                  "enum"
+                ],
+                "additionalProperties": false
+              },
+              "minItems": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              },
+              "maxItems": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 100
+              },
+              "uniqueItems": {
+                "type": "boolean",
+                "const": true
+              },
+              "default": {
+                "maxItems": 100,
+                "type": "array",
+                "items": {
+                  "anyOf": [
+                    {
+                      "type": "string",
+                      "maxLength": 4000
+                    },
+                    {
+                      "type": "number"
+                    },
+                    {
+                      "type": "boolean"
+                    }
+                  ]
+                }
+              }
+            },
+            "required": [
+              "type",
+              "items"
+            ],
+            "additionalProperties": false
+          }
+        ]
+      },
       "SecuritySettings": {
         "type": "object",
         "properties": {
@@ -17232,6 +18206,155 @@
           "password_min_length",
           "revision"
         ]
+      },
+      "ServerConnection": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "$ref": "#/components/schemas/Id"
+          },
+          "module_id": {
+            "type": "string",
+            "pattern": "^server\\.[a-z0-9][a-z0-9._-]{0,55}$"
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 80
+          },
+          "enabled": {
+            "type": "boolean"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "healthy",
+              "degraded",
+              "unreachable",
+              "unconfigured"
+            ]
+          },
+          "service_count": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          },
+          "last_checked_at": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Timestamp"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "revision": {
+            "$ref": "#/components/schemas/Revision"
+          }
+        },
+        "required": [
+          "id",
+          "module_id",
+          "name",
+          "enabled",
+          "status",
+          "service_count",
+          "last_checked_at",
+          "revision"
+        ],
+        "additionalProperties": false
+      },
+      "ServerCustomAction": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "$ref": "#/components/schemas/Id"
+          },
+          "name": {
+            "$ref": "#/components/schemas/LocalizedText"
+          },
+          "danger": {
+            "type": "boolean"
+          },
+          "confirm": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/LocalizedText"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "input_schema": {
+            "$ref": "#/components/schemas/ModuleSchema"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "danger",
+          "confirm",
+          "input_schema"
+        ],
+        "additionalProperties": false
+      },
+      "ServerModule": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^server\\.[a-z0-9][a-z0-9._-]{0,55}$"
+          },
+          "name": {
+            "$ref": "#/components/schemas/LocalizedText"
+          },
+          "version": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "ready",
+              "stopped",
+              "misconfigured",
+              "incompatible"
+            ]
+          },
+          "capabilities": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "pattern": "^[a-z][a-z0-9_]{0,63}$"
+            }
+          },
+          "product_schema": {
+            "$ref": "#/components/schemas/ModuleSchema"
+          },
+          "order_schema": {
+            "$ref": "#/components/schemas/ModuleSchema"
+          },
+          "custom_actions": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ServerCustomAction"
+            }
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "version",
+          "status",
+          "capabilities",
+          "product_schema",
+          "order_schema",
+          "custom_actions"
+        ],
+        "additionalProperties": false
       },
       "Service": {
         "type": "object",
@@ -17304,6 +18427,12 @@
           },
           "capabilities": {
             "$ref": "#/components/schemas/ServiceCapabilities"
+          },
+          "custom_actions": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ServerCustomAction"
+            }
           },
           "rescue": {
             "anyOf": [
@@ -17489,6 +18618,7 @@
           "power",
           "created_at",
           "capabilities",
+          "custom_actions",
           "rescue",
           "specs",
           "os_image",
@@ -17731,6 +18861,8 @@
             "type": "string",
             "enum": [
               "provision",
+              "action",
+              "renew",
               "start",
               "stop",
               "reboot",

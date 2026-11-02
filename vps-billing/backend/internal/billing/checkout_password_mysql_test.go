@@ -2,6 +2,7 @@ package billing
 
 import (
 	api "aster/billing/internal/financeapi"
+	"aster/billing/pkg/pluginapi/serverv1"
 	"strings"
 	"testing"
 	"time"
@@ -12,12 +13,17 @@ import (
 func TestMySQLCheckoutPasswordSurvivesPaymentAndBootstrap(t *testing.T) {
 	f := mysqlCatalogFixture(t)
 	m := f.store.(*MySQL)
-	controllerID, preset, imageID := "controller-test", "approved-preset", ID()
-	if _, err := m.DB.Exec(`INSERT INTO os_images(id,family,name,version,min_disk_gb,enabled,controller_id,remote_image_id,sha256) VALUES(?,'ubuntu','Ubuntu','24.04',4,TRUE,?,'ubuntu-24',?)`, imageID, controllerID, strings.Repeat("a", 64)); err != nil {
+	controllerID, imageID := "controller-test", ID()
+	description := serverv1.Description{ID: "server.fake", Name: serverv1.Text{"en": "Fake module"}, Version: "1.0.0", ProductSchema: serverv1.EmptySchema(), OrderSchema: serverv1.EmptySchema(), CustomActions: []serverv1.CustomAction{}}
+	if _, err := m.DB.Exec("INSERT INTO server_connections(id,module_id,name,description) VALUES(?,'server.fake','Test',?)", controllerID, jsonValue06(description)); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := m.DB.Exec(`INSERT INTO os_images(id,family,name,version,min_disk_gb,enabled,controller_id,connection_id,remote_image_id,sha256) VALUES(?,'ubuntu','Ubuntu','24.04',4,TRUE,'',?,'ubuntu-24',?)`, imageID, controllerID, strings.Repeat("a", 64)); err != nil {
 		t.Fatal(err)
 	}
 	product := product06Fixture(t, f)
-	product.Kind, product.ControllerID, product.RemoteProductID = "cloud_server", &controllerID, &preset
+	product.Kind = "cloud_server"
+	product.Module = &productModuleInput06{ModuleID: "server.fake", ConnectionID: controllerID, Config: map[string]any{}}
 	product.OSImageIDs = []string{imageID}
 	product.Options = []api.ProductOption{{ID: ID(), Key: "os", Kind: "os_image", Label: api.LocalizedText{"en": "Operating system"}, Required: true, Choices: []api.OptionChoice{}}}
 	p, err := m.SaveProduct06(t.Context(), f.admin, "", product, ID(), false)

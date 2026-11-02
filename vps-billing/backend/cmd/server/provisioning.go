@@ -5,7 +5,6 @@ import (
 	"aster/billing/internal/controllers"
 	api "aster/billing/internal/financeapi"
 	"aster/billing/internal/runtimeplugins"
-	"aster/billing/serviceapi"
 	"context"
 	"database/sql"
 	"encoding/json"
@@ -129,17 +128,7 @@ func runHostProvisioning(out io.Writer, jobID string, reconcile bool) int {
 	var serviceID string
 	serviceErr := store.DB.QueryRowContext(ctx, "SELECT service_id FROM service_tasks WHERE id=?", jobID).Scan(&serviceID)
 	if serviceErr == nil {
-		runtime := &billing.ServiceControllers06{
-			Provisioning: func(ctx context.Context, id string) (billing.ProvisioningController06, error) {
-				return prepare(ctx, id)
-			},
-			Services: func(ctx context.Context, id string) (billing.ServiceController06, error) {
-				if os.Getenv("PROVISIONING_TRANSPORT") == "resource" {
-					return nil, serviceapi.ErrUnavailable
-				}
-				return serviceapi.New(ctx, os.Getenv("PROVISIONING_POLICY_FILE"), id)
-			},
-		}
+		runtime := billing.NewServerModules06(runtimeplugins.New(os.Getenv("PROVISIONING_PLUGIN_ROOT"), os.Getenv("PROVISIONING_PLUGIN_POLICY_FILE")))
 		app := billing.NewApp(store, billing.Config{Services: runtime})
 		task, taskErr := app.DispatchServiceTask06(ctx, jobID, reconcile, true)
 		if task.ID != "" {

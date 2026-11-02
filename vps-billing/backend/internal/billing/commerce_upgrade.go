@@ -58,8 +58,8 @@ func calculateUpgrade06(s serviceRecord06, p api.AdminProduct, now time.Time) (c
 	if err := upgradeEligible06(s, now); err != nil {
 		return v, err
 	}
-	sameController := s.View.ControllerID == nil && p.ControllerID == nil || s.View.ControllerID != nil && p.ControllerID != nil && *s.View.ControllerID == *p.ControllerID
-	if p.ID == *s.ProductID || p.NodeID != s.Configuration.NodeID || p.Kind != s.View.Kind || !sameController || !p.Available || p.Specs.DiskGB < s.View.Specs.DiskGB {
+	sameModule := s.View.ConnectionID == nil && p.Module == nil || s.View.ConnectionID != nil && s.View.ModuleID != nil && p.Module != nil && *s.View.ConnectionID == p.Module.ConnectionID && *s.View.ModuleID == p.Module.ModuleID
+	if p.ID == *s.ProductID || p.NodeID != s.Configuration.NodeID || p.Kind != s.View.Kind || !sameModule || !p.Available || p.Specs.DiskGB < s.View.Specs.DiskGB {
 		return v, ErrCommerceUnavailable
 	}
 	input := s.Configuration.Input
@@ -79,7 +79,7 @@ func calculateUpgrade06(s serviceRecord06, p api.AdminProduct, now time.Time) (c
 	v.Quote = api.UpgradeQuote{TargetProductID: p.ID, Prorated: commerce.Money(s.View.Recurring.Currency, s.View.Recurring.DecimalPlaces, amount), DaysRemaining: days, RequiresRestart: true, ExpiresAt: stamp06(now.UTC().Truncate(time.Second).Add(10 * time.Minute))}
 	config := s.Configuration
 	config.ProductID = p.ID
-	config.RemoteProductID = p.RemoteProductID
+	config.Module = p.Module
 	config.Input = input
 	v.Change = planChange06{Product: p, Configuration: config, Recurring: recurring}
 	v.Quote.QuoteDigest = upgradeDigest06(v)

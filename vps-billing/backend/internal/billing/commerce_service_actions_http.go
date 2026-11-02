@@ -2,7 +2,7 @@ package billing
 
 import (
 	api "aster/billing/internal/financeapi"
-	"aster/billing/serviceapi"
+	"aster/billing/pkg/pluginapi/serverv1"
 	"context"
 	"crypto/hmac"
 	"crypto/sha256"
@@ -41,10 +41,10 @@ func (m *MySQL) serviceActionReplay06(ctx context.Context, uid, key, fp string) 
 func (m *MySQL) actionImage06(ctx context.Context, s api.AdminService, id string) (api.OsImage, string, error) {
 	var image api.OsImage
 	var remote string
-	if s.ControllerID == nil {
-		return image, remote, serviceapi.ErrUnavailable
+	if s.ConnectionID == nil {
+		return image, remote, serverv1.ErrUnavailable
 	}
-	err := m.DB.QueryRowContext(ctx, `SELECT i.id,i.family,i.name,i.version,i.min_disk_gb,i.remote_image_id FROM os_images i JOIN product_os_images p ON p.image_id=i.id JOIN services s ON s.product_id=p.product_id WHERE s.id=? AND i.id=? AND i.enabled=TRUE AND i.controller_id=?`, s.ID, id, *s.ControllerID).Scan(&image.ID, &image.Family, &image.Name, &image.Version, &image.MinDiskGB, &remote)
+	err := m.DB.QueryRowContext(ctx, `SELECT i.id,i.family,i.name,i.version,i.min_disk_gb,i.remote_image_id FROM os_images i JOIN product_os_images p ON p.image_id=i.id JOIN services s ON s.product_id=p.product_id WHERE s.id=? AND i.id=? AND i.enabled=TRUE AND i.connection_id=?`, s.ID, id, *s.ConnectionID).Scan(&image.ID, &image.Family, &image.Name, &image.Version, &image.MinDiskGB, &remote)
 	if errors.Is(err, sql.ErrNoRows) {
 		err = ErrCommerceInput
 	}
@@ -63,7 +63,7 @@ func (a *App) serviceActions06HTTP(w http.ResponseWriter, r *http.Request, u Use
 		return false
 	}
 	op := parts[2]
-	if !admin && op != "power" && op != "reinstall" && op != "reset-password" && op != "rescue" && op != "snapshots" {
+	if !admin && op != "power" && op != "reinstall" && op != "reset-password" && op != "rescue" && op != "snapshots" && op != "actions" {
 		return false
 	}
 	if !admin && op == "snapshots" && len(parts) == 3 && r.Method == "GET" {
@@ -71,10 +71,19 @@ func (a *App) serviceActions06HTTP(w http.ResponseWriter, r *http.Request, u Use
 	}
 	action := ""
 	var input any
-	var params serviceapi.Params
+	var params serviceParams06
 	payload := serviceActionPayload06{Source: "customer"}
 	requiredKey := true
 	switch {
+	case !admin && len(parts) == 4 && op == "actions" && r.Method == "POST":
+		var in api.RunServiceActionInput
+		if !commerceBody(w, r, "runServiceAction", &in) {
+			return true
+		}
+		input = in
+		action = "action"
+		params.ActionID = parts[3]
+		params.Input = in.Input
 	case admin && r.Method == "POST":
 		in := api.AdminServiceActionInput{}
 		if !commerceBody(w, r, "adminServiceAction", &in) {
@@ -114,6 +123,8 @@ func (a *App) serviceActions06HTTP(w http.ResponseWriter, r *http.Request, u Use
 		}
 		input = in
 		action = "rescue_enter"
+		params.Password = in.RootPassword
+
 	case !admin && len(parts) == 3 && op == "rescue" && r.Method == "DELETE":
 		action = "rescue_exit"
 		requiredKey = false
@@ -147,7 +158,7 @@ func (a *App) serviceActions06HTTP(w http.ResponseWriter, r *http.Request, u Use
 	}
 	m, ok := a.Store.(*MySQL)
 	if !ok {
-		a.serviceControllerError06(w, r, serviceapi.ErrUnavailable)
+		a.serviceControllerError06(w, r, serverv1.ErrUnavailable)
 		return true
 	}
 	owner := u.ID
@@ -166,7 +177,7 @@ func (a *App) serviceActions06HTTP(w http.ResponseWriter, r *http.Request, u Use
 			return true
 		}
 	}
-	fp := a.serviceActionFingerprint06(s.ID, action, input)
+	fp := a.serviceActionFingerprint06(s.ID, action+":"+params.ActionID, input)
 	if key != "" {
 		out, replay, err := m.serviceActionReplay06(r.Context(), u.ID, key, fp)
 		if err != nil {
@@ -184,7 +195,7 @@ func (a *App) serviceActions06HTTP(w http.ResponseWriter, r *http.Request, u Use
 			a.commerceError(w, r, ErrCommerceInput)
 			return true
 		}
-		if action == "provision" || action == "sync" || s.Kind == "generic" {
+		if action == "provision" || action == "sync" || s.ModuleID == nil {
 			out, err := a.adminManagedService06(r.Context(), u, s, action, payload, key, fp)
 			if err != nil {
 				a.serviceControllerError06(w, r, err)
@@ -194,9 +205,9 @@ func (a *App) serviceActions06HTTP(w http.ResponseWriter, r *http.Request, u Use
 			return true
 		}
 	}
-	runtime, ok := a.Config.Services.(*ServiceControllers06)
+	runtime, ok := a.Config.Services.(*ServerModules06)
 	if !ok || runtime == nil {
-		a.serviceControllerError06(w, r, serviceapi.ErrUnavailable)
+		a.serviceControllerError06(w, r, serverv1.ErrUnavailable)
 		return true
 	}
 	client, err := runtime.client(r.Context(), s)
@@ -215,7 +226,7 @@ func (a *App) serviceActions06HTTP(w http.ResponseWriter, r *http.Request, u Use
 		return true
 	}
 	if !serviceCapability06(projected, action) {
-		a.serviceControllerError06(w, r, serviceapi.ErrUnavailable)
+		a.serviceControllerError06(w, r, serverv1.ErrUnavailable)
 		return true
 	}
 	if err = serviceRemoteState06(remote, action); err != nil {
@@ -223,14 +234,28 @@ func (a *App) serviceActions06HTTP(w http.ResponseWriter, r *http.Request, u Use
 		return true
 	}
 	switch action {
+	case "action":
+		var definition *serverv1.CustomAction
+		for i := range remote.CustomActions {
+			if remote.CustomActions[i].ID == params.ActionID {
+				definition = &remote.CustomActions[i]
+				break
+			}
+		}
+		if definition == nil {
+			a.commerceError(w, r, ErrNotFound)
+			return true
+		}
+		normalized, _, err := definition.InputSchema.Normalize(params.Input)
+		if err != nil {
+			a.commerceError(w, r, ErrCommerceInput)
+			return true
+		}
+		params.Input, params.Secrets = definition.InputSchema.Split(normalized)
 	case "reinstall":
 		in := input.(api.ReinstallServiceInput)
 		if !serviceConfirmation06(s, in.Confirm) || (in.RootPassword == "") == (len(in.SSHKeyIDs) == 0) {
 			a.commerceError(w, r, ErrCommerceInput)
-			return true
-		}
-		if len(in.SSHKeyIDs) > 1 {
-			fail(w, r, 501, "FEATURE_UNAVAILABLE", "This controller supports one SSH key per reinstall")
 			return true
 		}
 		image, remote, err := m.actionImage06(r.Context(), s, in.OSImageID)
@@ -240,14 +265,16 @@ func (a *App) serviceActions06HTTP(w http.ResponseWriter, r *http.Request, u Use
 		}
 		payload.Image = &image
 		params.ImageID = remote
-		if len(in.SSHKeyIDs) == 1 {
-			if err = m.DB.QueryRowContext(r.Context(), "SELECT public_key FROM ssh_keys WHERE user_id=? AND id=?", u.ID, in.SSHKeyIDs[0]).Scan(&params.SSHPublicKey); err != nil {
+		for _, keyID := range in.SSHKeyIDs {
+			var publicKey string
+			if err = m.DB.QueryRowContext(r.Context(), "SELECT public_key FROM ssh_keys WHERE user_id=? AND id=?", u.ID, keyID).Scan(&publicKey); err != nil {
 				if errors.Is(err, sql.ErrNoRows) {
 					err = ErrCommerceInput
 				}
 				a.commerceError(w, r, err)
 				return true
 			}
+			params.SSHKeys = append(params.SSHKeys, publicKey)
 		}
 	case "snapshot_restore":
 		in := input.(struct {

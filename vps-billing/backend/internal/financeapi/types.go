@@ -144,7 +144,7 @@ type AdminOsImage = struct {
 	Version       string `json:"version"`
 	MinDiskGB     int64  `json:"min_disk_gb"`
 	Enabled       bool   `json:"enabled"`
-	ControllerID  string `json:"controller_id"`
+	ConnectionID  Id     `json:"connection_id"`
 	RemoteImageID string `json:"remote_image_id"`
 	SHA256        string `json:"sha256"`
 }
@@ -176,47 +176,53 @@ type AdminOverview = struct {
 }
 
 type AdminProduct = struct {
-	ID              Id              `json:"id"`
-	Slug            string          `json:"slug"`
-	Kind            ProductKind     `json:"kind"`
-	TypeID          Id              `json:"type_id"`
-	RegionID        Id              `json:"region_id"`
-	NodeID          Id              `json:"node_id"`
-	Name            LocalizedText   `json:"name"`
-	Description     LocalizedText   `json:"description"`
-	Badges          []string        `json:"badges"`
-	Specs           ProductSpecs    `json:"specs"`
-	Prices          []PricePoint    `json:"prices"`
-	Options         []ProductOption `json:"options"`
-	OSImages        []OsImage       `json:"os_images"`
-	Stock           *int64          `json:"stock"`
-	Available       bool            `json:"available"`
-	SortOrder       int64           `json:"sort_order"`
-	Visibility      string          `json:"visibility"`
-	ControllerID    *string         `json:"controller_id"`
-	RemoteProductID *string         `json:"remote_product_id"`
-	ActiveServices  int64           `json:"active_services"`
-	Revision        Revision        `json:"revision"`
+	ID          Id              `json:"id"`
+	Slug        string          `json:"slug"`
+	Kind        ProductKind     `json:"kind"`
+	TypeID      Id              `json:"type_id"`
+	RegionID    Id              `json:"region_id"`
+	NodeID      Id              `json:"node_id"`
+	Name        LocalizedText   `json:"name"`
+	Description LocalizedText   `json:"description"`
+	Badges      []string        `json:"badges"`
+	Specs       ProductSpecs    `json:"specs"`
+	Prices      []PricePoint    `json:"prices"`
+	Options     []ProductOption `json:"options"`
+	OSImages    []OsImage       `json:"os_images"`
+	OrderSchema *ModuleSchema   `json:"order_schema"`
+	Stock       *int64          `json:"stock"`
+	Available   bool            `json:"available"`
+	SortOrder   int64           `json:"sort_order"`
+	Visibility  string          `json:"visibility"`
+	Module      *struct {
+		ModuleID     string         `json:"module_id"`
+		ConnectionID Id             `json:"connection_id"`
+		Config       map[string]any `json:"config"`
+		ConfigDigest string         `json:"config_digest"`
+	} `json:"module"`
+	ActiveServices int64    `json:"active_services"`
+	Revision       Revision `json:"revision"`
 }
 
 type AdminService = struct {
-	ID           Id                  `json:"id"`
-	Label        string              `json:"label"`
-	ProductName  string              `json:"product_name"`
-	Kind         ProductKind         `json:"kind"`
-	Status       ServiceStatus       `json:"status"`
-	Region       string              `json:"region"`
-	Country      string              `json:"country"`
-	Hostname     *string             `json:"hostname"`
-	PrimaryIPv4  *string             `json:"primary_ipv4"`
-	Cycle        BillingCycle        `json:"cycle"`
-	Recurring    Money               `json:"recurring"`
-	NextDueAt    *Timestamp          `json:"next_due_at"`
-	AutoRenew    bool                `json:"auto_renew"`
-	Power        *PowerState         `json:"power"`
-	CreatedAt    Timestamp           `json:"created_at"`
-	Capabilities ServiceCapabilities `json:"capabilities"`
-	Rescue       *struct {
+	ID            Id                   `json:"id"`
+	Label         string               `json:"label"`
+	ProductName   string               `json:"product_name"`
+	Kind          ProductKind          `json:"kind"`
+	Status        ServiceStatus        `json:"status"`
+	Region        string               `json:"region"`
+	Country       string               `json:"country"`
+	Hostname      *string              `json:"hostname"`
+	PrimaryIPv4   *string              `json:"primary_ipv4"`
+	Cycle         BillingCycle         `json:"cycle"`
+	Recurring     Money                `json:"recurring"`
+	NextDueAt     *Timestamp           `json:"next_due_at"`
+	AutoRenew     bool                 `json:"auto_renew"`
+	Power         *PowerState          `json:"power"`
+	CreatedAt     Timestamp            `json:"created_at"`
+	Capabilities  ServiceCapabilities  `json:"capabilities"`
+	CustomActions []ServerCustomAction `json:"custom_actions"`
+	Rescue        *struct {
 		Active bool      `json:"active"`
 		Since  Timestamp `json:"since"`
 	} `json:"rescue"`
@@ -245,7 +251,8 @@ type AdminService = struct {
 	} `json:"renewal_options"`
 	ClientID          Id       `json:"client_id"`
 	ClientEmail       string   `json:"client_email"`
-	ControllerID      *string  `json:"controller_id"`
+	ModuleID          *string  `json:"module_id"`
+	ConnectionID      *Id      `json:"connection_id"`
 	ResourceID        *string  `json:"resource_id"`
 	ProvisioningJobID *Id      `json:"provisioning_job_id"`
 	PriceOverride     *Money   `json:"price_override"`
@@ -455,6 +462,7 @@ type BillingCycle = string
 
 type CartItemInput = struct {
 	ProductID    Id             `json:"product_id"`
+	ModuleFields map[string]any `json:"module_fields,omitempty"`
 	Cycle        BillingCycle   `json:"cycle"`
 	Quantity     int64          `json:"quantity"`
 	Options      map[string]any `json:"options"`
@@ -554,16 +562,6 @@ type ClientOverview = struct {
 }
 
 type ClientStatus = string
-
-type CloudController = struct {
-	ID                   string     `json:"id"`
-	Name                 string     `json:"name"`
-	Endpoint             string     `json:"endpoint"`
-	Enabled              bool       `json:"enabled"`
-	Status               string     `json:"status"`
-	LastCheckedAt        *Timestamp `json:"last_checked_at"`
-	CredentialConfigured bool       `json:"credential_configured"`
-}
 
 type ConsoleTicket = struct {
 	URL       string    `json:"url"`
@@ -765,6 +763,13 @@ type LoginEvent = struct {
 	Result    string    `json:"result"`
 }
 
+type ModuleSchema = struct {
+	Type                 string                 `json:"type"`
+	Properties           map[string]SchemaField `json:"properties"`
+	Required             []string               `json:"required,omitempty"`
+	AdditionalProperties bool                   `json:"additionalProperties"`
+}
+
 type Money = struct {
 	Currency      CurrencyCode `json:"currency"`
 	AmountMinor   int64        `json:"amount_minor"`
@@ -895,6 +900,7 @@ type Product = struct {
 	Prices      []PricePoint    `json:"prices"`
 	Options     []ProductOption `json:"options"`
 	OSImages    []OsImage       `json:"os_images"`
+	OrderSchema *ModuleSchema   `json:"order_schema"`
 	Stock       *int64          `json:"stock"`
 	Available   bool            `json:"available"`
 	SortOrder   int64           `json:"sort_order"`
@@ -998,6 +1004,8 @@ type Revision = int64
 
 type Role = string
 
+type SchemaField = any
+
 type SecuritySettings = struct {
 	ClientSessionHours int64    `json:"client_session_hours"`
 	StaffSessionHours  int64    `json:"staff_session_hours"`
@@ -1012,24 +1020,55 @@ type SecuritySettingsInput = struct {
 	Revision           Revision `json:"revision"`
 }
 
+type ServerConnection = struct {
+	ID            Id         `json:"id"`
+	ModuleID      string     `json:"module_id"`
+	Name          string     `json:"name"`
+	Enabled       bool       `json:"enabled"`
+	Status        string     `json:"status"`
+	ServiceCount  int64      `json:"service_count"`
+	LastCheckedAt *Timestamp `json:"last_checked_at"`
+	Revision      Revision   `json:"revision"`
+}
+
+type ServerCustomAction = struct {
+	ID          Id             `json:"id"`
+	Name        LocalizedText  `json:"name"`
+	Danger      bool           `json:"danger"`
+	Confirm     *LocalizedText `json:"confirm"`
+	InputSchema ModuleSchema   `json:"input_schema"`
+}
+
+type ServerModule = struct {
+	ID            string               `json:"id"`
+	Name          LocalizedText        `json:"name"`
+	Version       string               `json:"version"`
+	Status        string               `json:"status"`
+	Capabilities  []string             `json:"capabilities"`
+	ProductSchema ModuleSchema         `json:"product_schema"`
+	OrderSchema   ModuleSchema         `json:"order_schema"`
+	CustomActions []ServerCustomAction `json:"custom_actions"`
+}
+
 type Service = struct {
-	ID           Id                  `json:"id"`
-	Label        string              `json:"label"`
-	ProductName  string              `json:"product_name"`
-	Kind         ProductKind         `json:"kind"`
-	Status       ServiceStatus       `json:"status"`
-	Region       string              `json:"region"`
-	Country      string              `json:"country"`
-	Hostname     *string             `json:"hostname"`
-	PrimaryIPv4  *string             `json:"primary_ipv4"`
-	Cycle        BillingCycle        `json:"cycle"`
-	Recurring    Money               `json:"recurring"`
-	NextDueAt    *Timestamp          `json:"next_due_at"`
-	AutoRenew    bool                `json:"auto_renew"`
-	Power        *PowerState         `json:"power"`
-	CreatedAt    Timestamp           `json:"created_at"`
-	Capabilities ServiceCapabilities `json:"capabilities"`
-	Rescue       *struct {
+	ID            Id                   `json:"id"`
+	Label         string               `json:"label"`
+	ProductName   string               `json:"product_name"`
+	Kind          ProductKind          `json:"kind"`
+	Status        ServiceStatus        `json:"status"`
+	Region        string               `json:"region"`
+	Country       string               `json:"country"`
+	Hostname      *string              `json:"hostname"`
+	PrimaryIPv4   *string              `json:"primary_ipv4"`
+	Cycle         BillingCycle         `json:"cycle"`
+	Recurring     Money                `json:"recurring"`
+	NextDueAt     *Timestamp           `json:"next_due_at"`
+	AutoRenew     bool                 `json:"auto_renew"`
+	Power         *PowerState          `json:"power"`
+	CreatedAt     Timestamp            `json:"created_at"`
+	Capabilities  ServiceCapabilities  `json:"capabilities"`
+	CustomActions []ServerCustomAction `json:"custom_actions"`
+	Rescue        *struct {
 		Active bool      `json:"active"`
 		Since  Timestamp `json:"since"`
 	} `json:"rescue"`
@@ -1577,12 +1616,25 @@ type AdminUpdateEmailTemplateInput = struct {
 
 type AdminUpdateEmailTemplateResponse = EmailTemplate
 
-type AdminListControllersResponse = []CloudController
+type AdminListServerConnectionsResponse = []ServerConnection
 
-type AdminCheckControllerInput = struct {
+type AdminUpdateServerConnectionInput = struct {
+	Revision Revision `json:"revision"`
+	Name     string   `json:"name,omitempty"`
+	Enabled  bool     `json:"enabled,omitempty"`
 }
 
-type AdminCheckControllerResponse = CloudController
+type AdminUpdateServerConnectionResponse = ServerConnection
+
+type AdminSyncConnectionImagesInput = struct {
+}
+
+type AdminSyncConnectionImagesResponse = []AdminOsImage
+
+type AdminTestServerConnectionInput = struct {
+}
+
+type AdminTestServerConnectionResponse = ServerConnection
 
 type AdminListGatewaysResponse = []GatewayStatus
 
@@ -1594,6 +1646,8 @@ type AdminUpdateGatewayInput = struct {
 }
 
 type AdminUpdateGatewayResponse = GatewayStatus
+
+type AdminListServerModulesResponse = []ServerModule
 
 type AdminGetSmtpResponse = SmtpSettings
 
@@ -1707,22 +1761,25 @@ type AdminOverviewResponse = AdminOverview
 type AdminListProductsResponse = []AdminProduct
 
 type AdminCreateProductInput = struct {
-	Revision        Revision        `json:"revision,omitempty"`
-	Slug            string          `json:"slug"`
-	Kind            ProductKind     `json:"kind"`
-	NodeID          Id              `json:"node_id"`
-	Name            LocalizedText   `json:"name"`
-	Description     LocalizedText   `json:"description"`
-	Badges          []string        `json:"badges"`
-	Specs           ProductSpecs    `json:"specs"`
-	Prices          []PricePoint    `json:"prices"`
-	Options         []ProductOption `json:"options"`
-	OSImageIDs      []Id            `json:"os_image_ids"`
-	Stock           *int64          `json:"stock"`
-	Visibility      string          `json:"visibility"`
-	ControllerID    *string         `json:"controller_id"`
-	RemoteProductID *string         `json:"remote_product_id"`
-	SortOrder       int64           `json:"sort_order"`
+	Revision    Revision        `json:"revision,omitempty"`
+	Slug        string          `json:"slug"`
+	Kind        ProductKind     `json:"kind"`
+	NodeID      Id              `json:"node_id"`
+	Name        LocalizedText   `json:"name"`
+	Description LocalizedText   `json:"description"`
+	Badges      []string        `json:"badges"`
+	Specs       ProductSpecs    `json:"specs"`
+	Prices      []PricePoint    `json:"prices"`
+	Options     []ProductOption `json:"options"`
+	OSImageIDs  []Id            `json:"os_image_ids"`
+	Stock       *int64          `json:"stock"`
+	Visibility  string          `json:"visibility"`
+	Module      *struct {
+		ModuleID     string         `json:"module_id"`
+		ConnectionID Id             `json:"connection_id"`
+		Config       map[string]any `json:"config"`
+	} `json:"module"`
+	SortOrder int64 `json:"sort_order"`
 }
 
 type AdminCreateProductResponse = AdminProduct
@@ -1730,22 +1787,25 @@ type AdminCreateProductResponse = AdminProduct
 type AdminGetProductResponse = AdminProduct
 
 type AdminUpdateProductInput = struct {
-	Revision        Revision        `json:"revision,omitempty"`
-	Slug            string          `json:"slug"`
-	Kind            ProductKind     `json:"kind"`
-	NodeID          Id              `json:"node_id"`
-	Name            LocalizedText   `json:"name"`
-	Description     LocalizedText   `json:"description"`
-	Badges          []string        `json:"badges"`
-	Specs           ProductSpecs    `json:"specs"`
-	Prices          []PricePoint    `json:"prices"`
-	Options         []ProductOption `json:"options"`
-	OSImageIDs      []Id            `json:"os_image_ids"`
-	Stock           *int64          `json:"stock"`
-	Visibility      string          `json:"visibility"`
-	ControllerID    *string         `json:"controller_id"`
-	RemoteProductID *string         `json:"remote_product_id"`
-	SortOrder       int64           `json:"sort_order"`
+	Revision    Revision        `json:"revision,omitempty"`
+	Slug        string          `json:"slug"`
+	Kind        ProductKind     `json:"kind"`
+	NodeID      Id              `json:"node_id"`
+	Name        LocalizedText   `json:"name"`
+	Description LocalizedText   `json:"description"`
+	Badges      []string        `json:"badges"`
+	Specs       ProductSpecs    `json:"specs"`
+	Prices      []PricePoint    `json:"prices"`
+	Options     []ProductOption `json:"options"`
+	OSImageIDs  []Id            `json:"os_image_ids"`
+	Stock       *int64          `json:"stock"`
+	Visibility  string          `json:"visibility"`
+	Module      *struct {
+		ModuleID     string         `json:"module_id"`
+		ConnectionID Id             `json:"connection_id"`
+		Config       map[string]any `json:"config"`
+	} `json:"module"`
+	SortOrder int64 `json:"sort_order"`
 }
 
 type AdminUpdateProductResponse = AdminProduct
@@ -2063,6 +2123,12 @@ type UpdateServiceInput = struct {
 }
 
 type UpdateServiceResponse = Service
+
+type RunServiceActionInput = struct {
+	Input map[string]any `json:"input"`
+}
+
+type RunServiceActionResponse = ServiceTask
 
 type RequestCancellationInput = struct {
 	Type   string `json:"type"`
