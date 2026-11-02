@@ -14,7 +14,7 @@
 | 客户与权限 | 客户和管理员账户、角色管理、账户状态与会话控制 |
 | 订单与账单 | 购买确认、单笔详情、状态管理、付款入口、历史商品与价格快照 |
 | 站点运营 | 品牌与语言设置、默认币种、邮件配置、业务日志与审计 |
-| 扩展接口 | SMTP、支付、资源插件，独立运行时身份与授权 |
+| 扩展接口 | SMTP、支付、服务器模块，独立运行时身份与授权 |
 | 运维工具 | 版本检查、主机升级工具、备份恢复、健康检查与 systemd 服务 |
 
 不同币种独立定价，不自动换汇或重算历史订单。支付渠道需单独安装和配置；付款成功不等于虚拟机已开通。
@@ -39,7 +39,7 @@
 1. 使用发行版提供的安装入口，自动下载并核验配套的后端与前端文件。
 2. 按[原生安装手册](vps-billing/docs/INSTALL.md)配置专用数据库、域名、TLS 和匹配的前端文件。使用宝塔时阅读[宝塔部署](vps-billing/docs/BAOTA.md)。
 3. 创建自己的管理员账户，按[首次使用](vps-billing/docs/GETTING_STARTED.md)设置站点、分类和商品。
-4. 上线前完成备份与恢复演练，核对邮件、支付和资源插件的独立配置。
+4. 上线前完成备份与恢复演练，核对邮件、支付和服务器模块的独立配置。
 
 用户不需要安装编译工具。系统没有通用默认管理员密码。
 
@@ -47,7 +47,7 @@
 
 - [版本更新](vps-billing/docs/UPDATES.md) · [升级与回退](vps-billing/docs/UPGRADE.md) · [备份恢复](vps-billing/docs/BACKUP_RECOVERY.md)
 - [日志与审计](vps-billing/docs/LOGGING.md) · [日常运维](vps-billing/docs/OPERATIONS.md)
-- [插件管理](vps-billing/docs/PLUGINS.md) · [支付插件](vps-billing/docs/PAYMENT_PLUGINS.md) · [资源插件](vps-billing/docs/RESOURCE_PLUGINS.md)
+- [插件管理](vps-billing/docs/PLUGINS.md) · [支付插件](vps-billing/docs/PAYMENT_PLUGINS.md) · [服务器模块](vps-billing/docs/SERVER_MODULES.md)
 - [云主控与 KVM 被控](https://github.com/xiaoqiqixi/betteridcsys-cloud) · [商品资源配置](vps-billing/docs/PRODUCT_CONFIGURATION.md)
 
 ## 开发与集成

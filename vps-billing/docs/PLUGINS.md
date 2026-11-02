@@ -2,7 +2,7 @@
 
 Core 自 `0.5.3` 提供 SMTP 与支付独立运行时插槽，`0.5.10` 新增资源插槽，`0.6.0` 支持多个命名支付槽。插件是单独构建和运行的程序，通过受保护的 Unix socket 与 Core 通信；安装兼容插件无需重编 Core。Core 只读取元数据，主机管理员核验程序、兼容范围和哈希并明确批准后，才可启动专用非特权服务。没有网页上传、自动下载或通用命令执行入口。
 
-官方 `email.smtp` 插件版本为 `1.1.0`，使用 `aster.smtp/1`，支持 Core `>=0.4.0,<0.6.0`，该已发布版本不能用于 Core 0.6。Core 没有内置 SMTP 传输回退。支付采用 `aster.payment/1`，具体渠道由开发者按[支付插件作者指南](PAYMENT_PLUGINS.md)实现；仓库仅提供多插槽框架、SDK、作者模板、合规测试运行器和合成测试 fixture，不随附任何具体支付渠道插件。资源使用 `aster.resource/1`，见[资源插件](RESOURCE_PLUGINS.md)；它不负责安装独立主控或计算被控。SMS 和对象存储尚无运行时插槽。
+官方 `email.smtp` 插件版本为 `1.1.0`，使用 `aster.smtp/1`，支持 Core `>=0.4.0,<0.6.0`，该已发布版本不能用于 Core 0.6。Core 没有内置 SMTP 传输回退。支付采用 `aster.payment/1`，具体渠道由开发者按[支付插件作者指南](PAYMENT_PLUGINS.md)实现；仓库仅提供多插槽框架、SDK、作者模板、合规测试运行器和合成测试 fixture，不随附任何具体支付渠道插件。服务器模块使用 `aster.server/1`，见[服务器模块](SERVER_MODULES.md)；它不负责安装独立主控或计算被控。SMS 和对象存储尚无运行时插槽。
 
 以下 SMTP 安装流程记录 Core `0.5.10` 与独立 SMTP `1.1.0` 的组合；两者分别核对正常 Release、完整资产和来源，不从版本号推定下载可用。Core 0.6 的支付安装与迁移使用[支付插件作者指南](PAYMENT_PLUGINS.md)，不能用旧兼容上界推定当前可用。
 
@@ -166,4 +166,4 @@ Core 0.6 用 `payments[]` 审批多个命名槽，每槽独立 UID、`/run/aster
 
 ## 资源插件
 
-本轮 main 另提供受保护、独立进程的 `resource.aster-cloud` worker，支持通过本系统插件管理器安装/审批/回滚以及原持久化资源 job 的 host-only 派发；不属于支付渠道，也不是 Web 任意执行入口。它只读取专用 systemd credentials，不读取财务数据库。见 [RESOURCE_PLUGINS.md](RESOURCE_PLUGINS.md) 的构建、安装、配置、对账和兼容性说明。旧公开 Release 尚不含该协议，真实 KVM/生产 service 验收与离线包校验分开记录。
+Core 0.6 提供独立 `server.aster-cloud` 模块和 `server-template` 作者模板。接口使用独立 UID、socket 与 systemd credentials，核心不持有主控凭据。构建、安装、迁移和一致性测试见 [SERVER_MODULES.md](SERVER_MODULES.md)。

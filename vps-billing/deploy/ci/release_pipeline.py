@@ -1336,7 +1336,7 @@ def publish(api, policy, archive_bytes):
                 "正式附件发布后仍须独立完成公共六资产下载、摘要及 prepare 检查。"
                 "真实 KVM、跨节点、公网上联、生产容量与真实支付渠道不在本版合成验收声明内。\n\n"
                 f"[发布说明]({source_docs}RELEASE-v0.5.10.md) · [升级恢复]({source_docs}UPGRADE.md) · "
-                f"[安装]({source_docs}INSTALL.md) · [资源插件]({source_docs}RESOURCE_PLUGINS.md) · "
+                f"[安装]({source_docs}INSTALL.md) · [服务器模块]({source_docs}SERVER_MODULES.md) · "
                 f"[验证记录]({source_docs}VALIDATION.md)。"
             )
     release_id = None

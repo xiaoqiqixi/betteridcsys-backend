@@ -16,4 +16,4 @@ Checkout accepts owned SSH key references. It rejects `root_password` with `PASS
 
 Original-channel refunds require the gateway's `payment.refund` capability. Core reserves each refund before dispatch. A pending or ambiguous provider result stays reserved for operator reconciliation and is never automatically dispatched again. Credit refunds and manual payments commit their ledger, invoice, audit and idempotency response together.
 
-The controller SDK is pinned in [CLOUD_SOURCE.json](../contract/CLOUD_SOURCE.json), with the complete upstream source and an integrity test. See [COMMERCE_OPERATIONS.md](COMMERCE_OPERATIONS.md) for host credentials, automatic dispatch, manual reconciliation and current controller protocol limits.
+The Aster Cloud plugin’s controller SDK is pinned in [CLOUD_SOURCE.json](../backend/plugins/server.aster-cloud/vendor-source/CLOUD_SOURCE.json), with the complete upstream source and an integrity test. See [COMMERCE_OPERATIONS.md](COMMERCE_OPERATIONS.md) for host credentials, automatic dispatch, manual reconciliation and current controller protocol limits.

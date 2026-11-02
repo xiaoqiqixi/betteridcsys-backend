@@ -55,7 +55,7 @@ def main():
     with tempfile.TemporaryDirectory(prefix="aster-resource-build-") as temp:
         binary = Path(temp) / "plugin"
         go("build", "-mod=readonly", "-trimpath", "-buildvcs=false", "-ldflags=-s -w", "-o", str(binary), command)
-        raw = package(binary.read_bytes(), (repo / "LICENSE").read_bytes(), (repo / "vps-billing/docs/RESOURCE_PLUGINS.md").read_bytes(),
+        raw = package(binary.read_bytes(), (repo / "LICENSE").read_bytes(), (repo / "vps-billing/backend/plugins/server.aster-cloud/legacy/RESOURCE_PLUGINS.md").read_bytes(),
                       (goroot / "LICENSE").read_text(), (goroot / "PATENTS").read_text(), go("version").decode().strip())
     # Do not silently replace a previously approved package.
     with args.output.open("xb") as stream:

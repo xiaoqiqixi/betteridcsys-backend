@@ -26,6 +26,11 @@ jobs:
             echo 'Finance Core depends on a cloud-specific package' >&2
             exit 1
           fi
+      - name: Build independently installable module archives
+        run: |
+          mkdir -p artifacts/server-packages
+          python3 -B vps-billing/deploy/scripts/build-server-module.py --plugin template --output artifacts/server-packages/template.tar.gz
+          python3 -B vps-billing/deploy/scripts/build-server-module.py --plugin aster-cloud --output artifacts/server-packages/aster-cloud.tar.gz
       - name: Protected plugin installation and lifecycle regression
         run: |
           python3 -B vps-billing/deploy/scripts/test-plugin-manager.py

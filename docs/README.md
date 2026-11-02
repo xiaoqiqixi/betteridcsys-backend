@@ -20,7 +20,7 @@
 
 - [插件与邮件](../vps-billing/docs/PLUGINS.md)：安装、配置与运行状态。
 - [支付插件](../vps-billing/docs/PAYMENT_PLUGINS.md)：支付渠道接入与安全边界。
-- [资源插件](../vps-billing/docs/RESOURCE_PLUGINS.md)：财务与云主控连接。
+- [服务器模块](../vps-billing/docs/SERVER_MODULES.md)：财务与云主控连接。
 
 ## 升级与日常维护
 
