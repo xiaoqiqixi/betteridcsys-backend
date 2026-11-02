@@ -118,6 +118,7 @@ func TestMySQLCommerceUpgradeHandlersCreditInvoiceGuardAndCapability(t *testing.
 	if err != nil || view.Recurring.AmountMinor != 1999 {
 		t.Fatal(view, err)
 	}
+	contracttest.Data(t, "AdminService", map[string]any{"data": view})
 	var tasks int
 	if err = m.DB.QueryRow("SELECT COUNT(*) FROM service_tasks WHERE service_id=? AND action='resize'", sid).Scan(&tasks); err != nil || tasks != 1 {
 		t.Fatal(tasks, err)

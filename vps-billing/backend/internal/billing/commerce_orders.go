@@ -526,7 +526,7 @@ func queueServiceTask06(ctx context.Context, tx *sql.Tx, sid, action string, pay
 		return api.ServiceTask{}, err
 	}
 	_, err = tx.ExecContext(ctx, "INSERT INTO service_tasks(id,service_id,action,status,payload,created_at,updated_at) VALUES(?,?,?,'queued',?,?,?)", id, sid, action, raw, now, now)
-	return api.ServiceTask{ID: id, Action: action, Status: "queued", CreatedAt: stamp06(now)}, err
+	return api.ServiceTask{ID: id, Action: serviceTaskAction06(action), Status: "queued", CreatedAt: stamp06(now)}, err
 }
 
 func (m *MySQL) CancelOrder06(ctx context.Context, actor User, id, reason string) (api.Order, error) {

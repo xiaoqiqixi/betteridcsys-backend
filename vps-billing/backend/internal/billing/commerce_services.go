@@ -150,6 +150,7 @@ func readService06(ctx context.Context, q currencyQuerier, owner, id, lock strin
 			rows.Close()
 			return out, err
 		}
+		task.Action = serviceTaskAction06(task.Action)
 		task.CreatedAt = stamp06(at)
 		if done.Valid {
 			at := stamp06(done.Time)
@@ -436,4 +437,12 @@ func (m *MySQL) CancelService06(ctx context.Context, actor User, id string, in *
 		return tx.Commit()
 	})
 	return out, err
+}
+
+// The controller wire action is resize; the public billing task is upgrade.
+func serviceTaskAction06(action string) string {
+	if action == "resize" {
+		return "upgrade"
+	}
+	return action
 }
