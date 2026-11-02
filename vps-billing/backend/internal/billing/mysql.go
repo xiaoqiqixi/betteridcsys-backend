@@ -727,6 +727,10 @@ func (m *MySQL) createOrderOnce(c context.Context, u User, pid, host, key, curre
 	if quote != nil && !quote.matches(p.PriceMinor, cur.DecimalPlaces, priceRevision) {
 		return Order{}, false, ErrPriceChanged
 	}
+	stockReserved, e := reserveLegacyStock06(c, tx, p.ID)
+	if e != nil {
+		return Order{}, false, e
+	}
 	configuration, e := readProductConfiguration(c, tx, p.ID, " FOR SHARE")
 	if e != nil {
 		return Order{}, false, e
@@ -744,6 +748,11 @@ func (m *MySQL) createOrderOnce(c context.Context, u User, pid, host, key, curre
 	}
 	if e = insertOrderProductConfiguration(c, tx, o.ID, configuration, o.CreatedAt); e != nil {
 		return Order{}, false, e
+	}
+	if stockReserved {
+		if e = recordLegacyStock06(c, tx, o, p); e != nil {
+			return Order{}, false, e
+		}
 	}
 	_, e = tx.ExecContext(c, "INSERT INTO invoices(id,number,user_id,order_id,status,amount_minor,currency,issued_at,due_at,issuer_snapshot,currency_snapshot) VALUES(?,?,?,?,?,?,?,?,?,?,?)", i.ID, i.Number, u.ID, o.ID, i.Status, i.AmountMinor, i.Currency, i.IssuedAt, i.DueAt, issuerRaw, currencyRaw)
 	if e != nil {

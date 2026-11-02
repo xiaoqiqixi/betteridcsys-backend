@@ -42,7 +42,7 @@ jobs:
         run: |
           test -S /var/run/aster-commerce-mysql/mysqld.sock
           set -o pipefail
-          go test -race -count=1 -timeout=18m -json ./internal/billing -run 'Test(MySQL)?(Commerce|Credit|Automation|Payment|Gateway|HTTPPerformanceSeedUsesLiveStaffMembershipAndCurrentSchema)' | tee commerce-tests.jsonl
+          go test -race -count=1 -timeout=18m -json ./internal/billing -run 'Test(MySQL)?(Commerce|Credit|Automation|Payment|Gateway|Cancellation|HTTPPerformanceSeedUsesLiveStaffMembershipAndCurrentSchema)' | tee commerce-tests.jsonl
           python3 - <<'PY'
           import json
           from pathlib import Path

@@ -5,6 +5,9 @@ uses 0.6 by default. Legacy callers can send `X-Aster-API-Version: 0.5` for one
 release; a deployment may set `COMMERCE_API_VERSION=0.5` during frontend migration.
 The old `/plans`, `/admin/catalog`, legacy order body and root provisioning CLI
 remain available. Apply the complete embedded migrations before starting Core.
+Deprecated checkouts share finite inventory with their migrated products. Their
+payment and provisioning formats remain compatible; cancelling one through the
+current API preserves its legacy fulfillment checks and invoice void state.
 
 ## Approved controller access
 

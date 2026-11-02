@@ -383,6 +383,9 @@ func (m *MySQL) SettlePayment(ctx context.Context, id string, v integrations.Ver
 				return PaymentSettlement{}, e
 			}
 			o.Status, i.Status, i.PaidAt = "paid", "paid", &paid
+			if _, e = tx.ExecContext(ctx, "UPDATE order_items SET stock_reserved=0 WHERE order_id=?", o.ID); e != nil {
+				return PaymentSettlement{}, e
+			}
 			if e = recordAffiliateCommissionTx(ctx, tx, i.ID, now); e != nil {
 				return PaymentSettlement{}, e
 			}

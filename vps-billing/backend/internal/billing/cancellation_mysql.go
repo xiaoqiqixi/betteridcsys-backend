@@ -65,6 +65,11 @@ func (m *MySQL) cancelOrderOnce(ctx context.Context, actor User, orderID, reason
 	if err != nil {
 		return OrderCancellation{}, err
 	}
+	if actor.Role == "admin" {
+		if actor, err = lockActiveAdministrator(ctx, tx, actor.ID); err != nil {
+			return OrderCancellation{}, err
+		}
+	}
 	query := "SELECT " + orderColumns + " FROM orders WHERE id=?"
 	args := []any{orderID}
 	if actor.Role == "customer" {
@@ -141,6 +146,9 @@ func (m *MySQL) cancelOrderOnce(ctx context.Context, actor User, orderID, reason
 			return OrderCancellation{}, err
 		}
 		return OrderCancellation{Order: order, Invoice: invoice}, nil
+	}
+	if err = releaseOrderStock06(ctx, tx, order.ID); err != nil {
+		return OrderCancellation{}, err
 	}
 	result, err := tx.ExecContext(ctx, "UPDATE orders SET status='cancelled' WHERE id=? AND status='pending_payment'", order.ID)
 	if err = cancellationUpdateResult(result, err); err != nil {

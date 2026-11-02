@@ -535,12 +535,37 @@ func (m *MySQL) CancelOrder06(ctx context.Context, actor User, id, reason string
 	}
 	return retryPayment(ctx, func() (api.Order, error) {
 		var out api.Order
+		owner := actor.ID
+		if actor.Role == "admin" {
+			owner = ""
+		}
+		var version int
+		query := "SELECT i.commerce_version FROM invoices i JOIN orders o ON o.id=i.order_id WHERE o.id=?"
+		args := []any{id}
+		if owner != "" {
+			query += " AND o.user_id=?"
+			args = append(args, owner)
+		}
+		if err := m.DB.QueryRowContext(ctx, query, args...).Scan(&version); err != nil {
+			if errors.Is(err, sql.ErrNoRows) {
+				err = ErrNotFound
+			}
+			return out, err
+		}
+		if version == 0 {
+			// Preserve the legacy fulfillment/outbox barrier and void state even
+			// when a current client cancels a deprecated checkout.
+			if _, err := m.cancelOrderOnce(ctx, actor, id, reason); err != nil {
+				return out, err
+			}
+			order, err := m.Order06(ctx, owner, id)
+			return order.Order, err
+		}
 		tx, err := m.DB.BeginTx(ctx, &sql.TxOptions{Isolation: sql.LevelReadCommitted})
 		if err != nil {
 			return out, err
 		}
 		defer tx.Rollback()
-		owner := actor.ID
 		if actor.Role == "admin" {
 			if actor, err = lockActiveAdministrator(ctx, tx, actor.ID); err != nil {
 				return out, err
@@ -548,8 +573,8 @@ func (m *MySQL) CancelOrder06(ctx context.Context, actor User, id, reason string
 			owner = ""
 		}
 		var iid string
-		query := "SELECT i.id FROM invoices i JOIN orders o ON o.id=i.order_id WHERE o.id=?"
-		args := []any{id}
+		query = "SELECT i.id FROM invoices i JOIN orders o ON o.id=i.order_id WHERE o.id=?"
+		args = []any{id}
 		if owner != "" {
 			query += " AND o.user_id=?"
 			args = append(args, owner)
@@ -582,32 +607,8 @@ func (m *MySQL) CancelOrder06(ctx context.Context, actor User, id, reason string
 		if services != 0 {
 			return out, ErrPaymentState
 		}
-		rows, err := tx.QueryContext(ctx, "SELECT product_id,SUM(stock_reserved) FROM order_items WHERE order_id=? AND stock_reserved>0 GROUP BY product_id ORDER BY product_id", id)
-		if err != nil {
+		if err = releaseOrderStock06(ctx, tx, id); err != nil {
 			return out, err
-		}
-		type stock struct {
-			id       string
-			quantity int64
-		}
-		stocks := []stock{}
-		for rows.Next() {
-			var s stock
-			if err = rows.Scan(&s.id, &s.quantity); err != nil {
-				rows.Close()
-				return out, err
-			}
-			stocks = append(stocks, s)
-		}
-		err = rows.Err()
-		rows.Close()
-		if err != nil {
-			return out, err
-		}
-		for _, s := range stocks {
-			if _, err = tx.ExecContext(ctx, "UPDATE products SET stock=stock+? WHERE id=? AND stock IS NOT NULL", s.quantity, s.id); err != nil {
-				return out, err
-			}
 		}
 		if v.CreditApplied.AmountMinor > 0 {
 			if _, err = appendCredit06(ctx, tx, v.ClientID, "refund", v.CreditApplied.AmountMinor, &iid, "Credit released from cancelled order", time.Now().UTC()); err != nil {
@@ -618,7 +619,6 @@ func (m *MySQL) CancelOrder06(ctx context.Context, actor User, id, reason string
 			q    string
 			args []any
 		}{
-			{"UPDATE order_items SET stock_reserved=0 WHERE order_id=?", []any{id}},
 			{"DELETE FROM coupon_redemptions WHERE order_id=?", []any{id}},
 			{"UPDATE invoice_payments SET status='refunded',refunded_minor=amount_minor WHERE invoice_id=? AND method='credit'", []any{iid}},
 			{"UPDATE invoices SET status='cancelled',credit_applied_minor=0 WHERE id=?", []any{iid}},
