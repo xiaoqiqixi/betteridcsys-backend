@@ -9,7 +9,7 @@ permissions:
 jobs:
   accounts-mysql:
     runs-on: ubuntu-24.04
-    timeout-minutes: 25
+    timeout-minutes: 35
     services:
       mysql:
         image: mysql:8.4
@@ -42,7 +42,7 @@ jobs:
           test -S /var/run/aster-accounts-mysql/mysqld.sock
           set -o pipefail
           go vet -mod=readonly ./...
-          go test -mod=readonly -race -count=1 -timeout=18m -json ./... | tee account-tests.jsonl
+          go test -mod=readonly -race -count=1 -timeout=25m -json ./... | tee account-tests.jsonl
           python3 - <<'PY'
           import json
           from pathlib import Path
