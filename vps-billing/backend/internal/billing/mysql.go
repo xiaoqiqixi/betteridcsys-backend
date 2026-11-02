@@ -365,6 +365,14 @@ func scanUser(s interface{ Scan(...any) error }) (User, error) {
 	return u, e
 }
 func (m *MySQL) UserByEmail(c context.Context, e string) (User, error) {
+	// Accounts use an ASCII email column, while immutable audit identities can
+	// contain Unicode. Such an account cannot exist; do not ask MySQL to coerce
+	// its historical identity into the narrower account character set.
+	for i := range len(e) {
+		if e[i] > 127 {
+			return User{}, ErrNotFound
+		}
+	}
 	return scanUser(m.DB.QueryRowContext(c, "SELECT "+userColumns+" FROM users WHERE email=?", e))
 }
 func (m *MySQL) UserByID(c context.Context, id string) (User, error) {
