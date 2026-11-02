@@ -57,6 +57,36 @@ BROWSER_PHASES = {
     "tls-untrusted-navigation",
 }
 
+# Only exact fixture-owned assertion text can become a public diagnostic code.
+# Never copy the test log: it can contain SQL, credentials or browser traffic.
+FIXTURE_FAILURES = {
+    "owned HTTPS service did not drain": "https-drain",
+    "actual packaged API shutdown failed": "api-shutdown",
+    "packaged API did not stop cleanly": "api-shutdown",
+    "required real API acceptance did not complete or attempted a business write": "request-counts",
+    "browser must record exactly four successful logins": "login-count",
+    "authentication history does not match both browser sizes": "login-history",
+    "staff login timestamp does not match authenticated history": "staff-login-time",
+    "historical rows or business settings changed during UI acceptance": "historical-rows",
+    "synthetic authenticated sessions were not revoked": "session-revocation",
+    "owned browser database did not close": "database-close",
+    "owned browser database cleanup failed": "database-drop",
+    "owned browser database still exists": "database-remains",
+    "cannot persist bounded fixture result": "fixture-receipt",
+    "cannot persist actual packaged API acceptance": "api-receipt",
+}
+
+
+def read_fixture_failure(scratch):
+    path = scratch / "fixture.log"
+    if not path.exists():
+        return None
+    log = regular(path, 5_000_000).read_text(errors="replace")
+    for message, code in FIXTURE_FAILURES.items():
+        if re.search(r"^\s+[^:\r\n]+\.go:\d+: " + re.escape(message) + r"$", log, re.MULTILINE):
+            return code
+    return None
+
 
 CA_CONFIG = """[req]
 prompt=no
@@ -269,6 +299,7 @@ def main():
     stage, supervisor, fixture, scratch, output = "input-validation", None, None, None, None
     passed, cleanup_ok, output_owned = False, True, False
     browser_progress, progress_rejected = None, False
+    fixture_failure = None
     candidate, packaged_api_passed = None, False
     try:
         root, billing, temp, output = validate(args)
@@ -363,6 +394,10 @@ def main():
                 cleanup_ok = False
         if scratch is not None:
             try:
+                fixture_failure = read_fixture_failure(scratch)
+            except (Failure, OSError, ValueError):
+                fixture_failure = "diagnostic-rejected"
+            try:
                 browser_progress = read_browser_progress(scratch)
             except (Failure, OSError, ValueError, KeyError, TypeError):
                 progress_rejected = True
@@ -377,7 +412,8 @@ def main():
                        "owned_process_cleanup": cleanup_ok, "host_trust_modified": False,
                        "actual_mysql_history_verified": passed, "owned_database_removed": passed,
                        "screenshots": SHOTS if passed else [], "financial_business_writes": 0 if passed else None,
-                       "browser_progress": browser_progress, "browser_progress_rejected": progress_rejected}
+                       "browser_progress": browser_progress, "browser_progress_rejected": progress_rejected,
+                       "fixture_failure": fixture_failure}
             if candidate is not None:
                 summary.update({"candidate_pair": candidate["pair"],
                                 "packaged_backend_executed": passed and packaged_api_passed,

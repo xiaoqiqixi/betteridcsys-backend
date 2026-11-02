@@ -325,6 +325,26 @@ class BrowserMySQLProgress(unittest.TestCase):
         self.path.unlink()
         self.assertIsNone(runner.read_browser_progress(self.scratch))
 
+    def test_fixture_diagnostic_exports_only_an_exact_fixed_code(self):
+        log = self.scratch / "fixture.log"
+        self.assertIsNone(runner.read_fixture_failure(self.scratch))
+        log.write_text("private SQL and credentials\n    owned_fixture_test.go:505: staff login timestamp does not match authenticated history\n")
+        self.assertEqual(runner.read_fixture_failure(self.scratch), "staff-login-time")
+        log.write_text("    owned_fixture_test.go:505: staff login timestamp does not match authenticated history: private value\n")
+        self.assertIsNone(runner.read_fixture_failure(self.scratch))
+        log.write_text("private SQL and credentials\n")
+        self.assertIsNone(runner.read_fixture_failure(self.scratch))
+
+    def test_fixture_diagnostic_refuses_symlinks_and_unbounded_logs(self):
+        log = self.scratch / "fixture.log"
+        log.symlink_to(self.path)
+        with self.assertRaises(runner.Failure):
+            runner.read_fixture_failure(self.scratch)
+        log.unlink()
+        log.write_bytes(b"x" * 5_000_001)
+        with self.assertRaises(runner.Failure):
+            runner.read_fixture_failure(self.scratch)
+
     def test_every_source_phase_has_an_allowlisted_diagnostic(self):
         import re
         script = SCRIPT.with_name("browser-mysql.mjs")
