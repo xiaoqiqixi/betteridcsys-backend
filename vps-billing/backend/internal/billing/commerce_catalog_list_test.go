@@ -29,7 +29,7 @@ func TestMySQLCommerceCatalogBatchesMatchDetailReads(t *testing.T) {
 	migrationExec(t, t.Context(), m.DB, `INSERT INTO product_option_choices VALUES(?,'SIZE','small',JSON_OBJECT('en','Small'),1),(?,'size','large',JSON_OBJECT('en','Large'),0)`, pid, pid)
 	migrationExec(t, t.Context(), m.DB, `INSERT INTO option_prices VALUES(?,'STORAGE','','CNY','monthly',11,1,2),(?,'size','SMALL','CNY','monthly',22,2,2),(?,'SIZE','LARGE','CNY','monthly',33,3,2),(?,'storage','','ZZZ','monthly',44,4,3)`, pid, pid, pid, pid)
 	migrationExec(t, t.Context(), m.DB, `INSERT INTO product_prices VALUES(?,'ZZZ','monthly',100,1,3)`, pid)
-	migrationExec(t, t.Context(), m.DB, `INSERT INTO os_images VALUES('batch-image','ubuntu','Ubuntu','24.04',10,TRUE,'test','image',REPEAT('a',64)),('batch-disabled','debian','Debian','12',10,FALSE,'test','image',REPEAT('b',64))`)
+	migrationExec(t, t.Context(), m.DB, `INSERT INTO os_images(id,family,name,version,min_disk_gb,enabled,controller_id,remote_image_id,sha256,connection_id) VALUES('batch-image','ubuntu','Ubuntu','24.04',10,TRUE,'test','image',REPEAT('a',64),'test'),('batch-disabled','debian','Debian','12',10,FALSE,'test','image',REPEAT('b',64),'test')`)
 	migrationExec(t, t.Context(), m.DB, `INSERT INTO product_os_images VALUES(?,'batch-image'),(?,'batch-disabled')`, pid, pid)
 	for i, status := range []string{"active", "suspended", "terminated", "cancelled"} {
 		migrationExec(t, t.Context(), m.DB, `INSERT INTO services(id,user_id,name,plan_name,region,status,next_due_at,price_minor,currency,cpu,memory_gb,disk_gb,product_id)
