@@ -47,7 +47,7 @@ async function mutation(page, suffix, action) {
 }
 async function login(page, email, password) {
   await page.goto(setup.origin + '/login');
-  await page.getByRole('button', { name: /^(中文|EN)$/ }).click();
+  await page.getByRole('button', { name: /^(语言|Language)$/ }).click();
   await page.getByRole('menuitem', { name: /^English/ }).click();
   await expect(page.locator('html')).toHaveAttribute('lang', 'en');
   await page.getByLabel('Email', { exact: true }).fill(email);

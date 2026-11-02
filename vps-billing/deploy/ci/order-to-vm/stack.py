@@ -648,6 +648,30 @@ http {{
                     require(int(self.sql("controller", f"SELECT COUNT(*) FROM controller_audit WHERE target='{setup}'")) > 0, "initial guest setup has no audit")
                     operations.append({"id": setup, "action": "initial-guest-setup", "state": "succeeded"})
             result = {"id": sid, "resource": resource, "ip": instance["ipv4"], "finance": view["status"], "power": args.get("power"), "operations": operations}
+            if args["step"] in ("stopped-snapshot", "restore-snapshot", "delete-snapshot"):
+                requested = next(task for task in tasks if task["id"] == args["task"])
+                storage = ledger.get("storage_operations", {}).get(requested["operation"])
+                require(storage and storage["result"]["status"] == "succeeded", "node snapshot operation did not succeed")
+                artifact_id = storage["task"]["artifact_id"]
+                require(re.fullmatch("[a-f0-9]{32}", artifact_id), "invalid snapshot artifact identity")
+                artifact = ledger["artifacts"][artifact_id]["artifact"]
+                require(artifact["instance_id"] == resource and artifact["kind"] == "snapshot", "snapshot belongs to another resource")
+                directory = self.root / "snapshots" / artifact_id
+                removed = args["step"] == "delete-snapshot"
+                expected = "deleted" if removed else "available"
+                require(artifact["state"] == expected, "node snapshot state differs")
+                require(self.sql("controller", f"SELECT state FROM controller_artifacts WHERE id='{artifact_id}' AND instance_id='{resource}'") == expected, "controller snapshot state differs")
+                if removed:
+                    require(not directory.exists(), "deleted snapshot files remain")
+                else:
+                    disk = directory / "disk.qcow2"
+                    require(disk.is_file() and digest(disk) == artifact["disk_sha256"], "snapshot disk checksum differs from node receipt")
+                    info = json.loads(self.command(["qemu-img", "info", "--output=json", disk]).stdout)
+                    require(info["format"] == "qcow2" and not info.get("backing-filename") and info["virtual-size"] == artifact["virtual_bytes"], "snapshot is not a complete independent disk")
+                    self.command(["qemu-img", "compare", "-f", "qcow2", "-F", "qcow2", instance["disk"], disk])
+                    if args["step"] == "restore-snapshot":
+                        require(digest(instance["disk"]) == artifact["disk_sha256"], "restored disk is not the exact snapshot")
+                result["snapshot"] = {"id": artifact_id, "state": expected, "disk_verified": True}
             if args["step"] == "console-vnc-handshake":
                 grants = int(self.sql("controller", f"SELECT COUNT(*) FROM controller_audit WHERE actor='billing' AND action='console.issued' AND target='{resource}'"))
                 require(grants == 1, "console handshake lacks its controller grant audit")
