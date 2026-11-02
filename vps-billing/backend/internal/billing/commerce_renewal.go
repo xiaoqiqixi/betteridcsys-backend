@@ -176,7 +176,7 @@ func fulfillRenewal06(ctx context.Context, tx *sql.Tx, v api.AdminInvoice, paid 
 				return err
 			}
 			if pending == 0 {
-				_, err = queueServiceTask06(ctx, tx, sid, "unsuspend", map[string]string{"source": "payment", "reason": "overdue"}, paid)
+				_, err = queueServiceTask06(ctx, tx, sid, "unsuspend", serviceActionPayload06{Version: 1, Source: "payment", Reason: "overdue", Params: serviceParams06{StartAfter: true}}, paid)
 			}
 		}
 	}

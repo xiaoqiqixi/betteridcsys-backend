@@ -248,6 +248,14 @@ func TestMySQLCommerceAutomationBillingJobsAndFailureIsolation(t *testing.T) {
 	if err = m.DB.QueryRow("SELECT COUNT(*) FROM service_tasks WHERE service_id=? AND action='unsuspend' AND status='queued'", sid).Scan(&count); err != nil || count != 1 {
 		t.Fatal("overdue service not scheduled for unsuspend", count, err)
 	}
+	var payload []byte
+	if err = m.DB.QueryRow("SELECT payload FROM service_tasks WHERE service_id=? AND action='unsuspend' AND status='queued'", sid).Scan(&payload); err != nil {
+		t.Fatal(err)
+	}
+	var resume serviceActionPayload06
+	if err = json.Unmarshal(payload, &resume); err != nil || !resume.Params.StartAfter {
+		t.Fatal("settled overdue invoice would leave the resumed guest powered off", err)
+	}
 	if err = m.DB.QueryRow("SELECT COUNT(*) FROM service_tasks WHERE service_id=? AND action='suspend' AND status='queued' AND id<>?", sid, manual).Scan(&count); err != nil || count != 0 {
 		t.Fatal("stale suspension survived payment", count, err)
 	}
