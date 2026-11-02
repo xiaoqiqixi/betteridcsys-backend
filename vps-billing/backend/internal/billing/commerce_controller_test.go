@@ -151,6 +151,19 @@ func TestMySQLCommerceControllerReadModelsAndOwnership(t *testing.T) {
 			t.Fatal("foreign owner reached controller")
 		}
 	}
+	// Feature availability comes from the controller even while billing has
+	// suspended a service. Mutation state checks remain separate from capability.
+	if _, err := m.DB.Exec("UPDATE services SET status='suspended' WHERE id=?", sid); err != nil {
+		t.Fatal(err)
+	}
+	status, body := customer.request("GET", "/api/v1/services/"+sid, nil, "")
+	if status != 200 {
+		t.Fatal(status, body)
+	}
+	contracttest.Response(t, "GET", "/services/{id}", body)
+	if body["data"].(map[string]any)["capabilities"].(map[string]any)["metrics"] != true {
+		t.Fatal("billing status erased controller capabilities")
+	}
 	controller.mu.Lock()
 	controller.view.Capabilities = serviceapi.Capabilities{}
 	controller.mu.Unlock()
@@ -161,7 +174,7 @@ func TestMySQLCommerceControllerReadModelsAndOwnership(t *testing.T) {
 		}
 		contracttest.Error(t, body)
 	}
-	status, body := customer.request("POST", "/api/v1/services/"+sid+"/console", map[string]any{}, "")
+	status, body = customer.request("POST", "/api/v1/services/"+sid+"/console", map[string]any{}, "")
 	if status != 501 {
 		t.Fatal(status, body)
 	}

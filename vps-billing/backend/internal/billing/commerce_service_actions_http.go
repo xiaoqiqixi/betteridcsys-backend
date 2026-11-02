@@ -69,7 +69,7 @@ func (a *App) serviceActions06HTTP(w http.ResponseWriter, r *http.Request, u Use
 	if !admin && op == "snapshots" && len(parts) == 3 && r.Method == "GET" {
 		return false
 	}
-	action, operation := "", ""
+	action := ""
 	var input any
 	var params serviceapi.Params
 	payload := serviceActionPayload06{Source: "customer"}
@@ -82,7 +82,6 @@ func (a *App) serviceActions06HTTP(w http.ResponseWriter, r *http.Request, u Use
 		}
 		input = in
 		action = in.Action
-		operation = "adminServiceAction"
 		payload.Source = "administrator"
 		payload.Reason = in.Reason
 	case !admin && len(parts) == 3 && op == "power" && r.Method == "POST":
@@ -92,7 +91,6 @@ func (a *App) serviceActions06HTTP(w http.ResponseWriter, r *http.Request, u Use
 		}
 		input = in
 		action = in.Action
-		operation = "powerService"
 	case !admin && len(parts) == 3 && op == "reinstall" && r.Method == "POST":
 		in := api.ReinstallServiceInput{}
 		if !commerceBody(w, r, "reinstallService", &in) {
@@ -100,7 +98,6 @@ func (a *App) serviceActions06HTTP(w http.ResponseWriter, r *http.Request, u Use
 		}
 		input = in
 		action = "reinstall"
-		operation = "reinstallService"
 		params.Password = in.RootPassword
 	case !admin && len(parts) == 3 && op == "reset-password" && r.Method == "POST":
 		in := api.ResetServicePasswordInput{}
@@ -109,7 +106,6 @@ func (a *App) serviceActions06HTTP(w http.ResponseWriter, r *http.Request, u Use
 		}
 		input = in
 		action = "reset_password"
-		operation = "resetServicePassword"
 		params.Password = in.RootPassword
 	case !admin && len(parts) == 3 && op == "rescue" && r.Method == "POST":
 		in := api.EnterRescueInput{}
@@ -118,10 +114,8 @@ func (a *App) serviceActions06HTTP(w http.ResponseWriter, r *http.Request, u Use
 		}
 		input = in
 		action = "rescue_enter"
-		operation = "enterRescue"
 	case !admin && len(parts) == 3 && op == "rescue" && r.Method == "DELETE":
 		action = "rescue_exit"
-		operation = "exitRescue"
 		requiredKey = false
 	case !admin && len(parts) == 3 && op == "snapshots" && r.Method == "POST":
 		in := api.CreateSnapshotInput{}
@@ -130,11 +124,9 @@ func (a *App) serviceActions06HTTP(w http.ResponseWriter, r *http.Request, u Use
 		}
 		input = in
 		action = "snapshot_create"
-		operation = "createSnapshot"
 		params.Name = in.Name
 	case !admin && len(parts) == 4 && op == "snapshots" && r.Method == "DELETE":
 		action = "snapshot_delete"
-		operation = "deleteSnapshot"
 		params.SnapshotID = parts[3]
 		input = parts[3]
 		requiredKey = false
@@ -148,13 +140,11 @@ func (a *App) serviceActions06HTTP(w http.ResponseWriter, r *http.Request, u Use
 			Confirm    string
 		}{parts[3], in.Confirm}
 		action = "snapshot_restore"
-		operation = "restoreSnapshot"
 		params.SnapshotID = parts[3]
 	default:
 		fail(w, r, 405, "METHOD_NOT_ALLOWED", "Method not allowed")
 		return true
 	}
-	_ = operation
 	m, ok := a.Store.(*MySQL)
 	if !ok {
 		a.serviceControllerError06(w, r, serviceapi.ErrUnavailable)

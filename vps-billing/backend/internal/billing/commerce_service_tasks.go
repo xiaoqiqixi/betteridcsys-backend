@@ -385,6 +385,9 @@ func serviceCapability06(v api.Service, action string) bool {
 	return false
 }
 func serviceRemoteState06(remote serviceapi.Service, action string) error {
+	if remote.RescueActive && (action == "reinstall" || action == "reset_password" || action == "resize") {
+		return serviceConflict06()
+	}
 	if remote.Suspended && action != "unsuspend" && action != "terminate" {
 		return serviceConflict06()
 	}

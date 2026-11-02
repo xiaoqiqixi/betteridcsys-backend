@@ -75,9 +75,6 @@ func serviceProjection06(v api.AdminService, remote serviceapi.Service) (api.Ser
 	// This SDK cannot carry the rescue root password required by the public API.
 	// Advertising rescue would promise a credential the controller never receives.
 	out.Capabilities.Rescue = false
-	if v.Status != "active" {
-		out.Capabilities = api.ServiceCapabilities{}
-	}
 	out.Power = &remote.Power
 	out.IPv4 = append([]string{}, remote.IPv4...)
 	out.IPv6 = append([]string{}, remote.IPv6...)
