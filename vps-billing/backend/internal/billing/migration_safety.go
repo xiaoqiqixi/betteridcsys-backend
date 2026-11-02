@@ -34,6 +34,9 @@ func validateAppliedMigrations(ctx context.Context, conn *sql.Conn, sources []st
 // MySQL DDL commits independently. Resume only known statements whose existing
 // definitions match exactly; a matching object name alone is insufficient.
 func prepareMigrationStatement(ctx context.Context, conn *sql.Conn, version int, q string) (string, bool, error) {
+	if version > 0 && version <= len(schemaVersions) && schemaVersions[version-1] == migrations.ServiceContractBounds {
+		return prepareCommerceColumn(ctx, conn, version, q)
+	}
 	if version > 0 && version <= len(schemaVersions) && schemaVersions[version-1] == migrations.CommerceServices {
 		return prepareCommerceServicesMigration(ctx, conn, version, q)
 	}

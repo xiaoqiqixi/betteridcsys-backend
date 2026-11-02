@@ -79,3 +79,6 @@ var AffiliateCommissions string
 
 //go:embed 026_commerce_services.sql
 var CommerceServices string
+
+//go:embed 027_service_contract_bounds.sql
+var ServiceContractBounds string

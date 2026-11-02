@@ -5,6 +5,7 @@ import (
 	api "aster/billing/internal/financeapi"
 	"encoding/json"
 	"net/http/httptest"
+	"strings"
 	"testing"
 )
 
@@ -133,7 +134,11 @@ func TestMySQLCommerceServiceHandlersOwnershipRevisionAndCancellation(t *testing
 		t.Fatal(err)
 	}
 	for _, kind := range []string{"end_of_period", "immediate"} {
-		request := map[string]any{"type": kind, "reason": "No longer needed"}
+		reason := "No longer needed"
+		if kind == "immediate" {
+			reason = strings.Repeat("退", 1000)
+		}
+		request := map[string]any{"type": kind, "reason": reason}
 		status, body = admin.request("POST", "/api/v1/services/"+sid+"/cancellation", request, "")
 		if status != 404 {
 			t.Fatal(status, body)
@@ -145,7 +150,7 @@ func TestMySQLCommerceServiceHandlersOwnershipRevisionAndCancellation(t *testing
 		}
 		contracttest.Response(t, "POST", "/services/{id}/cancellation", body)
 		view = serviceResponse06(t, body)
-		if view.Cancellation == nil || view.Cancellation.Type != kind || view.TerminatesAt == nil || len(view.RenewalOptions) != 0 {
+		if view.Cancellation == nil || view.Cancellation.Type != kind || view.Cancellation.Reason != reason || view.TerminatesAt == nil || len(view.RenewalOptions) != 0 {
 			t.Fatal(view)
 		}
 		status, body = admin.request("DELETE", "/api/v1/services/"+sid+"/cancellation", nil, "")

@@ -26,6 +26,9 @@ func commerceServicesSchema(version int, specs map[string]string) {
 	specs["services"] = strings.ReplaceAll(specs["services"], "status:enum('pending','active','suspended','terminated')!", "status:enum('pending','active','suspended','terminated','provisioning','cancelled','failed')!")
 	specs["services"] = strings.ReplaceAll(specs["services"], "plan_name:varchar(120)!", "plan_name:varchar(4000)!")
 	specs["services"] += " product_id:varchar(64)? cycle:varchar(16)! recurring_minor:bigint! price_override_minor:bigint? next_invoice_at:datetime(6)? auto_renew:tinyint(1)! label:varchar(80)! controller_id:varchar(64)? resource_id:varchar(128)? suspension_reason:varchar(500)? cancellation_type:varchar(16)? cancellation_reason:varchar(500)? cancellation_requested_at:datetime(6)? terminates_at:datetime(6)? specs_snapshot:json? os_snapshot:json? configuration_snapshot:json? created_at:datetime(6)? revision:bigint! anchor_day:int! last_change_at:datetime(6)?"
+	if schemaIncludes(version, migrations.ServiceContractBounds) {
+		specs["services"] = strings.ReplaceAll(specs["services"], "cancellation_reason:varchar(500)?", "cancellation_reason:varchar(1000)?")
+	}
 }
 func commerceServicesChecks(version int, checks map[string]map[string]string) {
 	if !schemaIncludes(version, migrations.CommerceServices) {

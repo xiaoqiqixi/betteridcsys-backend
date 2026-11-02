@@ -71,3 +71,39 @@ func TestMySQLCommerceServicesMigrationRejectsCollisionBeforeDDL(t *testing.T) {
 		t.Fatal("changed service before preflight", n, err)
 	}
 }
+
+func TestMySQLCommerceServiceContractBoundsMigrationResumes(t *testing.T) {
+	for _, applied := range []bool{false, true} {
+		t.Run(fmt.Sprint(applied), func(t *testing.T) {
+			m, ctx := migrationTestDatabase(t)
+			prefix := 0
+			for i, source := range schemaVersions {
+				if source == migrations.ServiceContractBounds {
+					prefix = i
+					break
+				}
+			}
+			if prefix == 0 {
+				t.Fatal("missing contract bounds migration")
+			}
+			migrationHistoricalPrefix(t, ctx, m, prefix)
+			if applied {
+				for _, statement := range migrationStatements(migrations.ServiceContractBounds) {
+					migrationExec(t, ctx, m.DB, statement)
+				}
+			}
+			for range 2 {
+				if err := m.Migrate(ctx); err != nil {
+					t.Fatal(err)
+				}
+			}
+			var length int
+			if err := m.DB.QueryRowContext(ctx, "SELECT CHARACTER_MAXIMUM_LENGTH FROM information_schema.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='services' AND COLUMN_NAME='cancellation_reason'").Scan(&length); err != nil || length != 1000 {
+				t.Fatal(length, err)
+			}
+			if status, err := m.SchemaStatus(ctx); err != nil || status.Status != "current" {
+				t.Fatal(status, err)
+			}
+		})
+	}
+}
