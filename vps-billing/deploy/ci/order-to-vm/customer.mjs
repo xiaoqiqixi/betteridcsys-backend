@@ -47,6 +47,9 @@ async function mutation(page, suffix, action) {
 }
 async function login(page, email, password) {
   await page.goto(setup.origin + '/login');
+  await page.getByRole('button', { name: /^(中文|EN)$/ }).click();
+  await page.getByRole('menuitem', { name: /^English/ }).click();
+  await expect(page.locator('html')).toHaveAttribute('lang', 'en');
   await page.getByLabel('Email', { exact: true }).fill(email);
   await page.getByLabel('Password', { exact: true }).fill(password);
   await mutation(page, '/auth/login', () => page.getByRole('button', { name: 'Sign in', exact: true }).click());
@@ -98,6 +101,9 @@ try {
   const [staffContext, staff] = await browser('staff');
   const [customerContext, customer] = await browser('customer');
   await login(staff, 'staff@e2e.invalid', setup.staffPassword);
+  const staffSession = await data(staffContext, '/session');
+  assert.equal(staffSession.user.role, 'admin');
+  assert.ok(staffSession.user.permissions.includes('invoices.write'), 'staff cannot record payments');
   await customer.goto(setup.origin + '/register');
   await customer.getByLabel('Full name', { exact: true }).fill('Acceptance Customer');
   await customer.getByLabel('Email', { exact: true }).fill('customer@e2e.invalid');
@@ -228,6 +234,12 @@ try {
   await fixture('finish');
 } catch (error) {
   let message = String(error.stack || error);
+  for (const context of contexts) for (const page of context.pages()) {
+    if (page.isClosed()) continue;
+    const url = new URL(page.url());
+    const buttons = await page.getByRole('button').allTextContents().catch(() => []);
+    message += `\nPage ${url.origin}${url.pathname}; language=${await page.locator('html').getAttribute('lang').catch(() => '')}; buttons=${JSON.stringify(buttons).slice(0, 1200)}`;
+  }
   if (setup) for (const [key, value] of Object.entries(setup)) if (key.endsWith('Password')) message = message.replaceAll(value, '<redacted>');
   await fixture('failed', { message }).catch(() => {});
   process.exitCode = 1;
