@@ -5,6 +5,7 @@ import (
 	"context"
 	"crypto/sha256"
 	"crypto/tls"
+	"database/sql"
 	"encoding/hex"
 	"encoding/json"
 	"net"
@@ -162,7 +163,9 @@ func browserPackagedAPI(t *testing.T, ctx context.Context, caseDir, origin, dsn 
 }
 
 // Every business row is compared after UI acceptance. Authentication events
-// and staff login timestamps are checked separately against exactly four logins. This includes exact money, issuer/currency/product snapshots,
+// and staff login timestamps are checked separately against exactly four logins.
+// Automatic scheduler receipts must prove zero processed/failed objects.
+// This includes exact money, issuer/currency/product snapshots,
 // audit events, idempotency records, outbox, provisioning and settings.
 func browserMySQLHistory(t *testing.T, ctx context.Context, m *MySQL) map[string]string {
 	t.Helper()
@@ -179,7 +182,7 @@ func browserMySQLHistory(t *testing.T, ctx context.Context, m *MySQL) map[string
 		if !regexp.MustCompile(`^[a-z_]+$`).MatchString(name) {
 			t.Fatal("unexpected fixture table name")
 		}
-		if name != "sessions" && name != "login_events" {
+		if name != "sessions" && name != "login_events" && name != "automation_runs" {
 			names = append(names, name)
 		}
 	}
@@ -229,6 +232,48 @@ func browserMySQLHistory(t *testing.T, ctx context.Context, m *MySQL) map[string
 		result[name] = hex.EncodeToString(sum[:])
 	}
 	return result
+}
+
+func browserMySQLAutomation(t *testing.T, ctx context.Context, m *MySQL, started time.Time, packaged bool) {
+	t.Helper()
+	// Production starts the scheduler immediately. Its receipts are expected;
+	// changing any financial, audit, outbox or provisioning row is still forbidden.
+	want := map[string]bool{}
+	if packaged {
+		for _, name := range []string{"apply_credit", "cancel_unpaid_orders", "close_tickets", "dispatch_provisioning", "email_outbox", "generate_renewals", "purge_sessions", "release_affiliate", "send_reminders", "suspend_overdue", "terminate_overdue"} {
+			want[name] = true
+		}
+	}
+	var ended time.Time
+	if m.DB.QueryRowContext(ctx, "SELECT UTC_TIMESTAMP(6)").Scan(&ended) != nil {
+		t.Fatal("cannot bind scheduler receipts to browser lifetime")
+	}
+	rows, err := m.DB.QueryContext(ctx, "SELECT job,scheduled_at,started_at,finished_at,status,processed,failed,message FROM automation_runs")
+	if err != nil {
+		t.Fatal("cannot inspect browser scheduler receipts")
+	}
+	defer rows.Close()
+	seen := map[string]int{}
+	for rows.Next() {
+		var job, status string
+		var scheduled, began time.Time
+		var finished sql.NullTime
+		var processed, failed int64
+		var message sql.NullString
+		if rows.Scan(&job, &scheduled, &began, &finished, &status, &processed, &failed, &message) != nil ||
+			!want[job] || status != "succeeded" || processed != 0 || failed != 0 || message.Valid ||
+			!finished.Valid || began.Before(started) || finished.Time.Before(began) || finished.Time.After(ended) ||
+			scheduled.Before(started.Truncate(time.Minute)) || scheduled.After(began) {
+			t.Fatal("browser scheduler changed objects or produced invalid receipts")
+		}
+		seen[job]++
+		if seen[job] > 16 {
+			t.Fatal("browser scheduler exceeded the bounded fixture lifetime")
+		}
+	}
+	if rows.Err() != nil || len(seen) != len(want) {
+		t.Fatal("browser scheduler receipts are incomplete")
+	}
 }
 
 func TestOwnedBrowserMySQLFixture(t *testing.T) {
@@ -368,6 +413,10 @@ func TestOwnedBrowserMySQLFixture(t *testing.T) {
 	if m.DB.QueryRowContext(ctx, "SELECT COUNT(*) FROM login_events").Scan(&loginEvents) != nil || loginEvents != 0 {
 		t.Fatal("browser fixture must begin without login events")
 	}
+	var automationRuns int
+	if m.DB.QueryRowContext(ctx, "SELECT COUNT(*) FROM automation_runs").Scan(&automationRuns) != nil || automationRuns != 0 {
+		t.Fatal("browser fixture must begin without scheduler receipts")
+	}
 	var browserStarted time.Time
 	if m.DB.QueryRowContext(ctx, "SELECT UTC_TIMESTAMP(6)").Scan(&browserStarted) != nil {
 		t.Fatal("cannot bind authentication evidence to browser lifetime")
@@ -500,6 +549,7 @@ waiting:
 			}
 		}
 	}
+	browserMySQLAutomation(t, ctx, m, browserStarted, stopPackagedAPI != nil)
 	if !reflect.DeepEqual(before, browserMySQLHistory(t, ctx, m)) {
 		t.Fatal("historical rows or business settings changed during UI acceptance")
 	}
