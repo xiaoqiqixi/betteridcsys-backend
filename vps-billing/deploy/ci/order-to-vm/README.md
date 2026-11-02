@@ -23,7 +23,10 @@ credentials. The mail sink accepts authenticated SMTP over TLS.
 
 Customer and staff interactions use the pinned frontend in Firefox. API reads,
 controller audit and operation records, the node journal, `virsh`, `qemu-img`,
-and guest-network ping provide independent assertions.
+guest-network ping, and the guest SSH service banner provide independent assertions.
+The fixture waits for SSH service readiness before advancing to another power
+action: a newly booting guest can answer ping before it handles ACPI shutdown.
+The readiness probe sends no credentials or guest commands.
 
 | Step | Required evidence |
 | --- | --- |

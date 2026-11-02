@@ -16,6 +16,7 @@ import select
 import secrets
 import shutil
 import signal
+import socket
 import ssl
 import subprocess
 import sys
@@ -66,6 +67,19 @@ class API:
 def require(condition, message):
     if not condition:
         raise RuntimeError(message)
+
+
+def guest_ssh_ready(address, port=22):
+    # Ping is available before userspace finishes booting. In particular the
+    # Jammy image can answer ICMP before it can handle an ACPI shutdown request.
+    # Observe its SSH service without credentials or a guest-side mutation.
+    try:
+        with socket.create_connection((address, port), timeout=2) as connection:
+            with connection.makefile("rb") as reply:
+                banner = reply.readline(256)
+    except OSError:
+        return False
+    return len(banner) <= 255 and re.fullmatch(rb"SSH-2[.]0-[!-~]+(?: [ -~]+)?\r?\n", banner) is not None
 
 
 def digest(path):
@@ -595,6 +609,11 @@ http {{
                     self.evidence["last_service_observation"]["guest_reachable"] = reachable.returncode == 0
                     if reachable.returncode:
                         observation["waiting_for"] = "guest_network"
+                        return False
+                    ssh_ready = guest_ssh_ready(instance["ipv4"])
+                    observation["guest_ssh_ready"] = ssh_ready
+                    if not ssh_ready:
+                        observation["waiting_for"] = "guest_ssh"
                         return False
             operations = []
             for task in tasks:
