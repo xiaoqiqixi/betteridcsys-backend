@@ -45,6 +45,45 @@ func TestMySQLCommerceRenewalContractConcurrencyAndMonthEnd(t *testing.T) {
 	if err = json.Unmarshal(raw, &invoice); err != nil {
 		t.Fatal(err)
 	}
+	for _, source := range []string{"administrator", "cancellation", "", "automation"} {
+		t.Run("queued-termination-"+source, func(t *testing.T) {
+			taskID := ID()
+			if _, err := m.DB.Exec("INSERT INTO service_tasks(id,service_id,action,status,payload,created_at,updated_at) VALUES(?,?,'terminate','queued',JSON_OBJECT('source',?,'reason','overdue'),UTC_TIMESTAMP(6),UTC_TIMESTAMP(6))", taskID, sid, source); err != nil {
+				t.Fatal(err)
+			}
+			defer func() {
+				if _, err := m.DB.Exec("UPDATE service_tasks SET status='failed',finished_at=UTC_TIMESTAMP(6) WHERE id=?", taskID); err != nil {
+					t.Fatal(err)
+				}
+			}()
+			allowed := source == "automation"
+			status, body := customer.request("POST", "/api/v1/services/"+sid+"/renew", map[string]string{"cycle": "monthly"}, ID())
+			if allowed {
+				if status != 200 {
+					t.Fatal(status, body)
+				}
+				contracttest.Response(t, "POST", "/services/{id}/renew", body)
+			} else {
+				if status != 409 {
+					t.Fatal("renewal bypassed explicit termination", status, body)
+				}
+				contracttest.Error(t, body)
+			}
+			v, err := m.Invoice06(t.Context(), f.customer.ID, invoice.ID)
+			if err != nil {
+				t.Fatal(err)
+			}
+			tx, err := m.DB.BeginTx(t.Context(), nil)
+			if err != nil {
+				t.Fatal(err)
+			}
+			defer tx.Rollback()
+			payable, err := serviceInvoicePayable06(t.Context(), tx, v)
+			if err != nil || payable != allowed {
+				t.Fatal("invoice payment ignored termination source", payable, err)
+			}
+		})
+	}
 	var wg sync.WaitGroup
 	results := make(chan api.Invoice, 8)
 	errs := make(chan error, 8)
@@ -199,13 +238,21 @@ func TestMySQLCommerceAutomationBillingJobsAndFailureIsolation(t *testing.T) {
 	if _, err = m.DB.Exec("UPDATE services SET status='suspended',suspension_reason='overdue' WHERE id=?", sid); err != nil {
 		t.Fatal(err)
 	}
+	manual := ID()
+	if _, err = m.DB.Exec("INSERT INTO service_tasks(id,service_id,action,status,payload,created_at,updated_at) VALUES(?,?,'suspend','queued',JSON_OBJECT('source','administrator','reason','overdue'),UTC_TIMESTAMP(6),UTC_TIMESTAMP(6))", manual, sid); err != nil {
+		t.Fatal(err)
+	}
 	if _, err = m.AddInvoicePayment06(t.Context(), f.admin, invoiceID, invoice06Payment(599, ID()), ID()); err != nil {
 		t.Fatal(err)
 	}
 	if err = m.DB.QueryRow("SELECT COUNT(*) FROM service_tasks WHERE service_id=? AND action='unsuspend' AND status='queued'", sid).Scan(&count); err != nil || count != 1 {
 		t.Fatal("overdue service not scheduled for unsuspend", count, err)
 	}
-	if err = m.DB.QueryRow("SELECT COUNT(*) FROM service_tasks WHERE service_id=? AND action='suspend' AND status='queued'", sid).Scan(&count); err != nil || count != 0 {
+	if err = m.DB.QueryRow("SELECT COUNT(*) FROM service_tasks WHERE service_id=? AND action='suspend' AND status='queued' AND id<>?", sid, manual).Scan(&count); err != nil || count != 0 {
 		t.Fatal("stale suspension survived payment", count, err)
+	}
+	var status string
+	if err = m.DB.QueryRow("SELECT status FROM service_tasks WHERE id=?", manual).Scan(&status); err != nil || status != "queued" {
+		t.Fatal("payment cancelled an explicit administrator action", status, err)
 	}
 }

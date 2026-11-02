@@ -37,7 +37,7 @@ func serviceInvoicePayable06(ctx context.Context, tx *sql.Tx, v api.AdminInvoice
 		return false, nil
 	}
 	var terminating int
-	err = tx.QueryRowContext(ctx, "SELECT COUNT(*) FROM service_tasks WHERE service_id=? AND action='terminate' AND (status IN ('running','uncertain') OR (status='queued' AND COALESCE(JSON_UNQUOTE(JSON_EXTRACT(payload,'$.reason')),'')<>'overdue'))", sid).Scan(&terminating)
+	err = tx.QueryRowContext(ctx, "SELECT COUNT(*) FROM service_tasks WHERE service_id=? AND action='terminate' AND (status IN ('running','uncertain') OR (status='queued' AND (COALESCE(JSON_UNQUOTE(JSON_EXTRACT(payload,'$.source')),'')<>'automation' OR COALESCE(JSON_UNQUOTE(JSON_EXTRACT(payload,'$.reason')),'')<>'overdue')))", sid).Scan(&terminating)
 	return terminating == 0, err
 }
 
@@ -89,7 +89,7 @@ func (m *MySQL) renewService06(ctx context.Context, actor User, id, cycle, key s
 			return out, ErrCommerceInput
 		}
 		var pending int
-		if err = tx.QueryRowContext(ctx, "SELECT COUNT(*) FROM service_tasks WHERE service_id=? AND ((action='resize' AND status IN ('queued','running','uncertain')) OR (action='terminate' AND (status IN ('running','uncertain') OR (status='queued' AND COALESCE(JSON_UNQUOTE(JSON_EXTRACT(payload,'$.reason')),'')<>'overdue'))))", id).Scan(&pending); err != nil {
+		if err = tx.QueryRowContext(ctx, "SELECT COUNT(*) FROM service_tasks WHERE service_id=? AND ((action='resize' AND status IN ('queued','running','uncertain')) OR (action='terminate' AND (status IN ('running','uncertain') OR (status='queued' AND (COALESCE(JSON_UNQUOTE(JSON_EXTRACT(payload,'$.source')),'')<>'automation' OR COALESCE(JSON_UNQUOTE(JSON_EXTRACT(payload,'$.reason')),'')<>'overdue')))))", id).Scan(&pending); err != nil {
 			return out, err
 		}
 		if pending != 0 {
@@ -164,7 +164,7 @@ func fulfillRenewal06(ctx context.Context, tx *sql.Tx, v api.AdminInvoice, paid 
 	// A queued overdue suspension has not reached the controller and can safely
 	// be cancelled. An executing operation must finish or be looked up first.
 	if end.After(time.Now().UTC()) {
-		if _, err = tx.ExecContext(ctx, "UPDATE service_tasks SET status='failed',message='Overdue balance paid before dispatch',updated_at=?,finished_at=? WHERE service_id=? AND action IN ('suspend','terminate') AND status='queued' AND JSON_UNQUOTE(JSON_EXTRACT(payload,'$.reason'))='overdue'", paid, paid, sid); err != nil {
+		if _, err = tx.ExecContext(ctx, "UPDATE service_tasks SET status='failed',message='Overdue balance paid before dispatch',updated_at=?,finished_at=? WHERE service_id=? AND action IN ('suspend','terminate') AND status='queued' AND JSON_UNQUOTE(JSON_EXTRACT(payload,'$.source'))='automation' AND JSON_UNQUOTE(JSON_EXTRACT(payload,'$.reason'))='overdue'", paid, paid, sid); err != nil {
 			return err
 		}
 		if _, err = tx.ExecContext(ctx, "UPDATE services SET terminates_at=NULL WHERE id=? AND cancellation_type IS NULL AND (status='active' OR suspension_reason='overdue')", sid); err != nil {
