@@ -218,12 +218,9 @@ func (m *MySQL) OrderPage06(ctx context.Context, owner, cursor, status, search s
 		v := ids[len(ids)-1]
 		next = &v
 	}
-	for _, id := range ids {
-		v, err := readOrder06(ctx, tx, owner, id)
-		if err != nil {
-			return out, nil, err
-		}
-		out = append(out, v)
+	out, err = readOrderPageRecords06(ctx, tx, ids, owner)
+	if err != nil {
+		return out, nil, err
 	}
 	return out, next, tx.Commit()
 }
