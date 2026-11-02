@@ -209,6 +209,7 @@ func TestMySQLCommerceModuleRenewalHookIsClaimedOnce(t *testing.T) {
 	f := mysqlCatalogFixture(t)
 	m := f.store.(*MySQL)
 	sid, _ := paidService06(t, f)
+	activateServiceFixture06(t, m, sid)
 	fake, runtime := serviceControllerFixture06(t, m, f.customer.ID, sid)
 	app := NewApp(m, Config{Services: runtime})
 	invoice, err := m.RenewService06(t.Context(), f.customer, sid, "monthly", ID(), time.Now().UTC())
