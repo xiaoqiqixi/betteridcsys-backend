@@ -547,19 +547,25 @@ http {{
             require(view.get("module_id") == "server.aster-cloud" and view.get("connection_id") == "e2e-cloud", "service bypassed the Aster Cloud module")
             rows = self.sql("finance", f"SELECT JSON_OBJECT('id',id,'action',action,'status',status,'operation',operation_id) FROM service_tasks WHERE service_id='{sid}' ORDER BY created_at,id")
             tasks = [json.loads(row) for row in rows.splitlines()]
-            self.evidence["last_service_observation"] = {"id": sid, "status": view["status"], "power": view.get("power"), "tasks": tasks}
+            observation = {"id": sid, "status": view["status"], "power": view.get("power"), "tasks": tasks}
+            self.evidence["last_service_observation"] = observation
             require(not any(t["status"] in ("failed", "uncertain") for t in tasks), "service task definitively failed or became uncertain")
             if any(t["status"] != "succeeded" for t in tasks) or view["status"] != args["state"]:
+                observation["waiting_for"] = "finance_task_and_state"
                 return False
             if args.get("task") and not any(t["id"] == args["task"] for t in tasks):
+                observation["waiting_for"] = "requested_task"
                 return False
             resource = view.get("resource_id")
             if not resource:
+                observation["waiting_for"] = "resource_identity"
                 return False
             require(re.fullmatch("[a-f0-9]{32}", resource), "invalid controller resource")
+            observation["resource"] = resource
             ledger = json.loads((self.root / "node-state/journal.json").read_text())
             instance = ledger["instances"].get(resource)
             if not instance:
+                observation["waiting_for"] = "node_instance"
                 return False
             domain = "aster-" + resource
             live = self.command(["virsh", "-c", "qemu:///system", "domstate", domain], check=False)
@@ -570,6 +576,8 @@ http {{
             else:
                 actual = live.stdout.decode().strip()
                 if actual != ("shut off" if args["power"] == "stopped" else "running") or view.get("power") != args["power"]:
+                    observation["waiting_for"] = "libvirt_and_finance_power"
+                    observation["domain_state"] = actual if actual in ("running", "shut off", "paused") else "unconfirmed"
                     return False
                 require(view.get("primary_ipv4") == instance["ipv4"] and bool(instance["ipv4"]), "customer IP differs from node allocation")
                 require(bool(instance.get("suspended")) == (args["state"] == "suspended"), "node suspension flag differs from finance")
@@ -584,6 +592,7 @@ http {{
                 if args["power"] == "running":
                     reachable = self.command(["ping", "-n", "-c", "1", "-W", "1", instance["ipv4"]], check=False)
                     if reachable.returncode:
+                        observation["waiting_for"] = "guest_network"
                         return False
             operations = []
             for task in tasks:
