@@ -67,15 +67,12 @@ func (m *MySQL) ClientOverview06(ctx context.Context, uid string, at time.Time) 
 	if err != nil {
 		return out, err
 	}
-	for _, id := range ids {
-		record, err := readInvoice06(ctx, tx, id, uid, "")
-		if err != nil {
-			return out, err
-		}
-		raw, _ := json.Marshal(record.Invoice)
-		var v api.InvoiceSummary
-		_ = json.Unmarshal(raw, &v)
-		out.Invoices = append(out.Invoices, v)
+	summaries, err := readInvoiceSummaries06(ctx, tx, ids, uid)
+	if err != nil {
+		return out, err
+	}
+	for _, summary := range summaries {
+		out.Invoices = append(out.Invoices, customerInvoiceSummary06(summary))
 	}
 	rows, err := tx.QueryContext(ctx, "SELECT id,title,body,pinned,published,published_at FROM announcements WHERE published=TRUE AND published_at<=? ORDER BY pinned DESC,published_at DESC,id DESC LIMIT 5", at)
 	if err != nil {

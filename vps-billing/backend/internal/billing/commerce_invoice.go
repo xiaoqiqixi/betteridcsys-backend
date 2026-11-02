@@ -219,8 +219,8 @@ func (m *MySQL) Invoice06(ctx context.Context, owner, id string) (api.AdminInvoi
 	return v.Invoice, tx.Commit()
 }
 
-func (m *MySQL) InvoicePage06(ctx context.Context, owner, cursor, status, kind, search string, limit int) ([]api.AdminInvoice, *string, error) {
-	out := []api.AdminInvoice{}
+func (m *MySQL) InvoicePage06(ctx context.Context, owner, cursor, status, kind, search string, limit int) ([]api.AdminInvoiceSummary, *string, error) {
+	out := []api.AdminInvoiceSummary{}
 	if limit < 1 || limit > 100 || len(search) > 120 {
 		return out, nil, ErrCommerceInput
 	}
@@ -304,12 +304,9 @@ func (m *MySQL) InvoicePage06(ctx context.Context, owner, cursor, status, kind, 
 		last := ids[len(ids)-1]
 		next = &last
 	}
-	for _, id := range ids {
-		record, err := readInvoice06(ctx, tx, id, owner, "")
-		if err != nil {
-			return out, nil, err
-		}
-		out = append(out, record.Invoice)
+	out, err = readInvoiceSummaries06(ctx, tx, ids, owner)
+	if err != nil {
+		return out, nil, err
 	}
 	return out, next, tx.Commit()
 }

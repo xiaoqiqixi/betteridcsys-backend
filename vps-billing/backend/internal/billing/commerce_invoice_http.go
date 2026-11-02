@@ -2,7 +2,6 @@ package billing
 
 import (
 	api "aster/billing/internal/financeapi"
-	"encoding/json"
 	"net/http"
 	"strconv"
 	"strings"
@@ -251,21 +250,11 @@ func (a *App) invoiceList06HTTP(w http.ResponseWriter, r *http.Request, u User, 
 		return
 	}
 	if admin {
-		out := api.AdminListInvoicesResponse{Items: []api.AdminInvoiceSummary{}, NextCursor: next}
-		for _, v := range records {
-			raw, _ := json.Marshal(v)
-			var item api.AdminInvoiceSummary
-			_ = json.Unmarshal(raw, &item)
-			out.Items = append(out.Items, item)
-		}
-		jsonOut(w, 200, out)
+		jsonOut(w, 200, api.AdminListInvoicesResponse{Items: records, NextCursor: next})
 	} else {
 		out := api.ListInvoicesResponse{Items: []api.InvoiceSummary{}, NextCursor: next}
 		for _, v := range records {
-			raw, _ := json.Marshal(v)
-			var item api.InvoiceSummary
-			_ = json.Unmarshal(raw, &item)
-			out.Items = append(out.Items, item)
+			out.Items = append(out.Items, customerInvoiceSummary06(v))
 		}
 		jsonOut(w, 200, out)
 	}
