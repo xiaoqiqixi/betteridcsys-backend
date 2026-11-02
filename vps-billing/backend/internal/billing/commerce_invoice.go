@@ -604,6 +604,10 @@ func completeInvoice06(ctx context.Context, tx *sql.Tx, record invoiceRecord06, 
 		if err := fulfillRenewal06(ctx, tx, v, paid); err != nil {
 			return v, err
 		}
+	case "upgrade":
+		if err := fulfillUpgrade06(ctx, tx, v, paid); err != nil {
+			return v, err
+		}
 	case "manual", "top_up":
 	default:
 		return v, ErrCommerceUnavailable

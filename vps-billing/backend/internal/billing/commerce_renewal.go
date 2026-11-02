@@ -30,6 +30,9 @@ func serviceInvoicePayable06(ctx context.Context, tx *sql.Tx, v api.AdminInvoice
 	if (s.View.Status != "active" && s.View.Status != "suspended") || s.View.Cancellation != nil {
 		return false, nil
 	}
+	if kind == "upgrade" && (s.View.Status != "active" || !s.Due.After(time.Now().UTC())) {
+		return false, nil
+	}
 	if kind == "renewal" && (!start.Valid || !s.Due.Equal(start.Time)) {
 		return false, nil
 	}
@@ -87,6 +90,12 @@ func (m *MySQL) renewService06(ctx context.Context, actor User, id, cycle, key s
 		}
 		var pending int
 		if err = tx.QueryRowContext(ctx, "SELECT COUNT(*) FROM service_tasks WHERE service_id=? AND ((action='resize' AND status IN ('queued','running','uncertain')) OR (action='terminate' AND (status IN ('running','uncertain') OR (status='queued' AND COALESCE(JSON_UNQUOTE(JSON_EXTRACT(payload,'$.reason')),'')<>'overdue'))))", id).Scan(&pending); err != nil {
+			return out, err
+		}
+		if pending != 0 {
+			return out, serviceConflict06()
+		}
+		if err = tx.QueryRowContext(ctx, "SELECT COUNT(*) FROM invoice_service_changes c JOIN invoices i ON i.id=c.invoice_id WHERE c.service_id=? AND c.kind='upgrade' AND i.status='unpaid'", id).Scan(&pending); err != nil {
 			return out, err
 		}
 		if pending != 0 {

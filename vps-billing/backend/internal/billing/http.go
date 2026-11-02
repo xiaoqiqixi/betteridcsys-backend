@@ -26,6 +26,7 @@ import (
 )
 
 type Config struct {
+	Services                ServiceInspector06
 	CommerceContractVersion string
 	Logger                  *slog.Logger
 	Updates                 UpdateService
@@ -357,6 +358,9 @@ func (a *App) serveAuthorized(w http.ResponseWriter, r *http.Request, u User, p 
 		return
 	}
 	if a.commerceServicesHTTP(w, r, u, p) {
+		return
+	}
+	if a.upgrade06HTTP(w, r, u, p) {
 		return
 	}
 	if a.overview06HTTP(w, r, u, p) {

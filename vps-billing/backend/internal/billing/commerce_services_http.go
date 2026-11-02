@@ -90,6 +90,12 @@ func (a *App) commerceServicesHTTP(w http.ResponseWriter, r *http.Request, u Use
 		switch r.Method {
 		case "GET":
 			out, err = m.Service06(r.Context(), owner, id)
+			if err == nil && a.Config.Services != nil {
+				remote, inspectErr := a.Config.Services.InspectService(r.Context(), out)
+				if inspectErr == nil {
+					out.Capabilities = remote.Capabilities
+				}
+			}
 		case "PATCH":
 			op := "updateService"
 			if admin {

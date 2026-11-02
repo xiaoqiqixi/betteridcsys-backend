@@ -57,6 +57,9 @@ func (m *MySQL) CancelInvoice06(ctx context.Context, actor User, id, reason stri
 		if err = invoiceAttemptBarrier06(ctx, tx, id, false); err != nil {
 			return out, err
 		}
+		if err = releaseUpgradeStock06(ctx, tx, out); err != nil {
+			return out, err
+		}
 		if out.CreditApplied.AmountMinor > 0 {
 			if _, err = appendCredit06(ctx, tx, out.ClientID, "refund", out.CreditApplied.AmountMinor, &id, "Credit released from cancelled invoice", time.Now().UTC()); err != nil {
 				return out, err
