@@ -47,7 +47,8 @@ jobs:
           import json
           from pathlib import Path
           events = [json.loads(line) for line in Path('account-tests.jsonl').read_text().splitlines()]
-          skipped = [event.get('Test') for event in events if event.get('Action') == 'skip']
+          # Packages with no test files emit a package-level skip without Test.
+          skipped = [event['Test'] for event in events if event.get('Action') == 'skip' and event.get('Test')]
           passed = [event.get('Test') for event in events if event.get('Action') == 'pass' and event.get('Test')]
           assert not skipped, f'Backend acceptance skipped tests: {skipped}'
           assert len(passed) >= 300, f'Expected full backend acceptance tests, got {len(passed)}'
