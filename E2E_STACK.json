@@ -1,9 +1,9 @@
 {
   "schema": 1,
-  "integration": "core",
+  "integration": "server.aster-cloud",
   "cloud": {
     "repository": "xiaoqiqixi/betteridcsys-cloud",
-    "source_sha": "ba52445794c44105fdb61c7b6d2bf6dde7277d26"
+    "source_sha": "a36451ef8cde03beb8eb788733a0ec29d010e919"
   },
   "frontend": {
     "repository": "xiaoqiqixi/betteridcsys-frontend",

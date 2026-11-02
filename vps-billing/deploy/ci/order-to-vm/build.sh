@@ -9,6 +9,7 @@ go build -trimpath -buildvcs=false -o "$out/aster-api" ./cmd/server
 go build -trimpath -buildvcs=false -o "$out/aster-plugin-host" ./cmd/plugin-host
 go build -trimpath -buildvcs=false -o "$out/paymentfixture" ./plugins/paymentfixture/cmd/plugin
 go build -trimpath -buildvcs=false -o "$out/smtp" ./plugins/smtp/cmd/plugin
+go build -trimpath -buildvcs=false -o "$out/server.aster-cloud" ./plugins/server.aster-cloud/cmd/plugin
 python3 -B - "$root" <<'PY'
 import json, pathlib, sys
 root = pathlib.Path(sys.argv[1])

@@ -18,7 +18,10 @@ jobs:
           persist-credentials: false
       - name: Validate immutable stack pins
         id: pins
-        run: python3 -B vps-billing/deploy/ci/order-to-vm/stack.py pins >> "$GITHUB_OUTPUT"
+        run: |
+          python3 -B vps-billing/deploy/ci/order-to-vm/stack.py pins >> "$GITHUB_OUTPUT"
+          python3 -B vps-billing/deploy/ci/order-to-vm/test_mail_sink.py
+          node --check vps-billing/deploy/ci/order-to-vm/customer.mjs
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           repository: xiaoqiqixi/betteridcsys-cloud

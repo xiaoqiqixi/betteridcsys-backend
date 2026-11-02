@@ -12,6 +12,7 @@ import json
 import os
 from pathlib import Path
 import re
+import select
 import secrets
 import shutil
 import signal
@@ -22,6 +23,7 @@ import time
 import urllib.error
 import urllib.request
 import uuid
+import xml.etree.ElementTree as ET
 
 ROOT = Path(__file__).resolve().parents[4]
 HERE = Path(__file__).resolve().parent
@@ -233,6 +235,16 @@ class Stack:
         database = "aster_e2e" if name == "finance" else "aster_controller_e2e"
         return self.command([self.mysql_client, "--no-defaults", "--protocol=SOCKET", "--socket=" + str(socket), "--user=root", "--batch", "--skip-column-names", database], data=query).stdout.decode().strip()
 
+    def regressions(self):
+        self.log("checkout credential and overdue billing regression tests on MySQL 8.4")
+        self.sql("finance", "CREATE DATABASE aster_e2e_regression_test CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci")
+        result = self.command([BIN / "scheduler.test", "-test.v", "-test.timeout=4m",
+            "-test.run=^(TestMySQLCheckoutPasswordSurvivesPaymentAndBootstrap|TestOverdueDecisionSurvivesSchedulerClockAndRenewalRace|TestMySQLCommerceAutomationBillingJobsAndFailureIsolation)$"],
+            env=dict(self.env, ASTER_MYSQL_TEST_DSN="root@unix(" + str(self.private / "mysql-finance/mysql.sock") + ")/aster_e2e_regression_test?parseTime=true"), check=False, timeout=250)
+        self.write(self.private / "regressions.log", result.stdout + result.stderr)
+        require(result.returncode == 0 and b"--- SKIP:" not in result.stdout and result.stdout.count(b"--- PASS:") >= 3, "real MySQL regression tests failed or skipped")
+        self.complete_step("mysql-regressions", tests=3)
+
     def network(self):
         self.log("dedicated libvirt bridge and pinned IPv4 filter")
         self.command(["ip", "link", "add", "e2evm0", "type", "bridge"])
@@ -285,7 +297,7 @@ class Stack:
         self.write(self.private / "admin-write.token", self.password())
         profile = {"id": "e2e-node", "datacenter_id": "e2e-dc", "group_id": "", "endpoint": "https://127.0.0.1:19444", "allowed_cidrs": ["127.0.0.0/8"], "ca_file": str(self.root / "ca.crt"), "client_cert_file": str(self.root / "node-client.crt"), "client_key_file": str(self.private / "node-client.key"), "server_certificate_sha256": cert_hash("node"), "allow_software_emulation": emulation}
         resources = {"datacenter_id": "e2e-dc", "compute_node_id": "e2e-node", "node_group_id": "", "image_id": "ubuntu-24", "cpu_cores": 1, "memory_mib": 512, "system_disk_gib": 4, "system_storage_id": "local", "network_type": "normal", "traffic_direction": "all", "ipv4_count": 1}
-        controller = {"schema": 1, "controller_id": "e2e-cloud", "listen": "127.0.0.1:19443", "tls_cert_file": str(self.root / "controller.crt"), "tls_key_file": str(self.private / "controller.key"), "dsn_file": str(self.private / "controller.dsn"), "billing_token_file": str(self.private / "billing.token"), "admin_read_token_file": str(self.private / "admin-read.token"), "admin_write_token_file": str(self.private / "admin-write.token"), "heartbeat_ttl_seconds": 300, "nodes": [profile], "presets": [{"id": "e2e-small", "node_id": "e2e-node", "resources": resources}], "dispatcher": {"enabled": True}, "service": {"snapshot_limit": 3, "images": [{"id": im["id"], "family": "linux", "name": im["name"], "version": im["version"], "min_disk_gb": im["min_disk_gb"], "sha256": im["sha256"], "node_ids": ["e2e-node"]} for im in self.pin["images"]]}}
+        controller = {"schema": 1, "controller_id": "e2e-cloud", "listen": "127.0.0.1:19443", "tls_cert_file": str(self.root / "controller.crt"), "tls_key_file": str(self.private / "controller.key"), "dsn_file": str(self.private / "controller.dsn"), "billing_token_file": str(self.private / "billing.token"), "admin_read_token_file": str(self.private / "admin-read.token"), "admin_write_token_file": str(self.private / "admin-write.token"), "heartbeat_ttl_seconds": 300, "nodes": [profile], "presets": [{"id": "e2e-small", "node_id": "e2e-node", "resources": resources}, {"id": "e2e-large", "node_id": "e2e-node", "resources": dict(resources, cpu_cores=2, memory_mib=768, system_disk_gib=6)}], "dispatcher": {"enabled": True}, "service": {"snapshot_limit": 3, "images": [{"id": im["id"], "family": "linux", "name": im["name"], "version": im["version"], "min_disk_gb": im["min_disk_gb"], "sha256": im["sha256"], "node_ids": ["e2e-node"]} for im in self.pin["images"]]}}
         self.controller_config = self.write(self.private / "controller.json", controller)
         for command in ("migrate", "register-nodes"):
             self.command([BIN / "aster-controller", command, "--config", self.controller_config])
@@ -308,12 +320,11 @@ class Stack:
         os.chown(self.api_dir, self.api_uid, self.api_gid)
         self.write(self.api_dir / "mysql.dsn", (self.private / "finance.dsn").read_bytes(), uid=self.api_uid, gid=self.api_gid)
         self.write(self.api_dir / "session", self.password(), uid=self.api_uid, gid=self.api_gid)
-        self.write(self.api_dir / "billing.token", self.billing_token, uid=self.api_uid, gid=self.api_gid)
         self.write(self.api_dir / "smtp.key", secrets.token_bytes(32), uid=self.api_uid, gid=self.api_gid)
-        policy = {"schema": 1, "controllers": [{"id": "e2e-cloud", "enabled": True, "endpoint": "https://127.0.0.1:19443/v1/provisioning", "allowed_cidrs": ["127.0.0.0/8"], "token_file": str(self.api_dir / "billing.token"), "ca_file": str(self.root / "ca.crt")}]}
-        self.write(self.root / "controllers.json", policy, 0o644)
+        self.write(self.api_dir / "finance.key", (self.private / "finance.key").read_bytes(), uid=self.api_uid, gid=self.api_gid)
         self.plugins()
-        self.api_env = dict(self.env, APP_MODE="production", APP_ORIGIN="https://localhost:19445", LISTEN_ADDR="127.0.0.1:18080", MYSQL_DSN_FILE=str(self.api_dir / "mysql.dsn"), SESSION_SECRET_FILE=str(self.api_dir / "session"), SERVICE_CONTROLLER_POLICY_FILE=str(self.root / "controllers.json"), SMTP_ENCRYPTION_KEY_FILE=str(self.api_dir / "smtp.key"), COMMERCE_API_VERSION="0.6", TRUSTED_PROXY_CIDRS="127.0.0.0/8", PLUGIN_DIRECTORY=str(self.root / "plugins"), PLUGIN_POLICY_FILE=str(self.root / "plugins.json"))
+        self.api_env = dict(self.env, APP_MODE="production", APP_ORIGIN="https://localhost:19445", LISTEN_ADDR="127.0.0.1:18080", MYSQL_DSN_FILE=str(self.api_dir / "mysql.dsn"), SESSION_SECRET_FILE=str(self.api_dir / "session"), SMTP_ENCRYPTION_KEY_FILE=str(self.api_dir / "smtp.key"), COMMERCE_API_VERSION="0.6", TRUSTED_PROXY_CIDRS="127.0.0.0/8", PLUGIN_DIRECTORY=str(self.root / "plugins"), PLUGIN_POLICY_FILE=str(self.root / "plugins.json"))
+        self.api_env.update(API_TLS_CERT_FILE=str(self.root / "finance.crt"), API_TLS_KEY_FILE=str(self.api_dir / "finance.key"))
         prefix = ["setpriv", "--reuid=" + str(self.api_uid), "--regid=" + str(self.api_gid), "--init-groups"]
         self.command(prefix + [BIN / "aster-api", "-migrate"], env=self.api_env)
         self.admin_password = self.password()
@@ -331,6 +342,10 @@ http {{
   access_log off;
   client_body_temp_path {self.private}/nginx-body;
   proxy_temp_path {self.private}/nginx-proxy;
+  proxy_ssl_verify on;
+  proxy_ssl_trusted_certificate {self.root}/ca.crt;
+  proxy_ssl_server_name on;
+  proxy_ssl_name localhost;
   server {{
     listen 127.0.0.1:19445 ssl;
     server_name localhost;
@@ -339,8 +354,8 @@ http {{
     ssl_protocols TLSv1.2 TLSv1.3;
     root {static};
     location / {{ try_files $uri $uri/ /index.html; }}
-    location /api/ {{ proxy_pass http://127.0.0.1:18080; proxy_set_header Host $http_host; proxy_set_header X-Forwarded-Proto https; proxy_set_header X-Forwarded-For $remote_addr; }}
-    location = /readyz {{ proxy_pass http://127.0.0.1:18080; }}
+    location /api/ {{ proxy_pass https://127.0.0.1:18080; proxy_set_header Host $http_host; proxy_set_header X-Forwarded-Proto https; proxy_set_header X-Forwarded-For $remote_addr; }}
+    location = /readyz {{ proxy_pass https://127.0.0.1:18080; }}
   }}
 }}
 """
@@ -351,17 +366,19 @@ http {{
         self.evidence["steps"].append({"id": "stack-readiness", "passed": True})
 
     def plugins(self):
-        self.log("isolated SMTP and paymentfixture workers")
+        self.log("isolated server.aster-cloud, SMTP and paymentfixture workers")
         (self.private / "mail").mkdir(mode=0o700)
         self.smtp_password = self.password()
         self.write(self.private / "smtp-password", self.smtp_password)
         self.spawn("mail-sink", [sys.executable, "-B", HERE / "mail_sink.py", self.root])
         self.payment_key = secrets.token_bytes(32)
         self.write(self.private / "payment-fixture-key", self.payment_key)
+        self.write(self.private / "server-config.json", {"schema": 1, "controller_id": "e2e-cloud", "endpoint": "https://127.0.0.1:19443/v1/provisioning", "allowed_cidrs": ["127.0.0.0/8"], "custom_ca": True})
         policy = {"schema": 1, "revision": 1}
         specifications = [
             ("smtp", "email.smtp", "1.1.0", "aster.smtp/1", ["smtp.send"], 19446),
             ("payment", "payment.fixture", "0.1.0", "aster.payment/1", ["payment.checkout", "payment.verify_callback"], 443),
+            ("server", "server.aster-cloud", "1.0.0", "aster.server/1", ["server.call"], 19443),
         ]
         for kind, identifier, version, protocol, capabilities, port in specifications:
             user = "aster-e2e-" + kind
@@ -370,34 +387,50 @@ http {{
             directory = self.root / "plugins" / identifier / version
             directory.mkdir(parents=True, mode=0o755)
             binary = directory / "plugin"
-            shutil.copyfile(BIN / ("paymentfixture" if kind == "payment" else kind), binary)
+            shutil.copyfile(BIN / {"payment": "paymentfixture", "server": "server.aster-cloud", "smtp": "smtp"}[kind], binary)
             binary.chmod(0o555)
             manifest = {"schema": 1, "id": identifier, "version": version, "protocol": protocol,
-                "core_min": "0.5.3" if kind == "payment" else "0.4.0", "core_max_exclusive": "0.7.0",
+                "core_min": {"payment": "0.5.3", "smtp": "0.4.0", "server": "0.6.0"}[kind], "core_max_exclusive": "0.7.0",
                 "capabilities": capabilities, "executable": "plugin", "sha256": digest(binary)}
             if kind == "payment":
                 manifest["payment"] = {"currencies": [{"code": "CNY", "precision": 2}, {"code": "USD", "precision": 2}, {"code": "JPY", "precision": 0}], "checkout_hosts": ["checkout.example.test"]}
             path = self.write(directory / "manifest.json", manifest, 0o644)
-            sockets = self.root / (kind + "-socket")
+            sockets = Path("/run/aster-server/e2e-cloud") if kind == "server" else self.root / (kind + "-socket")
+            sockets.parent.mkdir(parents=True, exist_ok=True)
             sockets.mkdir(mode=0o750)
             os.chown(sockets, uid, self.api_gid)
             selection = {"enabled": True, "id": identifier, "version": version, "manifest_sha256": digest(path), "worker_uid": uid,
-                "client_uid": self.api_uid, "socket": str(sockets / "plugin.sock"), "allowed_targets": [{"host": "localhost", "port": port}]}
+                "client_uid": self.api_uid, "socket": str(sockets / "plugin.sock"), "allowed_targets": [{"host": "127.0.0.1" if kind == "server" else "localhost", "port": port}]}
             if kind == "payment":
                 selection["merchant_id"] = "e2e-merchant"
-            policy[kind] = selection
+            if kind == "server":
+                selection["slot"] = "e2e-cloud"
+                policy["servers"] = [selection]
+                self.module_state = Path("/var/lib/aster-server/e2e-cloud")
+                self.module_state.mkdir(parents=True, mode=0o700)
+                os.chown(self.module_state, uid, self.api_gid)
+            else:
+                policy[kind] = selection
         self.write(self.root / "plugins.json", policy, 0o644)
         for kind, *_ in specifications:
             unit = "aster-e2e-" + kind + "-" + os.environ["GITHUB_RUN_ID"]
             args = ["systemd-run", "--unit=" + unit, "--collect", "--property=User=aster-e2e-" + kind, "--property=Group=" + str(self.api_gid),
-                "--property=NoNewPrivileges=yes", "--property=ProtectSystem=strict", "--property=ReadWritePaths=" + str(self.root / (kind + "-socket")),
+                "--property=NoNewPrivileges=yes", "--property=ProtectSystem=strict", "--property=ReadWritePaths=" + str(Path("/run/aster-server/e2e-cloud") if kind == "server" else self.root / (kind + "-socket")),
                 "--property=BindReadOnlyPaths=" + str(self.root / "ca.crt") + ":/etc/ssl/certs/ca-certificates.crt"]
             if kind == "payment":
                 args += ["--property=LoadCredential=payment-fixture-key:" + str(self.private / "payment-fixture-key")]
+            if kind == "server":
+                args += ["--property=ReadWritePaths=" + str(self.module_state),
+                    "--property=LoadCredential=server_config.json:" + str(self.private / "server-config.json"),
+                    "--property=LoadCredential=server_token:" + str(self.private / "billing.token"),
+                    "--property=LoadCredential=server_ca.pem:" + str(self.root / "ca.crt")]
             args += [str(BIN / "aster-plugin-host"), "--root", str(self.root / "plugins"), "--policy", str(self.root / "plugins.json"), "--kind", kind]
+            if kind == "server":
+                args += ["--slot", "e2e-cloud"]
             self.command(args)
             self.units.append(unit)
-            self.wait(kind + " worker socket", lambda k=kind: (self.root / (k + "-socket/plugin.sock")).is_socket())
+            socket = Path(policy["servers"][0]["socket"] if kind == "server" else policy[kind]["socket"])
+            self.wait(kind + " worker socket", socket.is_socket)
 
     def tick(self, job, at=None):
         if at is not None:
@@ -443,6 +476,215 @@ http {{
             return False
         return self.wait("verification delivered over real SMTP TLS", delivered)
 
+    def catalogue(self):
+        self.log("approved Aster Cloud module connection and two product plans")
+        connections = self.admin.call("/admin/integrations/connections")
+        require(len(connections) == 1 and connections[0]["id"] == "e2e-cloud" and connections[0]["module_id"] == "server.aster-cloud", "scenario is not bound to the real module")
+        modules = self.admin.call("/admin/integrations/modules")
+        require(len(modules) == 1 and modules[0]["status"] == "ready", "Aster Cloud module unavailable")
+        for action in ("test", "sync-images"):
+            self.admin.call("/admin/integrations/connections/e2e-cloud/" + action, "POST", {})
+        images = self.admin.call("/admin/os-images")
+        require(len(images) == 2, "approved controller image catalog differs")
+        for image in images:
+            self.admin.call("/admin/os-images/" + image["id"], "PATCH", {"enabled": True})
+        taxonomy = self.admin.call("/admin/catalog-taxonomy")
+        for section in ("types", "regions", "nodes"):
+            require(bool(taxonomy[section]), "seed taxonomy missing " + section)
+            for row in taxonomy[section]:
+                row["visible"] = True
+        self.admin.call("/admin/catalog-taxonomy", "POST", taxonomy)
+        self.products = []
+        for name, cpu, memory, disk, price in (("Small", 1, 512, 4, 100), ("Large", 2, 768, 6, 200)):
+            config = {"preset_id": "e2e-" + name.lower(), "cpu_cores": cpu, "memory_mb": memory, "disk_gb": disk, "bandwidth_mbps": 0}
+            product = {"slug": "e2e-" + name.lower(), "kind": "cloud_server", "node_id": taxonomy["nodes"][0]["id"],
+                "name": {"en": "E2E " + name}, "description": {"en": "Real libvirt acceptance"}, "badges": [],
+                "specs": {"cpu_cores": cpu, "memory_mb": memory, "disk_gb": disk, "bandwidth_mbps": 0, "traffic_gb": None, "ipv4": 1, "ipv6": False},
+                "prices": [{"cycle": "monthly", "currency": "CNY", "recurring_minor": price, "setup_minor": 0, "decimal_places": 2}],
+                "options": [{"id": uuid.uuid4().hex, "key": "os", "kind": "os_image", "label": {"en": "Operating system"}, "required": True, "choices": []}],
+                "os_image_ids": [image["id"] for image in images], "visibility": "public", "stock": None, "sort_order": len(self.products),
+                "module": {"module_id": "server.aster-cloud", "connection_id": "e2e-cloud", "config": config}}
+            self.products.append(self.admin.call("/admin/products", "POST", product))
+        self.complete_step("module-product-binding", module="server.aster-cloud", connection="e2e-cloud")
+
+    def complete_step(self, name, **evidence):
+        self.evidence["steps"].append(dict(id=name, passed=True, **evidence))
+        self.log(name + " passed")
+        return evidence
+
+    def service_state(self, args):
+        sid = args["id"]
+        require(re.fullmatch("[a-f0-9]{32}", sid), "invalid service assertion identity")
+        def observed():
+            self.tick("dispatch_provisioning")
+            view = self.admin.call("/admin/services/" + sid)
+            require(view.get("module_id") == "server.aster-cloud" and view.get("connection_id") == "e2e-cloud", "service bypassed the Aster Cloud module")
+            rows = self.sql("finance", f"SELECT JSON_OBJECT('id',id,'action',action,'status',status,'operation',operation_id) FROM service_tasks WHERE service_id='{sid}' ORDER BY created_at,id")
+            tasks = [json.loads(row) for row in rows.splitlines()]
+            require(not any(t["status"] in ("failed", "uncertain") for t in tasks), "service task definitively failed or became uncertain")
+            if any(t["status"] != "succeeded" for t in tasks) or view["status"] != args["state"]:
+                return False
+            if args.get("task") and not any(t["id"] == args["task"] for t in tasks):
+                return False
+            resource = view.get("resource_id")
+            if not resource:
+                return False
+            require(re.fullmatch("[a-f0-9]{32}", resource), "invalid controller resource")
+            ledger = json.loads((self.root / "node-state/journal.json").read_text())
+            instance = ledger["instances"].get(resource)
+            if not instance:
+                return False
+            domain = "aster-" + resource
+            live = self.command(["virsh", "-c", "qemu:///system", "domstate", domain], check=False)
+            if args["state"] == "terminated":
+                require(live.returncode != 0 and instance["state"] == "deleted", "terminated domain still defined")
+                require(not Path(instance["directory"]).exists(), "terminated disks still exist")
+                require(not any(i["state"] != "deleted" and i["ipv4"] == instance["ipv4"] for i in ledger["instances"].values()), "IP is still allocated")
+            else:
+                actual = live.stdout.decode().strip()
+                if actual != ("shut off" if args["power"] == "stopped" else "running") or view.get("power") != args["power"]:
+                    return False
+                require(view.get("primary_ipv4") == instance["ipv4"] and bool(instance["ipv4"]), "customer IP differs from node allocation")
+                require(bool(instance.get("suspended")) == (args["state"] == "suspended"), "node suspension flag differs from finance")
+                xml = ET.fromstring(self.command(["virsh", "-c", "qemu:///system", "dumpxml", domain]).stdout)
+                if args.get("image"):
+                    require(instance["resources"]["image_id"] == args["image"], "reinstall did not change actual image")
+                if args.get("cpu"):
+                    require(int(xml.findtext("vcpu")) == args["cpu"] and int(xml.findtext("memory")) == args["memory"] * 1024, "domain resize differs")
+                    disk = json.loads(self.command(["qemu-img", "info", "--force-share", "--output=json", instance["disk"]]).stdout)
+                    require(disk["virtual-size"] == args["disk"] * (1 << 30), "disk resize differs")
+                    require(view["specs"]["cpu_cores"] == args["cpu"] and view["specs"]["memory_mb"] == args["memory"] and view["specs"]["disk_gb"] == args["disk"], "controller resize projection differs")
+                if args["power"] == "running":
+                    reachable = self.command(["ping", "-n", "-c", "1", "-W", "1", instance["ipv4"]], check=False)
+                    if reachable.returncode:
+                        return False
+            operations = []
+            for task in tasks:
+                operation = task["operation"]
+                require(operation and re.fullmatch("[a-f0-9]{32}", operation), "task missing remote operation identity")
+                state = self.sql("controller", f"SELECT state FROM controller_jobs WHERE operation_id='{operation}' UNION ALL SELECT state FROM controller_operations WHERE id='{operation}'")
+                require(state == "succeeded", "controller operation did not succeed: " + task["action"])
+                audit = int(self.sql("controller", f"SELECT COUNT(*) FROM controller_audit WHERE target='{operation}'"))
+                require(audit > 0, "controller operation has no audit evidence")
+                operations.append({"id": operation, "action": task["action"], "state": state, "audits": audit})
+                if task["action"] == "provision":
+                    setup = hashlib.sha256((operation + ":setup").encode()).hexdigest()[:32]
+                    require(self.sql("controller", f"SELECT state FROM controller_operations WHERE id='{setup}'") == "succeeded", "initial image and credential setup did not succeed")
+                    require(int(self.sql("controller", f"SELECT COUNT(*) FROM controller_audit WHERE target='{setup}'")) > 0, "initial guest setup has no audit")
+                    operations.append({"id": setup, "action": "initial-guest-setup", "state": "succeeded"})
+            return {"id": sid, "resource": resource, "ip": instance["ipv4"], "finance": view["status"], "power": args.get("power"), "operations": operations}
+        result = self.wait(args["step"] + " finance/controller/libvirt agreement", observed, timeout=300)
+        self.complete_step(args["step"], **result)
+        return result
+
+    def gateway_callback(self, invoice):
+        require(re.fullmatch("[a-f0-9]{32}", invoice), "invalid fixture invoice")
+        raw = self.sql("finance", "SELECT JSON_OBJECT('attempt_id',id,'account_id',user_id,'order_id',order_id,'invoice_id',invoice_id,"
+            "'amount_minor',amount_minor,'currency',currency,'currency_decimal_places',currency_decimal_places) FROM payment_attempts WHERE invoice_id='" + invoice + "'")
+        event = json.loads(raw)
+        event.update(provider_id="payment.fixture", event_id="e2e-event-" + uuid.uuid4().hex,
+            transaction_id="e2e-transaction-" + uuid.uuid4().hex, merchant_account_id="e2e-merchant", status="settled",
+            settled_at=datetime.now(timezone.utc).isoformat(timespec="microseconds").replace("+00:00", "Z"))
+        body = json.dumps(event, sort_keys=True, separators=(",", ":")).encode()
+        request = urllib.request.Request("https://localhost:19445/api/v1/payment-callbacks/payment.fixture", method="POST", data=body,
+            headers={"Content-Type": "application/json", "X-Fixture-Signature": hmac.new(self.payment_key, body, hashlib.sha256).hexdigest()})
+        with urllib.request.urlopen(request, context=self.context, timeout=30) as response:
+            require(response.status == 200, "signed real payment callback rejected")
+        require(self.admin.call("/admin/invoices/" + invoice)["status"] == "paid", "gateway callback did not settle invoice")
+        return self.complete_step("paymentfixture-signed-callback", invoice=invoice)
+
+    def no_plaintext(self):
+        for name, database in (("finance", "aster_e2e"), ("controller", "aster_controller_e2e")):
+            raw = self.command([self.mysql_root / "bin/mysqldump", "--no-defaults", "--protocol=SOCKET", "--socket=" + str(self.private / ("mysql-" + name) / "mysql.sock"), "--user=root", "--skip-comments", "--hex-blob", "--set-gtid-purged=OFF", database], timeout=60).stdout
+            for password in self.secrets:
+                require(password.encode() not in raw and password.encode().hex().upper().encode() not in raw.upper(), "plaintext secret persisted in " + name)
+        logs = list(self.private.glob("*.log")) + list(Path("/var/log/libvirt/qemu").glob("aster-*.log")) + [self.root / "node-state/journal.json"] + list(self.module_state.glob("*.json"))
+        for unit in self.units:
+            self.write(self.private / (unit + ".log"), self.command(["journalctl", "--no-pager", "-u", unit, "-n", "1000"], check=False).stdout)
+        for path in logs + list(self.private.glob("aster-e2e-*.log")):
+            if path.is_file():
+                raw = path.read_bytes()
+                for password in self.secrets:
+                    require(password.encode() not in raw, "plaintext secret found in log or journal")
+        return self.complete_step("no-plaintext-passwords", databases=2, logs=len(logs))
+
+    def browser_request(self, method, args):
+        if method == "setup":
+            return self.browser_setup
+        if method == "mail":
+            return self.verification_link(args["address"])
+        if method == "step":
+            return self.complete_step(args.pop("id"), **args)
+        if method == "registered":
+            require(re.fullmatch("[a-f0-9]{32}", args["id"]), "invalid customer")
+            require(self.sql("finance", "SELECT email_verified FROM account_profiles WHERE user_id='" + args["id"] + "'") == "1", "email verification missing")
+            return self.complete_step("register-verify-sign-in", customer=args["id"])
+        if method == "gateway":
+            return self.gateway_callback(args["invoice"])
+        if method == "state":
+            return self.service_state(args)
+        if method == "provisioned":
+            order = self.admin.call("/admin/orders/" + args["order"])
+            ids = [sid for item in order["items"] for sid in item["service_ids"]]
+            require(len(ids) == 1, "paid order did not create one service")
+            return self.service_state({"id": ids[0], "state": "active", "power": "running", "step": args["step"]})
+        if method == "overdue":
+            service = self.admin.call("/admin/services/" + args["id"])
+            due = datetime.fromisoformat(service["next_due_at"].replace("Z", "+00:00"))
+            self.tick("generate_renewals", due + timedelta(days=2))
+            self.tick("suspend_overdue")
+            self.service_state({"id": args["id"], "state": "suspended", "power": "stopped", "step": "renewal-and-overdue-suspension"})
+            invoice = self.sql("finance", "SELECT invoice_id FROM invoice_service_changes WHERE service_id='" + args["id"] + "' AND kind='renewal'")
+            return self.admin.call("/admin/invoices/" + invoice)
+        if method == "terminate":
+            self.tick("terminate_overdue")
+            return self.service_state({"id": args["id"], "state": "terminated", "step": "terminate-" + args["id"]})
+        if method == "finish":
+            self.no_plaintext()
+            require(self.pin["integration"] == "server.aster-cloud", "final acceptance requires server module")
+            self.evidence["passed"] = True
+            return True
+        if method == "failed":
+            raise RuntimeError("browser scenario: " + args["message"][:6000])
+        raise RuntimeError("unknown fixture operation")
+
+    def browser(self):
+        self.log("Playwright customer and staff journey")
+        profiles = {}
+        for name in ("customer", "staff"):
+            profile = self.private / ("firefox-" + name)
+            profile.mkdir(mode=0o700)
+            self.command(["certutil", "-N", "--empty-password", "-d", "sql:" + str(profile)])
+            self.command(["certutil", "-A", "-d", "sql:" + str(profile), "-n", "Acceptance", "-t", "C,,", "-i", self.root / "ca.crt"])
+            profiles[name] = str(profile)
+        self.browser_setup = {"origin": "https://localhost:19445", "profiles": profiles, "product": self.products[0]["id"],
+            "staffPassword": self.admin_password, **{name + "Password": self.password() for name in ("customer", "root", "second", "reset", "reinstall")}}
+        # Frontend password policy requires mixed classes; append fixed classes to
+        # cryptographically random material and retain every exact canary.
+        for key in self.browser_setup:
+            if key.endswith("Password") and key != "staffPassword":
+                self.browser_setup[key] += "aA1!"
+                self.secrets.append(self.browser_setup[key])
+        log = (self.private / "browser.log").open("wb")
+        process = subprocess.Popen(["node", str(HERE / "customer.mjs")], cwd=ROOT,
+            stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=log, text=True, start_new_session=True,
+            env=dict(self.env, NODE_EXTRA_CA_CERTS=str(self.root / "ca.crt")))
+        self.processes.append(("browser", process, log))
+        deadline = time.monotonic() + 20 * 60
+        while process.poll() is None and time.monotonic() < deadline:
+            ready, _, _ = select.select([process.stdout], [], [], 0.5)
+            if not ready:
+                continue
+            line = process.stdout.readline(65537)
+            if not line:
+                break
+            require(len(line) <= 65536, "browser fixture message too large")
+            request = json.loads(line)
+            value = self.browser_request(request["method"], request["args"])
+            process.stdin.write(json.dumps({"id": request["id"], "value": value}) + "\n")
+            process.stdin.flush()
+        require(process.wait(timeout=10) == 0 and self.evidence["passed"], "browser journey did not finish")
+
     def cleanup(self):
         for unit in self.units:
             self.write(self.private / (unit + ".log"), self.command(["journalctl", "--no-pager", "-u", unit, "-n", "60"], check=False).stdout)
@@ -456,6 +698,12 @@ http {{
                     os.killpg(process.pid, signal.SIGKILL)
                     process.wait(timeout=5)
             log.close()
+        ledger = self.root / "node-state/journal.json"
+        if ledger.is_file():
+            for instance in json.loads(ledger.read_text())["instances"].values():
+                if re.fullmatch("aster-[a-f0-9]{32}", instance["domain"]):
+                    self.command(["virsh", "-c", "qemu:///system", "destroy", instance["domain"]], check=False)
+                    self.command(["virsh", "-c", "qemu:///system", "undefine", instance["domain"]], check=False)
         self.command(["virsh", "-c", "qemu:///system", "nwfilter-undefine", "aster-e2e-filter"], check=False)
         self.command(["ip", "link", "del", "e2evm0"], check=False)
         # Only bounded redacted diagnostic tails are exported; never DBs/keys/mail.
@@ -468,17 +716,22 @@ http {{
                 lines.append(path.name + "\n" + tail)
         self.write(self.report / "diagnostics.txt", "\n".join(lines)[-60000:], 0o644)
         self.write(self.report / "summary.json", self.evidence, 0o644)
+        if hasattr(self, "module_state"):
+            shutil.rmtree(self.module_state)
+            shutil.rmtree("/run/aster-server/e2e-cloud")
         shutil.rmtree(self.root)
 
     def run(self):
         try:
             self.tls()
             self.mysql()
+            self.regressions()
             self.network()
             self.cloud()
             self.finance()
             self.configure()
-            self.evidence["passed"] = True
+            self.catalogue()
+            self.browser()
         except Exception as error:
             self.evidence["failure"] = {"phase": self.phase, "error": str(error)}
             raise
