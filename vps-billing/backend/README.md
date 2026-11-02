@@ -31,6 +31,7 @@ demo 无初始服务或假已付账单；创建订单只生成待付款记录，
 | -------------------------------------------- | -------------------------------------------------------------------------------------------------- |
 | APP_MODE                                     | production（默认）或显式 demo                                                                      |
 | LISTEN_ADDR                                  | 默认 127.0.0.1:8080；原生 systemd 模板使用 127.0.0.1:18080                                         |
+| API_TLS_CERT_FILE / API_TLS_KEY_FILE          | 可选，必须同时配置；为 API 回环监听启用 TLS 1.2+，反向代理须校验证书和主机名                         |
 | APP_ORIGIN                                   | 精确 HTTPS 来源，无路径/尾斜杠，如 https://billing.example.com                                     |
 | SESSION_SECRET / SESSION_SECRET_FILE         | 独立随机秘密，至少 32 字节；优先受限文件                                                           |
 | MYSQL_DSN / MYSQL_DSN_FILE                   | Go MySQL DSN；生产优先验证证书的 tls=true                                                          |

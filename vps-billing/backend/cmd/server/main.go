@@ -7,6 +7,7 @@ import (
 	"aster/billing/internal/updates"
 	"aster/billing/pkg/pluginapi"
 	"context"
+	"crypto/tls"
 	"encoding/json"
 	"errors"
 	"flag"
@@ -230,6 +231,9 @@ func main() {
 	if err != nil {
 		fatal("HTTP listener failed")
 	}
+	if local.tls != nil {
+		listener = tls.NewListener(listener, local.tls)
+	}
 	stop, stopSignals := signal.NotifyContext(context.Background(), syscall.SIGTERM, syscall.SIGINT)
 	defer stopSignals()
 	if !demo {
@@ -281,6 +285,7 @@ func validProductionOrigin(origin string) bool {
 }
 
 type localConfiguration struct {
+	tls            *tls.Config
 	proxyCIDRs     []string
 	integrations   map[string]integrations.Config
 	smtpKey        *billing.SMTPCipher
@@ -292,6 +297,10 @@ type localConfiguration struct {
 // release lookup, socket bind, user creation or migration. All production
 // commands run this before any database mutation.
 func loadLocalConfiguration(listen string, demo bool) (cfg localConfiguration, err error) {
+	cfg.tls, err = apiTLSConfig(os.Getenv("API_TLS_CERT_FILE"), os.Getenv("API_TLS_KEY_FILE"))
+	if err != nil {
+		return cfg, err
+	}
 	host, port, e := net.SplitHostPort(listen)
 	number, portErr := strconv.Atoi(port)
 	if e != nil || portErr != nil || number < 1 || number > 65535 || (!demo && (net.ParseIP(host) == nil || !net.ParseIP(host).IsLoopback())) {
