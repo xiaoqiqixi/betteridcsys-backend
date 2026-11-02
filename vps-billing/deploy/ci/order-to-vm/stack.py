@@ -731,6 +731,8 @@ http {{
         require(process.wait(timeout=10) == 0 and self.evidence["passed"], "browser journey did not finish")
 
     def cleanup(self):
+        neighbors = self.command(["ip", "neigh", "show", "dev", "e2evm0"], check=False).stdout
+        self.write(self.private / "guest-network.log", neighbors)
         for unit in self.units:
             self.write(self.private / (unit + ".log"), self.command(["journalctl", "--no-pager", "-u", unit, "-n", "60"], check=False).stdout)
             self.command(["systemctl", "stop", unit], check=False)
@@ -767,10 +769,20 @@ http {{
                     if log.is_file():
                         self.write(self.private / (instance["domain"] + ".log"), log.read_bytes()[-16384:])
                     self.command(["virsh", "-c", "qemu:///system", "destroy", instance["domain"]], check=False)
+                    if not self.evidence["passed"] and Path(instance["disk"]).is_file():
+                        # Inspect only after stopping the owned guest, through a
+                        # read-only appliance. This never changes guest readiness.
+                        try:
+                            guest = self.command(["virt-cat", "-a", instance["disk"], "/var/log/cloud-init.log", "/var/log/cloud-init-output.log"],
+                                env=dict(self.env, LIBGUESTFS_BACKEND="direct"), timeout=180, check=False)
+                            tail = (guest.stdout + guest.stderr)[-65536:].decode(errors="replace")
+                        except subprocess.TimeoutExpired:
+                            tail = "Read-only guest log inspection exceeded its deadline.\n"
+                        for secret in self.secrets:
+                            tail = tail.replace(secret, "<REDACTED>")
+                        self.write(self.report / (instance["domain"] + "-cloud-init.log"), tail, 0o644)
                     self.command(["virsh", "-c", "qemu:///system", "undefine", instance["domain"]], check=False)
         self.command(["virsh", "-c", "qemu:///system", "nwfilter-undefine", "aster-e2e-filter"], check=False)
-        neighbors = self.command(["ip", "neigh", "show", "dev", "e2evm0"], check=False).stdout
-        self.write(self.private / "guest-network.log", neighbors)
         self.command(["ip", "link", "del", "e2evm0"], check=False)
         # Only bounded redacted diagnostic tails are exported; never DBs/keys/mail.
         lines = []

@@ -54,7 +54,8 @@ redacted `diagnostics.txt`. The summary identifies the exact source commits,
 hypervisor mode, node readiness and capabilities, completed steps, and the last
 observed service tasks. A step is recorded only after its assertions pass; the
 artifact also retains a bounded guest screenshot and domain XML when a VM check
-fails, so a running QEMU process can be distinguished from a booted guest. The
+fails, plus redacted cloud-init log tails read from its stopped disk through a
+read-only appliance. This distinguishes a running QEMU process from a configured guest. The
 overall result remains false until the final secret-retention check succeeds.
 Private credentials, mail bodies, and database dumps are never uploaded.
 Cleanup happens after assertions and does not count as successful termination.
