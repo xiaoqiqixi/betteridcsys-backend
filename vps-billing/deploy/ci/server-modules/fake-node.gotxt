@@ -20,6 +20,8 @@ func TestServerModuleFakeNode(t *testing.T) {
 		t.Fatal("disposable Linux CI fixture required")
 	}
 	m, runner, task := newFixture(t)
+	// This job exercises the fake runner and does not require KVM hardware.
+	m.Config.AllowSoftwareEmulation = true
 	m.Config.Certificate = filepath.Join(root, "node.crt")
 	m.Config.PrivateKey = filepath.Join(root, "private/node.key")
 	m.Config.ControllerCA = filepath.Join(root, "ca.crt")
