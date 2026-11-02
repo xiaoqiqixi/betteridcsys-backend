@@ -601,7 +601,7 @@ http {{
                     operations.append({"id": setup, "action": "initial-guest-setup", "state": "succeeded"})
             return {"id": sid, "resource": resource, "ip": instance["ipv4"], "finance": view["status"], "power": args.get("power"), "operations": operations}
         result = self.wait(args["step"] + " finance/controller/libvirt agreement", observed, timeout=300)
-        self.complete_step(args["step"], **result)
+        self.complete_step(args["step"], service=sid, **{key: value for key, value in result.items() if key != "id"})
         return result
 
     def gateway_callback(self, invoice):
