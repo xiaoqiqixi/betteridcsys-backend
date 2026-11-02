@@ -206,7 +206,10 @@ func preflightChecks(version int) map[string]map[string]string {
 	}
 	if schemaIncludes(version, migrations.AffiliateSettings) {
 		for k, v := range affiliateSettingsChecks {
-			checks[k] = v
+			checks[k] = make(map[string]string, len(v))
+			for name, expression := range v {
+				checks[k][name] = expression
+			}
 		}
 	}
 	return checks

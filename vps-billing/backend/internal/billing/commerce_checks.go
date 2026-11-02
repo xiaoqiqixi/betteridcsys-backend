@@ -39,10 +39,10 @@ func (p *commerceCheckParser) expression(minimum int) any {
 			p.ok = false
 		}
 	case "-":
-		value := p.expression(5)
+		value := p.expression(6)
 		left = []any{"negative", value}
 	default:
-		if token == "" || token == ")" || token == "," || token == "and" || token == "or" || token == "in" {
+		if token == "" || token == ")" || token == "," || token == "and" || token == "or" || token == "in" || token == "is" {
 			p.ok = false
 		}
 		left = token
@@ -51,17 +51,27 @@ func (p *commerceCheckParser) expression(minimum int) any {
 		op := p.peek()
 		priority := 0
 		switch op {
-		case "and":
+		case "or":
 			priority = 1
-		case "=", "<", ">", "<=", ">=", "in":
+		case "and":
 			priority = 2
-		case "+", "-":
+		case "=", "<", ">", "<=", ">=", "in", "is":
 			priority = 3
+		case "+", "-":
+			priority = 4
 		}
 		if priority < minimum || priority == 0 {
 			break
 		}
 		p.take()
+		if op == "is" {
+			if p.take() != "null" {
+				p.ok = false
+				break
+			}
+			left = []any{"is null", left}
+			continue
+		}
 		if op == "in" {
 			if p.take() != "(" {
 				p.ok = false
@@ -69,7 +79,7 @@ func (p *commerceCheckParser) expression(minimum int) any {
 			}
 			values := []any{}
 			for p.ok {
-				values = append(values, p.expression(4))
+				values = append(values, p.expression(5))
 				separator := p.take()
 				if separator == ")" {
 					break

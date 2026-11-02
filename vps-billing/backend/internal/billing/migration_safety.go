@@ -217,6 +217,7 @@ func normalizeMigrationCheck(expression string) (string, bool) {
 			literal := expression[i+1 : i+1+end]
 			switch literal {
 			case "USD", "CNY", "top_up", "invoice_payment", "refund", "adjustment", "affiliate_payout", "overpayment", "running", "succeeded", "failed", "uncertain":
+			case "active", "suspended", "reverse_pending", "reverse_all", "first_payment", "all_payments", "first_months", "credit", "manual":
 			default:
 				return "", false
 			}
