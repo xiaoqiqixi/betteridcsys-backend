@@ -16,6 +16,7 @@ type serviceActionPayload06 struct {
 	Version       int               `json:"version"`
 	Source        string            `json:"source,omitempty"`
 	Reason        string            `json:"reason,omitempty"`
+	BillingDueAt  *time.Time        `json:"billing_due_at,omitempty"`
 	Params        serviceParams06   `json:"params"`
 	RequestSHA256 string            `json:"request_sha256,omitempty"`
 	ReceiptKnown  bool              `json:"receipt_known,omitempty"`
@@ -268,7 +269,7 @@ func (m *MySQL) finishServiceTask06(ctx context.Context, id, status, code, resou
 					}
 					// A renewal can settle while the module is suspending. Reverse only
 					// an overdue suspension, using a new durable operation after confirmation.
-					if reason == "overdue" && s.Due.After(now) {
+					if reason == "overdue" && overdueRenewed06(s.Due, task.Payload, now) {
 						if _, err = queueServiceTask06(ctx, tx, s.View.ID, "unsuspend", serviceActionPayload06{Version: 1, Source: "payment", Reason: "overdue", Params: serviceParams06{StartAfter: true}}, now); err != nil {
 							return out, err
 						}

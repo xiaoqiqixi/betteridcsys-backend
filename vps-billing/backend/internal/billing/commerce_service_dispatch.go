@@ -58,7 +58,7 @@ func (m *MySQL) claimServiceTask06(ctx context.Context, id string, revision int6
 		if first != id {
 			return out, serviceConflict06()
 		}
-		stale := payload.Reason == "overdue" && (payload.Source == "automation" && (t.Action == "suspend" || t.Action == "terminate") && s.Due.After(time.Now().UTC()) ||
+		stale := payload.Reason == "overdue" && (payload.Source == "automation" && (t.Action == "suspend" || t.Action == "terminate") && overdueRenewed06(s.Due, payload, time.Now().UTC()) ||
 			t.Action == "unsuspend" && (s.View.SuspensionReason == nil || *s.View.SuspensionReason != "overdue"))
 		if stale {
 			if _, err = tx.ExecContext(ctx, "UPDATE service_tasks SET status='failed',message='Superseded by a billing or service state change',updated_at=UTC_TIMESTAMP(6),finished_at=UTC_TIMESTAMP(6) WHERE id=?", id); err != nil {

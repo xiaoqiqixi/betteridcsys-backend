@@ -233,7 +233,7 @@ func (m *MySQL) queueOverdue06(ctx context.Context, id, action string, settings 
 		if pending > 0 {
 			return false, nil
 		}
-		if _, err = queueServiceTask06(ctx, tx, id, action, map[string]string{"source": source, "reason": reason}, at); err != nil {
+		if _, err = queueServiceTask06(ctx, tx, id, action, serviceActionPayload06{Version: 1, Source: source, Reason: reason, BillingDueAt: &s.Due}, at); err != nil {
 			return false, err
 		}
 		if action == "suspend" && s.View.Cancellation == nil {
