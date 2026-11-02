@@ -43,6 +43,10 @@ jobs:
           test -S /var/run/aster-commerce-mysql/mysqld.sock
           set -o pipefail
           go test -race -count=1 -timeout=18m -json ./internal/billing -run 'Test(MySQL)?(Commerce|Credit|Automation|Payment|Gateway|Cancellation|AuditEventsCurrentFrontendContract|HTTPPerformanceSeedUsesLiveStaffMembershipAndCurrentSchema)' | tee commerce-tests.jsonl
+          if grep -qE 'Module-Action-Password!2026|Ephemeral-Service-Password!2026|MODULE-SECRET-CANARY|NEVER-PERSIST-MODULE-SECRET' commerce-tests.jsonl; then
+            echo 'Secret canary appeared in commerce logs' >&2
+            exit 1
+          fi
           python3 - <<'PY'
           import json
           from pathlib import Path

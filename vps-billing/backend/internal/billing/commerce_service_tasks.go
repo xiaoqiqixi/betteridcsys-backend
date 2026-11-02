@@ -71,7 +71,7 @@ func taskStateAllowed06(s serviceRecord06, action, source string) bool {
 		return s.View.Status == "active"
 	case "unsuspend":
 		return s.View.Status == "suspended"
-	case "terminate":
+	case "terminate", "renew":
 		return s.View.Status == "active" || s.View.Status == "suspended"
 	case "reinstall":
 		return s.View.Status == "active" || source == "bootstrap" && s.View.Status == "provisioning" && s.View.ResourceID != nil
@@ -387,7 +387,7 @@ func serviceRemoteState06(remote serverv1.Service, action string) error {
 	if remote.RescueActive && (action == "reinstall" || action == "reset_password" || action == "resize") {
 		return serviceConflict06()
 	}
-	if remote.Suspended && action != "unsuspend" && action != "terminate" {
+	if remote.Suspended && action != "unsuspend" && action != "terminate" && action != "renew" {
 		return serviceConflict06()
 	}
 	switch action {

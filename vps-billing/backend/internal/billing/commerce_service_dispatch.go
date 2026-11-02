@@ -144,6 +144,20 @@ func (a *App) DispatchServiceTask06(ctx context.Context, id string, reconcileOnl
 	if err != nil {
 		return task.View, err
 	}
+	if task.Action == "renew" {
+		request := serverv1.Request{Protocol: serverv1.Protocol, Method: "describe"}
+		result, err := client.Call(ctx, request)
+		if err != nil || !result.Matches(request) || result.Description == nil || result.Description.Validate() != nil {
+			return task.View, serverv1.ErrUnavailable
+		}
+		if !result.Description.Has("renew") {
+			claimed, fresh, err := m.claimServiceTask06(ctx, id, s.View.Revision, task.Payload)
+			if err != nil || !fresh {
+				return claimed.View, err
+			}
+			return m.finishServiceTask06(ctx, id, "succeeded", "NO_RENEWAL_HOOK", "")
+		}
+	}
 	payload := task.Payload
 	config := s.Configuration
 	if task.Action == "resize" {

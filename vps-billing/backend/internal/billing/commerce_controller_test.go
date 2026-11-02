@@ -117,9 +117,9 @@ func (c *fakeServiceController06) Call(ctx context.Context, r serverv1.Request) 
 		return serverv1.Response{}, serverv1.ErrUncertain
 	}
 	c.actions[r.OperationID] = r.Method
+	c.lastRequest = r
 	if r.Method == "create" {
 		c.provisions++
-		c.lastRequest = r
 		out.ResourceID = c.view.ResourceID
 		// Simulate a module that finishes image setup before reporting create done.
 		if image, ok := r.Input["image_id"].(string); ok {

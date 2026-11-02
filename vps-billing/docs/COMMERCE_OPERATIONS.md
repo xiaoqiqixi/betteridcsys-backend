@@ -49,7 +49,9 @@ Manual products have `module: null`. Staff enter hostname and IP addresses using
 `manual_info`, then confirm provision/suspend/unsuspend/terminate. Module-backed
 services reject these manual information overrides. Module actions update finance
 state only after confirmed completion. Renewal payments lift only overdue
-suspensions, including payments racing an in-flight suspension.
+suspensions, including payments racing an in-flight suspension. Each paid module
+renewal queues one optional `renew` task with invoice and period boundaries; a
+module without that capability completes the task without a provider mutation.
 
 Root commands accept service task IDs and the retained legacy job IDs:
 

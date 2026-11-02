@@ -3,6 +3,7 @@ package billing
 import (
 	"aster/billing/internal/commerce"
 	api "aster/billing/internal/financeapi"
+	"aster/billing/pkg/pluginapi/serverv1"
 	"context"
 	"database/sql"
 	"encoding/json"
@@ -179,6 +180,12 @@ func fulfillRenewal06(ctx context.Context, tx *sql.Tx, v api.AdminInvoice, paid 
 				_, err = queueServiceTask06(ctx, tx, sid, "unsuspend", serviceActionPayload06{Version: 1, Source: "payment", Reason: "overdue", Params: serviceParams06{StartAfter: true}}, paid)
 			}
 		}
+	}
+	if err != nil {
+		return err
+	}
+	if s.View.ModuleID != nil {
+		_, err = queueServiceTask06(ctx, tx, sid, "renew", serviceActionPayload06{Version: 1, Source: "payment", Params: serviceParams06{Input: serverv1.Fields{"invoice_id": v.ID, "period_start": stamp06(start), "period_end": stamp06(end)}}}, paid)
 	}
 	return err
 }

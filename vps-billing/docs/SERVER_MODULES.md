@@ -20,7 +20,7 @@ Core 0.6 使用 `aster.server/1` 把商品、付款和服务任务连接到独�
 | `test_connection` | 验证本接口的受保护连接 |
 | `validate_product` | 校验、规范化商品配置，返回规范 JSON 的 SHA-256 digest |
 | `create`, `suspend`, `unsuspend`, `terminate`, `change_package` | 服务生命周期 |
-| `renew` | 可选续费钩子 |
+| `renew` | 可选续费钩子；付款事务入队，输入含 invoice_id、period_start、period_end |
 | `power`, `reinstall`, `reset_password`, `rescue_enter`, `rescue_exit` | 按实际能力提供管理操作 |
 | `snapshot_create`, `snapshot_restore`, `snapshot_delete`, `action` | 快照及带 `action_id` 的自定义动作 |
 | `status`, `operation_status`, `console`, `metrics`, `snapshots`, `images` | 只读观察；`console` 返回短期一次性 URL |

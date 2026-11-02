@@ -204,3 +204,64 @@ func TestMySQLCommerceManualDeliveryInformation(t *testing.T) {
 		t.Fatal("manual edit of module service", status, body)
 	}
 }
+
+func TestMySQLCommerceModuleRenewalHookIsClaimedOnce(t *testing.T) {
+	f := mysqlCatalogFixture(t)
+	m := f.store.(*MySQL)
+	sid, _ := paidService06(t, f)
+	fake, runtime := serviceControllerFixture06(t, m, f.customer.ID, sid)
+	app := NewApp(m, Config{Services: runtime})
+	invoice, err := m.RenewService06(t.Context(), f.customer, sid, "monthly", ID(), time.Now().UTC())
+	if err != nil {
+		t.Fatal(err)
+	}
+	payment, key := invoice06Payment(invoice.Total.AmountMinor, ID()), ID()
+	for range 2 {
+		if _, err = m.AddInvoicePayment06(t.Context(), f.admin, invoice.ID, payment, key); err != nil {
+			t.Fatal(err)
+		}
+	}
+	var taskID string
+	var count int
+	if err = m.DB.QueryRow("SELECT COUNT(*),MIN(id) FROM service_tasks WHERE service_id=? AND action='renew'", sid).Scan(&count, &taskID); err != nil || count != 1 {
+		t.Fatal(count, err)
+	}
+	fake.sendErr = serverv1.ErrUncertain
+	for range 2 {
+		task, err := app.DispatchServiceTask06(t.Context(), taskID, false, false)
+		if err != nil || task.Status != "uncertain" {
+			t.Fatal(task, err)
+		}
+	}
+	if fake.sends != 1 || fake.lastRequest.Method != "renew" || fake.lastRequest.Input["invoice_id"] != invoice.ID || fake.lastRequest.Input["period_end"] == nil {
+		t.Fatal("renewal resent or missing period", fake.sends)
+	}
+	if task, err := app.DispatchServiceTask06(t.Context(), taskID, true, false); err != nil || task.Status != "succeeded" {
+		t.Fatal(task, err)
+	}
+	// A module may omit the hook: settlement still completes without a provider mutation.
+	described, err := fake.Call(t.Context(), serverv1.Request{Protocol: serverv1.Protocol, Method: "describe"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	d := *described.Description
+	d.Capabilities = []string{"create", "status", "operation_status"}
+	fake.description = &d
+	fake.sendErr = nil
+	invoice, err = m.RenewService06(t.Context(), f.customer, sid, "monthly", ID(), time.Now().UTC())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err = m.AddInvoicePayment06(t.Context(), f.admin, invoice.ID, invoice06Payment(invoice.Total.AmountMinor, ID()), ID()); err != nil {
+		t.Fatal(err)
+	}
+	if err = m.DB.QueryRow("SELECT id FROM service_tasks WHERE service_id=? AND action='renew' AND status='queued'", sid).Scan(&taskID); err != nil {
+		t.Fatal(err)
+	}
+	if task, err := app.DispatchServiceTask06(t.Context(), taskID, false, false); err != nil || task.Status != "succeeded" {
+		t.Fatal(task, err)
+	}
+	if fake.sends != 1 {
+		t.Fatal("module without hook received renewal mutation")
+	}
+}

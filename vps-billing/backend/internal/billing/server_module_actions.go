@@ -58,6 +58,8 @@ func serviceRequest06(s serviceRecord06, id, action string, params serviceParams
 			r.Input["password_hash"] = s.Configuration.PasswordHash
 		}
 		r.Input["fields"] = s.Configuration.Input.ModuleFields
+	case "renew":
+		r.Input = params.Input
 	case "resize":
 		r.Method = "change_package"
 	case "start", "stop", "reboot", "force_off":
