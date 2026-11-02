@@ -16,8 +16,18 @@ import (
 const product06Columns = `p.id,p.slug,p.kind,r.type_id,n.region_id,p.node_id,p.name_i18n,p.description_i18n,p.badges,p.specs,p.stock,p.visibility,p.controller_id,p.remote_product_id,p.sort_order,p.revision,(n.enabled AND r.enabled AND t.enabled),(SELECT COUNT(*) FROM services s WHERE s.product_id=p.id AND s.status NOT IN ('terminated','cancelled'))`
 const product06Joins = ` FROM products p JOIN catalog_nodes n ON n.id=p.node_id JOIN catalog_regions r ON r.id=n.region_id JOIN catalog_types t ON t.id=r.type_id`
 
+// Materialize service counts once for a catalog list. The detail/locking path
+// retains its existing query and lock scope.
+var productList06Columns = strings.Replace(product06Columns, "(SELECT COUNT(*) FROM services s WHERE s.product_id=p.id AND s.status NOT IN ('terminated','cancelled'))", "COALESCE(service_counts.active_services,0)", 1)
+
+const productList06Joins = product06Joins + ` LEFT JOIN (SELECT product_id,COUNT(*) active_services FROM services WHERE status NOT IN ('terminated','cancelled') GROUP BY product_id) service_counts ON service_counts.product_id=p.id`
+
 func readProducts06(ctx context.Context, q currencyQuerier, admin bool, id, currency, typeID, regionID, lock string) ([]api.AdminProduct, error) {
 	query := "SELECT " + product06Columns + product06Joins + " WHERE 1=1"
+	batched := id == "" && lock == ""
+	if batched {
+		query = "SELECT " + productList06Columns + productList06Joins + " WHERE 1=1"
+	}
 	args := []any{}
 	if !admin {
 		query += " AND p.visibility='public' AND n.enabled=TRUE AND r.enabled=TRUE AND t.enabled=TRUE"
@@ -70,6 +80,9 @@ func readProducts06(ctx context.Context, q currencyQuerier, admin bool, id, curr
 		if c, ok := config.find(currency); !ok || !c.Enabled {
 			return nil, ErrCommerceInput
 		}
+	}
+	if batched {
+		return readProductListChildren06(ctx, q, out, currency, config, admin)
 	}
 	for i := range out {
 		p := &out[i]

@@ -194,7 +194,7 @@ func financePerfExplain(t *testing.T, ctx context.Context, f *httpPerfFixture) {
 		"services_status":  "SELECT id FROM services WHERE status='active' ORDER BY id DESC LIMIT 51",
 		"audit_admin":      "SELECT id,user_id,action,target,created_at,actor_email,detail FROM audit_events WHERE created_at<=UTC_TIMESTAMP(6) ORDER BY created_at DESC,id DESC LIMIT 51",
 		"audit_client":     "SELECT id,user_id,action,target,created_at,actor_email,detail FROM audit_events WHERE user_id=? AND created_at<=UTC_TIMESTAMP(6) ORDER BY created_at DESC,id DESC LIMIT 51",
-		"products_admin":   "SELECT " + product06Columns + product06Joins + " ORDER BY p.sort_order,p.id",
+		"products_admin":   "SELECT " + productList06Columns + productList06Joins + " ORDER BY p.sort_order,p.id",
 		"invoice_lines":    "SELECT description,service_id,amount_minor,period_text FROM invoice_lines WHERE invoice_id=? ORDER BY position,id",
 		"invoice_payments": "SELECT id,method,gateway,reference,amount_minor,status,created_at FROM invoice_payments WHERE invoice_id=? ORDER BY created_at,id",
 	}
