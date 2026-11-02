@@ -50,7 +50,8 @@ func (a *App) releaseAffiliate(ctx context.Context, _ financeapi.AutomationSetti
 				return false, err
 			}
 			defer tx.Rollback()
-			if _, err = lockAccountUser(ctx, tx, v.uid); err != nil {
+			var locked string
+			if err = tx.QueryRowContext(ctx, "SELECT id FROM users WHERE id=? FOR UPDATE", v.uid).Scan(&locked); err != nil {
 				return false, err
 			}
 			var invoice, state, clawback string

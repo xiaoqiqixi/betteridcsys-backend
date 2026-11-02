@@ -122,6 +122,7 @@ func TestMySQLAffiliateClawbackMatrix(t *testing.T) {
 		wantAvailable, wantDebt int64
 	}{
 		{"pending all", "reverse_all", "pending", 195, 0},
+		{"disabled affiliate", "reverse_all", "disabled", 195, 0},
 		{"pending only", "reverse_pending", "pending", 195, 0},
 		{"available all", "reverse_all", "available", 195, 0},
 		{"available preserved", "reverse_pending", "available", 390, 0},
@@ -150,6 +151,9 @@ func TestMySQLAffiliateClawbackMatrix(t *testing.T) {
 			now := time.Now().UTC()
 			at := now.Add(-48 * time.Hour)
 			invoice := seedAffiliateInvoice(t, m, other.ID, at)
+			if tc.state == "disabled" {
+				migrationExec(t, f.ctx, m.DB, "UPDATE users SET disabled=TRUE WHERE id=?", f.customer.ID)
+			}
 			if tc.state != "pending" {
 				result, e := a.releaseAffiliate(f.ctx, financeapi.AutomationSettings{}, now)
 				if e != nil || result.Failed != 0 {
