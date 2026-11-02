@@ -1,0 +1,773 @@
+[
+  {
+    "name": "audit_admin",
+    "plan": {
+      "query_block": {
+        "select_id": 1,
+        "cost_info": {
+          "query_cost": "9844.25"
+        },
+        "ordering_operation": {
+          "using_filesort": false,
+          "table": {
+            "table_name": "audit_events",
+            "access_type": "range",
+            "possible_keys": [
+              "ix_audit_date_id"
+            ],
+            "key": "ix_audit_date_id",
+            "used_key_parts": [
+              "created_at"
+            ],
+            "key_length": "8",
+            "rows_examined_per_scan": 46370,
+            "rows_produced_per_join": 46370,
+            "filtered": "100.00",
+            "index_condition": "(`aster_migration_test_af837490c727ad452435be51a0cee27f`.`audit_events`.`created_at` <= <cache>(utc_timestamp(6)))",
+            "backward_index_scan": true,
+            "cost_info": {
+              "read_cost": "5207.25",
+              "eval_cost": "4637.00",
+              "prefix_cost": "9844.25",
+              "data_read_per_join": "268M"
+            },
+            "used_columns": [
+              "id",
+              "user_id",
+              "action",
+              "target",
+              "created_at",
+              "actor_email",
+              "detail"
+            ]
+          }
+        }
+      }
+    },
+    "sql": "SELECT id,user_id,action,target,created_at,actor_email,detail FROM audit_events WHERE created_at<=UTC_TIMESTAMP(6) ORDER BY created_at DESC,id DESC LIMIT 51"
+  },
+  {
+    "name": "audit_client",
+    "plan": {
+      "query_block": {
+        "select_id": 1,
+        "cost_info": {
+          "query_cost": "450.26"
+        },
+        "ordering_operation": {
+          "using_filesort": false,
+          "table": {
+            "table_name": "audit_events",
+            "access_type": "range",
+            "possible_keys": [
+              "ix_audit_user_date",
+              "ix_audit_date_id"
+            ],
+            "key": "ix_audit_user_date",
+            "used_key_parts": [
+              "user_id",
+              "created_at"
+            ],
+            "key_length": "136",
+            "rows_examined_per_scan": 1000,
+            "rows_produced_per_join": 1000,
+            "filtered": "100.00",
+            "index_condition": "((`aster_migration_test_af837490c727ad452435be51a0cee27f`.`audit_events`.`user_id` = 'f0279bec29c2c7d51fc10dfe058b3b95') and (`aster_migration_test_af837490c727ad452435be51a0cee27f`.`audit_events`.`created_at` <= <cache>(utc_timestamp(6))))",
+            "backward_index_scan": true,
+            "cost_info": {
+              "read_cost": "350.26",
+              "eval_cost": "100.00",
+              "prefix_cost": "450.26",
+              "data_read_per_join": "5M"
+            },
+            "used_columns": [
+              "id",
+              "user_id",
+              "action",
+              "target",
+              "created_at",
+              "actor_email",
+              "detail"
+            ]
+          }
+        }
+      }
+    },
+    "sql": "SELECT id,user_id,action,target,created_at,actor_email,detail FROM audit_events WHERE user_id=? AND created_at<=UTC_TIMESTAMP(6) ORDER BY created_at DESC,id DESC LIMIT 51"
+  },
+  {
+    "name": "invoice_lines",
+    "plan": {
+      "query_block": {
+        "select_id": 1,
+        "cost_info": {
+          "query_cost": "1.96"
+        },
+        "ordering_operation": {
+          "using_filesort": false,
+          "table": {
+            "table_name": "invoice_lines",
+            "access_type": "ref",
+            "possible_keys": [
+              "invoice_line_position"
+            ],
+            "key": "invoice_line_position",
+            "used_key_parts": [
+              "invoice_id"
+            ],
+            "key_length": "128",
+            "ref": [
+              "const"
+            ],
+            "rows_examined_per_scan": 2,
+            "rows_produced_per_join": 2,
+            "filtered": "100.00",
+            "index_condition": "(`aster_migration_test_af837490c727ad452435be51a0cee27f`.`invoice_lines`.`invoice_id` = '4366804bc3cf5229431cba614934ed90')",
+            "cost_info": {
+              "read_cost": "1.76",
+              "eval_cost": "0.20",
+              "prefix_cost": "1.96",
+              "data_read_per_join": "1K"
+            },
+            "used_columns": [
+              "id",
+              "invoice_id",
+              "position",
+              "service_id",
+              "description",
+              "amount_minor",
+              "period_text"
+            ]
+          }
+        }
+      }
+    },
+    "sql": "SELECT description,service_id,amount_minor,period_text FROM invoice_lines WHERE invoice_id=? ORDER BY position,id"
+  },
+  {
+    "name": "invoice_payments",
+    "plan": {
+      "query_block": {
+        "select_id": 1,
+        "cost_info": {
+          "query_cost": "0.35"
+        },
+        "ordering_operation": {
+          "using_filesort": true,
+          "table": {
+            "table_name": "invoice_payments",
+            "access_type": "ref",
+            "possible_keys": [
+              "invoice_payment_reference"
+            ],
+            "key": "invoice_payment_reference",
+            "used_key_parts": [
+              "invoice_id"
+            ],
+            "key_length": "128",
+            "ref": [
+              "const"
+            ],
+            "rows_examined_per_scan": 1,
+            "rows_produced_per_join": 1,
+            "filtered": "100.00",
+            "index_condition": "(`aster_migration_test_af837490c727ad452435be51a0cee27f`.`invoice_payments`.`invoice_id` = '4366804bc3cf5229431cba614934ed90')",
+            "cost_info": {
+              "read_cost": "0.25",
+              "eval_cost": "0.10",
+              "prefix_cost": "0.35",
+              "data_read_per_join": "1K"
+            },
+            "used_columns": [
+              "id",
+              "invoice_id",
+              "method",
+              "gateway",
+              "reference",
+              "amount_minor",
+              "status",
+              "created_at"
+            ]
+          }
+        }
+      }
+    },
+    "sql": "SELECT id,method,gateway,reference,amount_minor,status,created_at FROM invoice_payments WHERE invoice_id=? ORDER BY created_at,id"
+  },
+  {
+    "name": "invoices_admin",
+    "plan": {
+      "query_block": {
+        "select_id": 1,
+        "cost_info": {
+          "query_cost": "7020.68"
+        },
+        "ordering_operation": {
+          "using_filesort": true,
+          "table": {
+            "table_name": "invoices",
+            "access_type": "index",
+            "key": "ix_invoices_user_date",
+            "used_key_parts": [
+              "user_id",
+              "issued_at"
+            ],
+            "key_length": "136",
+            "rows_examined_per_scan": 49525,
+            "rows_produced_per_join": 49525,
+            "filtered": "100.00",
+            "using_index": true,
+            "cost_info": {
+              "read_cost": "2068.18",
+              "eval_cost": "4952.50",
+              "prefix_cost": "7020.68",
+              "data_read_per_join": "36M"
+            },
+            "used_columns": [
+              "id",
+              "issued_at"
+            ]
+          }
+        }
+      }
+    },
+    "sql": "SELECT id FROM invoices ORDER BY issued_at DESC,id DESC LIMIT 51"
+  },
+  {
+    "name": "invoices_client",
+    "plan": {
+      "query_block": {
+        "select_id": 1,
+        "cost_info": {
+          "query_cost": "64.60"
+        },
+        "ordering_operation": {
+          "using_filesort": false,
+          "table": {
+            "table_name": "invoices",
+            "access_type": "ref",
+            "possible_keys": [
+              "ix_invoices_user_date"
+            ],
+            "key": "ix_invoices_user_date",
+            "used_key_parts": [
+              "user_id"
+            ],
+            "key_length": "128",
+            "ref": [
+              "const"
+            ],
+            "rows_examined_per_scan": 500,
+            "rows_produced_per_join": 500,
+            "filtered": "100.00",
+            "backward_index_scan": true,
+            "using_index": true,
+            "cost_info": {
+              "read_cost": "14.60",
+              "eval_cost": "50.00",
+              "prefix_cost": "64.60",
+              "data_read_per_join": "375K"
+            },
+            "used_columns": [
+              "id",
+              "user_id",
+              "issued_at"
+            ],
+            "attached_condition": "(`aster_migration_test_af837490c727ad452435be51a0cee27f`.`invoices`.`user_id` = 'f0279bec29c2c7d51fc10dfe058b3b95')"
+          }
+        }
+      }
+    },
+    "sql": "SELECT id FROM invoices WHERE user_id=? ORDER BY issued_at DESC,id DESC LIMIT 51"
+  },
+  {
+    "name": "invoices_status",
+    "plan": {
+      "query_block": {
+        "select_id": 1,
+        "cost_info": {
+          "query_cost": "7020.68"
+        },
+        "ordering_operation": {
+          "using_filesort": true,
+          "table": {
+            "table_name": "invoices",
+            "access_type": "ALL",
+            "rows_examined_per_scan": 49525,
+            "rows_produced_per_join": 8254,
+            "filtered": "16.67",
+            "cost_info": {
+              "read_cost": "6195.27",
+              "eval_cost": "825.42",
+              "prefix_cost": "7020.68",
+              "data_read_per_join": "6M"
+            },
+            "used_columns": [
+              "id",
+              "status",
+              "issued_at"
+            ],
+            "attached_condition": "(`aster_migration_test_af837490c727ad452435be51a0cee27f`.`invoices`.`status` = 'unpaid')"
+          }
+        }
+      }
+    },
+    "sql": "SELECT id FROM invoices WHERE status='unpaid' ORDER BY issued_at DESC,id DESC LIMIT 51"
+  },
+  {
+    "name": "orders_admin",
+    "plan": {
+      "query_block": {
+        "select_id": 1,
+        "cost_info": {
+          "query_cost": "7550.70"
+        },
+        "ordering_operation": {
+          "using_filesort": true,
+          "table": {
+            "table_name": "orders",
+            "access_type": "index",
+            "key": "ix_orders_user_date",
+            "used_key_parts": [
+              "user_id",
+              "created_at"
+            ],
+            "key_length": "136",
+            "rows_examined_per_scan": 49041,
+            "rows_produced_per_join": 49041,
+            "filtered": "100.00",
+            "using_index": true,
+            "cost_info": {
+              "read_cost": "2646.60",
+              "eval_cost": "4904.10",
+              "prefix_cost": "7550.70",
+              "data_read_per_join": "122M"
+            },
+            "used_columns": [
+              "id",
+              "created_at"
+            ]
+          }
+        }
+      }
+    },
+    "sql": "SELECT id FROM orders ORDER BY created_at DESC,id DESC LIMIT 51"
+  },
+  {
+    "name": "orders_client",
+    "plan": {
+      "query_block": {
+        "select_id": 1,
+        "cost_info": {
+          "query_cost": "64.77"
+        },
+        "ordering_operation": {
+          "using_filesort": false,
+          "table": {
+            "table_name": "orders",
+            "access_type": "ref",
+            "possible_keys": [
+              "ix_orders_user_date"
+            ],
+            "key": "ix_orders_user_date",
+            "used_key_parts": [
+              "user_id"
+            ],
+            "key_length": "128",
+            "ref": [
+              "const"
+            ],
+            "rows_examined_per_scan": 500,
+            "rows_produced_per_join": 500,
+            "filtered": "100.00",
+            "backward_index_scan": true,
+            "using_index": true,
+            "cost_info": {
+              "read_cost": "14.77",
+              "eval_cost": "50.00",
+              "prefix_cost": "64.77",
+              "data_read_per_join": "1M"
+            },
+            "used_columns": [
+              "id",
+              "user_id",
+              "created_at"
+            ],
+            "attached_condition": "(`aster_migration_test_af837490c727ad452435be51a0cee27f`.`orders`.`user_id` = 'f0279bec29c2c7d51fc10dfe058b3b95')"
+          }
+        }
+      }
+    },
+    "sql": "SELECT id FROM orders WHERE user_id=? ORDER BY created_at DESC,id DESC LIMIT 51"
+  },
+  {
+    "name": "orders_status",
+    "plan": {
+      "query_block": {
+        "select_id": 1,
+        "cost_info": {
+          "query_cost": "7550.70"
+        },
+        "ordering_operation": {
+          "using_filesort": true,
+          "table": {
+            "table_name": "orders",
+            "access_type": "ALL",
+            "rows_examined_per_scan": 49041,
+            "rows_produced_per_join": 9808,
+            "filtered": "20.00",
+            "cost_info": {
+              "read_cost": "6569.88",
+              "eval_cost": "980.82",
+              "prefix_cost": "7550.70",
+              "data_read_per_join": "24M"
+            },
+            "used_columns": [
+              "id",
+              "status",
+              "created_at"
+            ],
+            "attached_condition": "(`aster_migration_test_af837490c727ad452435be51a0cee27f`.`orders`.`status` = 'pending_payment')"
+          }
+        }
+      }
+    },
+    "sql": "SELECT id FROM orders WHERE status='pending_payment' ORDER BY created_at DESC,id DESC LIMIT 51"
+  },
+  {
+    "name": "products_admin",
+    "plan": {
+      "query_block": {
+        "select_id": 1,
+        "cost_info": {
+          "query_cost": "1371.17"
+        },
+        "ordering_operation": {
+          "using_temporary_table": true,
+          "using_filesort": true,
+          "cost_info": {
+            "sort_cost": "1002.13"
+          },
+          "nested_loop": [
+            {
+              "table": {
+                "table_name": "t",
+                "access_type": "ALL",
+                "possible_keys": [
+                  "PRIMARY"
+                ],
+                "rows_examined_per_scan": 1,
+                "rows_produced_per_join": 1,
+                "filtered": "100.00",
+                "cost_info": {
+                  "read_cost": "1.00",
+                  "eval_cost": "0.10",
+                  "prefix_cost": "1.10",
+                  "data_read_per_join": "560"
+                },
+                "used_columns": [
+                  "id",
+                  "enabled"
+                ]
+              }
+            },
+            {
+              "table": {
+                "table_name": "r",
+                "access_type": "ref",
+                "possible_keys": [
+                  "PRIMARY",
+                  "catalog_regions_type"
+                ],
+                "key": "catalog_regions_type",
+                "used_key_parts": [
+                  "type_id"
+                ],
+                "key_length": "66",
+                "ref": [
+                  "aster_migration_test_af837490c727ad452435be51a0cee27f.t.id"
+                ],
+                "rows_examined_per_scan": 1,
+                "rows_produced_per_join": 1,
+                "filtered": "100.00",
+                "cost_info": {
+                  "read_cost": "1.00",
+                  "eval_cost": "0.10",
+                  "prefix_cost": "2.20",
+                  "data_read_per_join": "624"
+                },
+                "used_columns": [
+                  "id",
+                  "type_id",
+                  "enabled"
+                ]
+              }
+            },
+            {
+              "table": {
+                "table_name": "n",
+                "access_type": "ref",
+                "possible_keys": [
+                  "PRIMARY",
+                  "catalog_nodes_region"
+                ],
+                "key": "catalog_nodes_region",
+                "used_key_parts": [
+                  "region_id"
+                ],
+                "key_length": "66",
+                "ref": [
+                  "aster_migration_test_af837490c727ad452435be51a0cee27f.r.id"
+                ],
+                "rows_examined_per_scan": 1,
+                "rows_produced_per_join": 1,
+                "filtered": "100.00",
+                "cost_info": {
+                  "read_cost": "1.00",
+                  "eval_cost": "0.10",
+                  "prefix_cost": "3.30",
+                  "data_read_per_join": "624"
+                },
+                "used_columns": [
+                  "id",
+                  "region_id",
+                  "enabled"
+                ]
+              }
+            },
+            {
+              "table": {
+                "table_name": "p",
+                "access_type": "ref",
+                "possible_keys": [
+                  "product_node"
+                ],
+                "key": "product_node",
+                "used_key_parts": [
+                  "node_id"
+                ],
+                "key_length": "66",
+                "ref": [
+                  "aster_migration_test_af837490c727ad452435be51a0cee27f.n.id"
+                ],
+                "rows_examined_per_scan": 100,
+                "rows_produced_per_join": 100,
+                "filtered": "100.00",
+                "cost_info": {
+                  "read_cost": "5.00",
+                  "eval_cost": "10.00",
+                  "prefix_cost": "18.30",
+                  "data_read_per_join": "139K"
+                },
+                "used_columns": [
+                  "id",
+                  "slug",
+                  "kind",
+                  "node_id",
+                  "name_i18n",
+                  "description_i18n",
+                  "specs",
+                  "badges",
+                  "stock",
+                  "visibility",
+                  "controller_id",
+                  "remote_product_id",
+                  "sort_order",
+                  "revision"
+                ]
+              }
+            },
+            {
+              "table": {
+                "table_name": "service_counts",
+                "access_type": "ref",
+                "possible_keys": [
+                  "<auto_key0>"
+                ],
+                "key": "<auto_key0>",
+                "used_key_parts": [
+                  "product_id"
+                ],
+                "key_length": "259",
+                "ref": [
+                  "aster_migration_test_af837490c727ad452435be51a0cee27f.p.id"
+                ],
+                "rows_examined_per_scan": 10,
+                "rows_produced_per_join": 1002,
+                "filtered": "100.00",
+                "cost_info": {
+                  "read_cost": "250.53",
+                  "eval_cost": "100.21",
+                  "prefix_cost": "369.04",
+                  "data_read_per_join": "266K"
+                },
+                "used_columns": [
+                  "product_id",
+                  "active_services"
+                ],
+                "materialized_from_subquery": {
+                  "using_temporary_table": true,
+                  "dependent": false,
+                  "cacheable": true,
+                  "query_block": {
+                    "select_id": 2,
+                    "cost_info": {
+                      "query_cost": "222.15"
+                    },
+                    "grouping_operation": {
+                      "using_temporary_table": true,
+                      "using_filesort": false,
+                      "table": {
+                        "table_name": "services",
+                        "access_type": "ALL",
+                        "rows_examined_per_scan": 1979,
+                        "rows_produced_per_join": 1413,
+                        "filtered": "71.43",
+                        "cost_info": {
+                          "read_cost": "80.79",
+                          "eval_cost": "141.36",
+                          "prefix_cost": "222.15",
+                          "data_read_per_join": "34M"
+                        },
+                        "used_columns": [
+                          "id",
+                          "status",
+                          "product_id"
+                        ],
+                        "attached_condition": "(`aster_migration_test_af837490c727ad452435be51a0cee27f`.`services`.`status` not in ('terminated','cancelled'))"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          ]
+        }
+      }
+    },
+    "sql": "SELECT p.id,p.slug,p.kind,r.type_id,n.region_id,p.node_id,p.name_i18n,p.description_i18n,p.badges,p.specs,p.stock,p.visibility,p.controller_id,p.remote_product_id,p.sort_order,p.revision,(n.enabled AND r.enabled AND t.enabled),COALESCE(service_counts.active_services,0) FROM products p JOIN catalog_nodes n ON n.id=p.node_id JOIN catalog_regions r ON r.id=n.region_id JOIN catalog_types t ON t.id=r.type_id LEFT JOIN (SELECT product_id,COUNT(*) active_services FROM services WHERE status NOT IN ('terminated','cancelled') GROUP BY product_id) service_counts ON service_counts.product_id=p.id ORDER BY p.sort_order,p.id"
+  },
+  {
+    "name": "services_admin",
+    "plan": {
+      "query_block": {
+        "select_id": 1,
+        "cost_info": {
+          "query_cost": "222.15"
+        },
+        "ordering_operation": {
+          "using_filesort": false,
+          "table": {
+            "table_name": "services",
+            "access_type": "index",
+            "key": "PRIMARY",
+            "used_key_parts": [
+              "id"
+            ],
+            "key_length": "128",
+            "rows_examined_per_scan": 51,
+            "rows_produced_per_join": 1979,
+            "filtered": "100.00",
+            "backward_index_scan": true,
+            "using_index": true,
+            "cost_info": {
+              "read_cost": "24.25",
+              "eval_cost": "197.90",
+              "prefix_cost": "222.15",
+              "data_read_per_join": "48M"
+            },
+            "used_columns": [
+              "id"
+            ]
+          }
+        }
+      }
+    },
+    "sql": "SELECT id FROM services ORDER BY id DESC LIMIT 51"
+  },
+  {
+    "name": "services_client",
+    "plan": {
+      "query_block": {
+        "select_id": 1,
+        "cost_info": {
+          "query_cost": "2.39"
+        },
+        "ordering_operation": {
+          "using_filesort": false,
+          "table": {
+            "table_name": "services",
+            "access_type": "ref",
+            "possible_keys": [
+              "ix_services_user"
+            ],
+            "key": "ix_services_user",
+            "used_key_parts": [
+              "user_id"
+            ],
+            "key_length": "128",
+            "ref": [
+              "const"
+            ],
+            "rows_examined_per_scan": 20,
+            "rows_produced_per_join": 20,
+            "filtered": "100.00",
+            "backward_index_scan": true,
+            "using_index": true,
+            "cost_info": {
+              "read_cost": "0.39",
+              "eval_cost": "2.00",
+              "prefix_cost": "2.39",
+              "data_read_per_join": "499K"
+            },
+            "used_columns": [
+              "id",
+              "user_id"
+            ],
+            "attached_condition": "(`aster_migration_test_af837490c727ad452435be51a0cee27f`.`services`.`user_id` = 'f0279bec29c2c7d51fc10dfe058b3b95')"
+          }
+        }
+      }
+    },
+    "sql": "SELECT id FROM services WHERE user_id=? ORDER BY id DESC LIMIT 51"
+  },
+  {
+    "name": "services_status",
+    "plan": {
+      "query_block": {
+        "select_id": 1,
+        "cost_info": {
+          "query_cost": "222.15"
+        },
+        "ordering_operation": {
+          "using_filesort": false,
+          "table": {
+            "table_name": "services",
+            "access_type": "index",
+            "key": "PRIMARY",
+            "used_key_parts": [
+              "id"
+            ],
+            "key_length": "128",
+            "rows_examined_per_scan": 51,
+            "rows_produced_per_join": 282,
+            "filtered": "14.29",
+            "backward_index_scan": true,
+            "cost_info": {
+              "read_cost": "193.88",
+              "eval_cost": "28.27",
+              "prefix_cost": "222.15",
+              "data_read_per_join": "6M"
+            },
+            "used_columns": [
+              "id",
+              "status"
+            ],
+            "attached_condition": "(`aster_migration_test_af837490c727ad452435be51a0cee27f`.`services`.`status` = 'active')"
+          }
+        }
+      }
+    },
+    "sql": "SELECT id FROM services WHERE status='active' ORDER BY id DESC LIMIT 51"
+  }
+]

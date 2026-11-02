@@ -1,0 +1,181 @@
+{
+  "concurrency": 1,
+  "go": "go1.27.3",
+  "gomaxprocs": 1,
+  "host_cpus": 4,
+  "measurements": [
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/overview?currency=CNY",
+      "p50_ms": 99.509451,
+      "p95_ms": 605.381541,
+      "samples": 100
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/invoices",
+      "p50_ms": 51.811671,
+      "p95_ms": 58.454742,
+      "samples": 100
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/currencies",
+      "p50_ms": 50.125165,
+      "p95_ms": 51.503242,
+      "samples": 100
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/orders",
+      "p50_ms": 41.007269,
+      "p95_ms": 45.744751,
+      "samples": 100
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/invoices",
+      "p50_ms": 36.286237,
+      "p95_ms": 44.887133,
+      "samples": 100
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/services",
+      "p50_ms": 26.386792,
+      "p95_ms": 32.133199,
+      "samples": 100
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/orders",
+      "p50_ms": 25.493518,
+      "p95_ms": 30.16881,
+      "samples": 100
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/overview",
+      "p50_ms": 12.646353,
+      "p95_ms": 14.636425,
+      "samples": 100
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/products",
+      "p50_ms": 13.084843,
+      "p95_ms": 14.183258,
+      "samples": 100
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/services",
+      "p50_ms": 11.792447,
+      "p95_ms": 13.911764,
+      "samples": 100
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/products",
+      "p50_ms": 11.865468,
+      "p95_ms": 12.883355,
+      "samples": 100
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/audit-events",
+      "p50_ms": 4.171998,
+      "p95_ms": 5.102825,
+      "samples": 100
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/credit/top-up",
+      "p50_ms": 4.277125,
+      "p95_ms": 5.03372,
+      "samples": 100
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/products/perf-product-0",
+      "p50_ms": 2.501662,
+      "p95_ms": 2.831722,
+      "samples": 100
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/products/perf-product-0",
+      "p50_ms": 1.797099,
+      "p95_ms": 2.1382,
+      "samples": 100
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/customer-accounts",
+      "p50_ms": 1.384837,
+      "p95_ms": 1.866755,
+      "samples": 100
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/invoices/{id}",
+      "p50_ms": 1.630706,
+      "p95_ms": 1.8451,
+      "samples": 100
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/audit-events",
+      "p50_ms": 1.196762,
+      "p95_ms": 1.709047,
+      "samples": 100
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/orders/{id}",
+      "p50_ms": 1.023548,
+      "p95_ms": 1.470606,
+      "samples": 100
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/services/{id}",
+      "p50_ms": 1.252364,
+      "p95_ms": 1.459795,
+      "samples": 100
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/catalog-taxonomy",
+      "p50_ms": 1.114307,
+      "p95_ms": 1.395055,
+      "samples": 100
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/session",
+      "p50_ms": 0.704862,
+      "p95_ms": 1.060773,
+      "samples": 100
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/catalog-taxonomy",
+      "p50_ms": 0.551444,
+      "p95_ms": 0.743233,
+      "samples": 100
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/currencies",
+      "p50_ms": 0.355496,
+      "p95_ms": 0.394624,
+      "samples": 100
+    }
+  ],
+  "mysql": "8.4.13",
+  "seed": "finance-perf-v1",
+  "warmup_requests": 5,
+  "source_commit": "30477fd3905c5cf2cf7ad0df3af0aea0cf0afd64",
+  "source_run": "https://github.com/xiaoqiqixi/betteridcsys-backend/actions/runs/41392523400"
+}

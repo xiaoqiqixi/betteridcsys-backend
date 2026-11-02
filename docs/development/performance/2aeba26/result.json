@@ -1,0 +1,181 @@
+{
+  "concurrency": 1,
+  "go": "go1.27.3",
+  "gomaxprocs": 1,
+  "host_cpus": 4,
+  "measurements": [
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/overview?currency=CNY",
+      "p50_ms": 95.697227,
+      "p95_ms": 101.347644,
+      "samples": 100
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/currencies",
+      "p50_ms": 46.721237,
+      "p95_ms": 48.837307,
+      "samples": 100
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/orders",
+      "p50_ms": 14.962841,
+      "p95_ms": 16.246787,
+      "samples": 100
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/products",
+      "p50_ms": 13.286543,
+      "p95_ms": 14.349563,
+      "samples": 100
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/invoices",
+      "p50_ms": 12.331118,
+      "p95_ms": 13.201542,
+      "samples": 100
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/products",
+      "p50_ms": 11.739082,
+      "p95_ms": 12.829562,
+      "samples": 100
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/overview",
+      "p50_ms": 6.582275,
+      "p95_ms": 7.201691,
+      "samples": 100
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/credit/top-up",
+      "p50_ms": 4.965807,
+      "p95_ms": 6.460892,
+      "samples": 100
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/orders",
+      "p50_ms": 3.728439,
+      "p95_ms": 4.631725,
+      "samples": 100
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/products/perf-product-0",
+      "p50_ms": 2.300818,
+      "p95_ms": 2.975519,
+      "samples": 100
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/services",
+      "p50_ms": 2.178981,
+      "p95_ms": 2.968353,
+      "samples": 100
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/services",
+      "p50_ms": 1.647037,
+      "p95_ms": 2.517742,
+      "samples": 100
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/invoices",
+      "p50_ms": 1.543443,
+      "p95_ms": 2.463217,
+      "samples": 100
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/audit-events",
+      "p50_ms": 1.436012,
+      "p95_ms": 2.125288,
+      "samples": 100
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/products/perf-product-0",
+      "p50_ms": 1.699223,
+      "p95_ms": 2.024575,
+      "samples": 100
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/invoices/{id}",
+      "p50_ms": 1.246515,
+      "p95_ms": 1.817259,
+      "samples": 100
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/audit-events",
+      "p50_ms": 1.207351,
+      "p95_ms": 1.815589,
+      "samples": 100
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/customer-accounts",
+      "p50_ms": 1.171168,
+      "p95_ms": 1.724627,
+      "samples": 100
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/orders/{id}",
+      "p50_ms": 1.168025,
+      "p95_ms": 1.56231,
+      "samples": 100
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/services/{id}",
+      "p50_ms": 1.08818,
+      "p95_ms": 1.462426,
+      "samples": 100
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/catalog-taxonomy",
+      "p50_ms": 1.26697,
+      "p95_ms": 1.42214,
+      "samples": 100
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/session",
+      "p50_ms": 0.613594,
+      "p95_ms": 0.810963,
+      "samples": 100
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/catalog-taxonomy",
+      "p50_ms": 0.442567,
+      "p95_ms": 0.491895,
+      "samples": 100
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/currencies",
+      "p50_ms": 0.238262,
+      "p95_ms": 0.28089,
+      "samples": 100
+    }
+  ],
+  "mysql": "8.4.13",
+  "seed": "finance-perf-v1",
+  "warmup_requests": 5,
+  "source_commit": "2aeba267f9013556eeb843ac5fb7f3dac3800577",
+  "source_run": "https://github.com/xiaoqiqixi/betteridcsys-backend/actions/runs/41395844770"
+}

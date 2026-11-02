@@ -138,17 +138,123 @@ and status/date indexes need a new migration; registering it also requires the
 existing HTTP seed test's hard-coded migration count to be updated by agreement
 with CI-2.
 
-## Product-list optimization under validation
+## Measured changes
 
-List reads now aggregate service counts once and load prices, options, choices,
-option prices and OS images in batches of at most 100 products. For the seeded
-200-product staff list, child-query count falls from 600 to six, with a single
-service aggregation instead of 200 scans. Detail/locking reads retain their
-existing path. A real-MySQL equivalence test compares batched output to detail
-reads across batch boundaries, mixed visibility, unknown currencies, option
-prices, disabled images and case-insensitive child keys. The candidate CI run
-will supply the corresponding latency comparison before acceptance is claimed.
+The full-size probe on [2aeba26, run 41395844770](https://github.com/xiaoqiqixi/betteridcsys-backend/actions/runs/41395844770)
+passed with the same seed, Go/MySQL versions, concurrency, scheduler limit and
+sample count as the baseline. It includes product, request-authorization,
+invoice, service, order and audit batching. Main also contains concurrent
+non-PERF changes; hosted-runner timing varies. This is a comparison of complete
+application revisions, not isolated attribution of every millisecond.
 
+Times are milliseconds, in the original baseline ranking. The first twenty
+rows remain the baseline's twenty slowest routes.
+
+| Method and endpoint | Before p50 | Before p95 | After p50 | After p95 |
+| --- | ---: | ---: | ---: | ---: |
+| GET /api/v1/admin/products | 209.591 | 224.958 | 13.287 | 14.350 |
+| GET /api/v1/products | 208.356 | 222.222 | 11.739 | 12.830 |
+| GET /api/v1/admin/overview?currency=CNY | 103.063 | 107.582 | 95.697 | 101.348 |
+| GET /api/v1/admin/invoices | 58.577 | 65.931 | 12.331 | 13.202 |
+| GET /api/v1/admin/currencies | 53.880 | 55.087 | 46.721 | 48.837 |
+| GET /api/v1/admin/orders | 47.368 | 52.369 | 14.963 | 16.247 |
+| GET /api/v1/invoices | 44.016 | 50.881 | 1.543 | 2.463 |
+| GET /api/v1/admin/services | 31.617 | 38.008 | 2.179 | 2.968 |
+| GET /api/v1/orders | 30.917 | 35.762 | 3.728 | 4.632 |
+| GET /api/v1/overview | 14.356 | 16.509 | 6.582 | 7.202 |
+| GET /api/v1/services | 13.022 | 15.815 | 1.647 | 2.518 |
+| GET /api/v1/admin/audit-events | 6.797 | 7.050 | 1.436 | 2.125 |
+| POST /api/v1/credit/top-up | 4.992 | 6.142 | 4.966 | 6.461 |
+| GET /api/v1/admin/products/perf-product-0 | 2.971 | 3.492 | 2.301 | 2.976 |
+| GET /api/v1/admin/customer-accounts | 1.814 | 2.375 | 1.171 | 1.725 |
+| GET /api/v1/admin/catalog-taxonomy | 2.226 | 2.349 | 1.267 | 1.422 |
+| GET /api/v1/invoices/{id} | 1.632 | 2.303 | 1.247 | 1.817 |
+| GET /api/v1/products/perf-product-0 | 2.068 | 2.198 | 1.699 | 2.025 |
+| GET /api/v1/services/{id} | 1.623 | 1.676 | 1.088 | 1.462 |
+| GET /api/v1/orders/{id} | 1.565 | 1.649 | 1.168 | 1.562 |
+| GET /api/v1/audit-events | 1.161 | 1.548 | 1.207 | 1.816 |
+| GET /api/v1/session | 0.981 | 1.020 | 0.614 | 0.811 |
+| GET /api/v1/catalog-taxonomy | 0.685 | 0.879 | 0.443 | 0.492 |
+| GET /api/v1/currencies | 0.364 | 0.407 | 0.238 | 0.281 |
+
+[After measurements](performance/2aeba26/result.json),
+[81 query plans](performance/2aeba26/explain.json),
+[CPU](performance/2aeba26/cpu.pprof),
+[block](performance/2aeba26/block.pprof) and
+[mutex](performance/2aeba26/mutex.pprof) profiles are retained. The plans contain
+14 explicit list/filter cases and all 67 distinct SELECT forms observed during
+HTTP read preflights, including their child queries. They are not an exhaustive
+matrix of every filter and every endpoint in the repository.
+
+The after CPU profile sampled 330 ms over 3.03 s; Linux syscalls accounted for
+18.2% flat time, down from 48.2% in the baseline. This fixed-duration workload
+completes more cycles after optimization, so these samples are not CPU/request
+measurements. Mutex delay remained tiny (228 microseconds), and block stacks
+still primarily show driver, SQL transaction and HTTP waits.
+
+### Implementation and evidence by change
+
+| Commit | Change | Before → after p95 (ms) | Regression evidence |
+| --- | --- | --- | --- |
+| `1749131` | Batch catalog children; aggregate service counts once | Staff products 224.958 → 12.996; public products 222.222 → 8.172 | Real-MySQL batch/detail equivalence passed on that commit |
+| `30477fd` | Cache identity and staff policy within one HTTP request | Staff audit 7.050 → 5.103; session 1.020 → 1.061 | One session, user and policy read per guarded request; revocation and failures refresh on the next request |
+| `4a59836` | Read invoice summaries without detail children | Staff invoices 65.931 → 13.202; client invoices 50.881 → 2.463 | All summary fields, historical precision, legacy paid/void states, pagination and ownership matched detail reads |
+| `f2e240d` | Batch service summaries and reuse their base scanner | Staff services 38.008 → 2.968; client services 15.815 → 2.518 | Full summary equivalence, one-time cycles, cloud data, tasks and owner scoping passed |
+| `ca9657e` | Batch order headers, items and service links | Staff orders 52.369 → 16.247; client orders 35.762 → 4.632 | Full detail equivalence, legacy options, mixed-case child keys and cursor ownership passed |
+| `e555274` | Resolve audit actor roles in one query | Staff audit 7.050 → 2.125 | MySQL account collation, historical actors, Unicode and one-query assertion passed |
+| `f6ebdd7` | Combine duplicate overview aggregate scans | Before 107.582; after pending | Empty sets, month/current-time boundaries, currencies and balances covered by a new MySQL test |
+
+The first two rows use their own retained probe runs:
+[product measurements](performance/1749131/result.json) and
+[authorization measurements](performance/30477fd/result.json). Later rows use the
+combined 2aeba26 probe. Request caching is supported by deterministic lookup-count
+and revocation checks; noisy session latency does not establish a speedup for
+that endpoint. The authorization-only run also recorded a 605.382 ms overview
+p95, retained in the raw evidence rather than discarded.
+
+For the 200-product staff list, child queries fell from 600 to six. Service counts
+now scan the service relation once instead of once per product. Invoice and
+service hydration each use a bounded query; order hydration uses three queries.
+All retain their existing cursor selector and repeatable-read transaction.
+Customer responses explicitly project public fields. Detail and mutation paths
+retain their transaction-specific checks. The audit batch preserves original
+actor spelling and lets MySQL apply account email collation.
+
+The 2aeba26 workflow was red in two catalog tests after the concurrent server
+connection migration. The latency probe, authorization test and invoice/service/
+order/audit equivalence tests passed. `0cba120` fixes the new product fixture's
+positional image insert by naming columns and supplying a connection identity.
+The existing image endpoint contract failure (`connection_id` empty) is separate
+from PERF-1 and its fixture was repaired by concurrent commit `0d770d2`; the
+complete suite must pass before claiming a green gate.
+
+## Index migration dependency
+
+Global chronological invoice and order selectors still scan roughly 50,000 and
+46,000 entries and sort: their existing indexes lead with `user_id`.
+`TestMySQLCommerceFinanceListIndexCandidates` measures these four proposed indexes
+inside a disposable full-size database and verifies that ordered results match:
+
+```sql
+CREATE INDEX ix_orders_date_id ON orders(created_at,id);
+CREATE INDEX ix_orders_status_date_id ON orders(status,created_at,id);
+CREATE INDEX ix_invoices_date_id ON invoices(issued_at,id);
+CREATE INDEX ix_invoices_status_date_id ON invoices(status,issued_at,id);
+```
+
+Its `PERF1_INDEX_RESULT` record includes before/after p50/p95 and EXPLAIN JSON for
+global and status-filtered selectors. This SQL experiment runs inside the ordinary
+race-enabled MySQL suite; its timings are not HTTP acceptance measurements.
+No candidate index is installed in production by this test.
+
+Registering a new migration also changes the exact migration count asserted by
+`internal/billing/http_performance_seed_test.go`. The task explicitly forbids
+editing that existing harness. Its inventory now expects 29 migrations after
+concurrent changes. The migration therefore awaits permission for that narrow
+inventory update, or an update by CI-2. Existing migrations and assertions have
+not been weakened. Additional observed scans include currency usage aggregation,
+revenue-date filtering and service-count grouping; further indexes need their
+own measured tradeoffs, including write overhead.
 
 ## Existing behavior to preserve
 
@@ -157,8 +263,11 @@ a five-minute maximum lifetime. Financial emails already enter an outbox inside
 the financial transaction. Password verification must finish before a login can
 be authorized; reducing bcrypt cost or returning success before verification is
 not an acceptable latency optimization. Transactional session and permission
-checks protecting mutations must remain fresh even if read-side identity lookup
-is reused within a request.
+checks protecting mutations remain fresh; the request memo does not replace
+store checks performed within financial transactions. The measured cursor lists
+already omit global totals and do not run a count query per page, so no contract
+change is needed to remove default totals. Dashboard aggregates and currency
+usage have distinct semantics and are not silently omitted.
 
 ## CI baseline
 

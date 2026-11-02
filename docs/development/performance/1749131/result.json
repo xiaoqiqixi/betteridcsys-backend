@@ -1,0 +1,181 @@
+{
+  "concurrency": 1,
+  "go": "go1.27.3",
+  "gomaxprocs": 1,
+  "host_cpus": 4,
+  "measurements": [
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/overview?currency=CNY",
+      "p50_ms": 76.191889,
+      "p95_ms": 756.817267,
+      "samples": 100
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/currencies",
+      "p50_ms": 36.507959,
+      "p95_ms": 40.784814,
+      "samples": 100
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/invoices",
+      "p50_ms": 32.930192,
+      "p95_ms": 39.685196,
+      "samples": 100
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/orders",
+      "p50_ms": 24.56374,
+      "p95_ms": 27.894896,
+      "samples": 100
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/invoices",
+      "p50_ms": 20.979283,
+      "p95_ms": 25.255967,
+      "samples": 100
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/services",
+      "p50_ms": 14.860639,
+      "p95_ms": 18.491514,
+      "samples": 100
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/orders",
+      "p50_ms": 13.592012,
+      "p95_ms": 16.309849,
+      "samples": 100
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/products",
+      "p50_ms": 8.768573,
+      "p95_ms": 12.99593,
+      "samples": 100
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/overview",
+      "p50_ms": 7.987354,
+      "p95_ms": 9.205927,
+      "samples": 100
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/products",
+      "p50_ms": 7.454466,
+      "p95_ms": 8.172321,
+      "samples": 100
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/services",
+      "p50_ms": 5.88054,
+      "p95_ms": 7.810414,
+      "samples": 100
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/credit/top-up",
+      "p50_ms": 3.094612,
+      "p95_ms": 3.943362,
+      "samples": 100
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/audit-events",
+      "p50_ms": 3.012609,
+      "p95_ms": 3.838404,
+      "samples": 100
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/products/perf-product-0",
+      "p50_ms": 1.506034,
+      "p95_ms": 1.769528,
+      "samples": 100
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/customer-accounts",
+      "p50_ms": 1.06888,
+      "p95_ms": 1.477411,
+      "samples": 100
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/products/perf-product-0",
+      "p50_ms": 0.939256,
+      "p95_ms": 1.19646,
+      "samples": 100
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/catalog-taxonomy",
+      "p50_ms": 0.802281,
+      "p95_ms": 1.107618,
+      "samples": 100
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/invoices/{id}",
+      "p50_ms": 0.709782,
+      "p95_ms": 1.020557,
+      "samples": 100
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/audit-events",
+      "p50_ms": 0.569893,
+      "p95_ms": 0.992525,
+      "samples": 100
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/services/{id}",
+      "p50_ms": 0.845716,
+      "p95_ms": 0.900838,
+      "samples": 100
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/orders/{id}",
+      "p50_ms": 0.608431,
+      "p95_ms": 0.870553,
+      "samples": 100
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/session",
+      "p50_ms": 0.394941,
+      "p95_ms": 0.584124,
+      "samples": 100
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/catalog-taxonomy",
+      "p50_ms": 0.395782,
+      "p95_ms": 0.508431,
+      "samples": 100
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/currencies",
+      "p50_ms": 0.197295,
+      "p95_ms": 0.219689,
+      "samples": 100
+    }
+  ],
+  "mysql": "8.4.13",
+  "seed": "finance-perf-v1",
+  "warmup_requests": 5,
+  "source_commit": "17491315012ed105b1df1eeff7e40c66066dae45",
+  "source_run": "https://github.com/xiaoqiqixi/betteridcsys-backend/actions/runs/41392269669"
+}
