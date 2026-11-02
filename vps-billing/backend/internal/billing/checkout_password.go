@@ -28,6 +28,6 @@ func checkoutPasswordHashes06(items []api.CartItemInput) ([]string, error) {
 	return hashes, nil
 }
 
-var guestPasswordHashPattern06 = regexp.MustCompile(`^\$2[aby]\$(?:1[0-6])\$[./A-Za-z0-9]{53}$`)
+var guestPasswordHashPattern06 = regexp.MustCompile(`^\$2[ab]\$1[2-6]\$[./A-Za-z0-9]{53}$`)
 
 func validGuestPasswordHash06(hash string) bool { return guestPasswordHashPattern06.MatchString(hash) }

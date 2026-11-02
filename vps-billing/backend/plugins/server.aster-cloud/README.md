@@ -36,3 +36,25 @@ are absent from receipts and process output is discarded by systemd.
 Run `go test -race ./plugins/server.aster-cloud/...` from the backend module. The
 suite includes protocol conformance, process restart recovery, uncertainty,
 selected images, and credential absence in durable files.
+# Migrate a configured controller
+
+Run the Core schema migrations first, stop the API, and reconcile outstanding
+0.5.10 provisioning jobs with the old installation. The migration refuses any
+queued or uncertain old provisioning job and any running or uncertain service
+task. It never sends a controller mutation or replays an old request.
+
+Build the host-only tool with `go build -o artifacts/migrate-controller
+./plugins/server.aster-cloud/cmd/migrate`. Run as root with
+`--controller-policy /etc/aster/controllers.json --controller-id primary
+--connection-id primary-cloud` to print the nonsecret plan. Add
+`--mysql-dsn-file /etc/aster/secrets/mysql.dsn --apply` to create the connection,
+copy private credentials into `/etc/aster/server/primary-cloud/`, and migrate
+explicit product and service preset bindings in one database transaction.
+Each invocation selects exactly one controller. Custom legacy products need
+an explicit controller preset before migration; no node selection is inferred.
+Old order snapshots and dispatched requests remain unchanged for audit.
+
+The tool does not install, approve or start a worker. Approve the resulting
+server slot, test the connection, then start Core. A failed database transaction
+leaves only a private prepared credential directory; inspect it before repeating
+the migration. An existing connection or credential directory is never replaced.
