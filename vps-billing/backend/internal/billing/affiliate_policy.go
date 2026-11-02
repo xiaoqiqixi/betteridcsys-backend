@@ -139,6 +139,7 @@ func recordAffiliateCommissionTx(ctx context.Context, tx *sql.Tx, invoiceID stri
 	if err != nil {
 		return err
 	}
+	// The lifetime cap counts original awards; refunds do not reopen the cap.
 	var used int64
 	if err = tx.QueryRowContext(ctx, "SELECT COALESCE(SUM(amount_minor),0) FROM affiliate_commissions WHERE client_id=? AND affiliate_id=? AND currency=?", uid, affiliate, currency).Scan(&used); err != nil {
 		return err

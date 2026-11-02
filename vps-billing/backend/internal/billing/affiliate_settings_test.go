@@ -179,6 +179,12 @@ func TestMySQLAffiliateClawbackMatrix(t *testing.T) {
 			if err != nil || out.Balances[0].Available.AmountMinor != tc.wantAvailable || out.Balances[0].Debt.AmountMinor != tc.wantDebt {
 				t.Fatal(out, err)
 			}
+			if tc.policy == "reverse_all" || tc.state == "pending" {
+				var auditCount int
+				if err = m.DB.QueryRow("SELECT COUNT(*) FROM audit_events WHERE user_id=? AND action='affiliate.reversed' AND actor_email='system'", f.customer.ID).Scan(&auditCount); err != nil || auditCount != 1 {
+					t.Fatal(auditCount, err)
+				}
+			}
 			if tc.wantDebt > 0 {
 				seedAffiliateInvoice(t, m, other.ID, at)
 				result, e := a.releaseAffiliate(f.ctx, financeapi.AutomationSettings{}, now)

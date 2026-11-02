@@ -108,7 +108,7 @@ func (a *App) releaseAffiliate(ctx context.Context, _ financeapi.AutomationSetti
 				if _, err = tx.ExecContext(ctx, "INSERT INTO affiliate_adjustments(id,commission_id,refund_id,amount_minor,created_at) VALUES(?,?,?,?,?)", ID(), v.id, r.id, -delta, now.UTC()); err != nil {
 					return false, err
 				}
-				if err = insertAccountAudit(ctx, tx, v.uid, v.uid, "affiliate.reversed", r.id); err != nil {
+				if err = insertAffiliateSystemAudit(ctx, tx, v.uid, "affiliate.reversed", r.id); err != nil {
 					return false, err
 				}
 				changed = true
@@ -121,7 +121,7 @@ func (a *App) releaseAffiliate(ctx context.Context, _ financeapi.AutomationSetti
 				if _, err = tx.ExecContext(ctx, "UPDATE affiliate_commissions SET status=?,released_at=? WHERE id=?", state, now.UTC(), v.id); err != nil {
 					return false, err
 				}
-				if err = insertAccountAudit(ctx, tx, v.uid, v.uid, "affiliate.released", v.id); err != nil {
+				if err = insertAffiliateSystemAudit(ctx, tx, v.uid, "affiliate.released", v.id); err != nil {
 					return false, err
 				}
 				changed = true
@@ -135,4 +135,9 @@ func (a *App) releaseAffiliate(ctx context.Context, _ financeapi.AutomationSetti
 		}
 	}
 	return result, nil
+}
+
+func insertAffiliateSystemAudit(ctx context.Context, tx *sql.Tx, owner, action, target string) error {
+	_, err := tx.ExecContext(ctx, "INSERT INTO audit_events(id,user_id,action,target,created_at,actor_email,detail) VALUES(?,?,?,?,UTC_TIMESTAMP(6),'system','')", ID(), owner, action, target)
+	return err
 }
