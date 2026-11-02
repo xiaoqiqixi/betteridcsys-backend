@@ -526,6 +526,7 @@ http {{
             require(view.get("module_id") == "server.aster-cloud" and view.get("connection_id") == "e2e-cloud", "service bypassed the Aster Cloud module")
             rows = self.sql("finance", f"SELECT JSON_OBJECT('id',id,'action',action,'status',status,'operation',operation_id) FROM service_tasks WHERE service_id='{sid}' ORDER BY created_at,id")
             tasks = [json.loads(row) for row in rows.splitlines()]
+            self.evidence["last_service_observation"] = {"id": sid, "status": view["status"], "power": view.get("power"), "tasks": tasks}
             require(not any(t["status"] in ("failed", "uncertain") for t in tasks), "service task definitively failed or became uncertain")
             if any(t["status"] != "succeeded" for t in tasks) or view["status"] != args["state"]:
                 return False
@@ -705,8 +706,15 @@ http {{
             log.close()
         ledger = self.root / "node-state/journal.json"
         if ledger.is_file():
-            for instance in json.loads(ledger.read_text())["instances"].values():
+            state = json.loads(ledger.read_text())
+            self.evidence["node_operations"] = [{"id": identifier, "action": operation["task"]["action"],
+                "status": operation["result"]["status"], "error_code": operation.get("error_code", "")}
+                for kind in ("operations", "storage_operations") for identifier, operation in state.get(kind, {}).items()]
+            for instance in state["instances"].values():
                 if re.fullmatch("aster-[a-f0-9]{32}", instance["domain"]):
+                    log = Path("/var/log/libvirt/qemu") / (instance["domain"] + ".log")
+                    if log.is_file():
+                        self.write(self.private / (instance["domain"] + ".log"), log.read_bytes()[-16384:])
                     self.command(["virsh", "-c", "qemu:///system", "destroy", instance["domain"]], check=False)
                     self.command(["virsh", "-c", "qemu:///system", "undefine", instance["domain"]], check=False)
         self.command(["virsh", "-c", "qemu:///system", "nwfilter-undefine", "aster-e2e-filter"], check=False)
