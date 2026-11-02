@@ -367,7 +367,7 @@ report = json.loads(Path(sys.argv[1]).read_text())
 database = report['database']
 assert report['read_only'] is True and report['configuration_checked'] is True
 assert database['read_only'] is True and database['status'] == 'current'
-assert database['schema_version'] == 26 and len(database['migration_checksums']) == 26
+assert database['schema_version'] == 27 and len(database['migration_checksums']) == 27
 assert database['admin_count'] == 1 and database['pending_migrations'] == []
 assert database['table_visibility_verified'] is True
 PYCURRENT
