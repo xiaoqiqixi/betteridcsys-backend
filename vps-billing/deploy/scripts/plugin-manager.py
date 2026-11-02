@@ -24,7 +24,6 @@ import zlib
 
 CORE_VERSION = "0.6.0"
 PAYMENT_MIN_CORE_VERSION = "0.5.3"
-RESOURCE_MIN_CORE_VERSION = "0.5.10"
 FILES = frozenset({"plugin", "manifest.json", "LICENSE", "README.md", "THIRD_PARTY_NOTICES.json", "SHA256SUMS"})
 MAX_ARCHIVE = 80 << 20
 MAX_BINARY = 64 << 20
@@ -36,8 +35,7 @@ MANIFEST_KEYS = {"schema", "id", "version", "protocol", "core_min", "core_max_ex
 SELECTION_KEYS = {"enabled", "id", "version", "manifest_sha256", "worker_uid", "client_uid", "socket", "allowed_targets"}
 PAYMENT_ID = re.compile(r"payment\.[a-z][a-z0-9-]{0,47}\Z")
 SERVER_ID = re.compile(r"server\.[a-z][a-z0-9-]{0,47}\Z")
-RESOURCE_ID = re.compile(r"resource\.[a-z][a-z0-9-]{0,47}\Z")
-CONTROLLER_ID = re.compile(r"[a-z0-9][a-z0-9_-]{0,63}\Z")
+CONNECTION_ID = re.compile(r"[a-z0-9][a-z0-9_-]{0,63}\Z")
 GATEWAY_ID = re.compile(r"[a-z0-9][a-z0-9._-]{0,63}\Z")
 MERCHANT_ID = re.compile(r"[!-~]{1,128}\Z")
 
@@ -47,8 +45,6 @@ def plugin_kind(identifier):
         return "smtp"
     if isinstance(identifier, str) and identifier != "payment.disabled" and PAYMENT_ID.fullmatch(identifier):
         return "payment"
-    if isinstance(identifier, str) and RESOURCE_ID.fullmatch(identifier):
-        return "resource"
     if isinstance(identifier, str) and SERVER_ID.fullmatch(identifier):
         return "server"
     raise Rejected("Unsupported runtime plugin identity.")
@@ -175,7 +171,7 @@ def validate_manifest(value, core):
         raise Rejected("Unsupported runtime manifest.")
     kind = plugin_kind(value["id"])
     expected_keys = MANIFEST_KEYS | ({"payment"} if kind == "payment" else set())
-    capabilities = {"smtp": ["smtp.send"], "payment": ["payment.checkout", "payment.verify_callback"], "resource": ["resource.send", "resource.lookup"], "server": ["server.call"]}[kind]
+    capabilities = {"smtp": ["smtp.send"], "payment": ["payment.checkout", "payment.verify_callback"], "server": ["server.call"]}[kind]
     if set(value) != expected_keys or type(value["schema"]) is not int or value["schema"] != 1 or value["protocol"] != "aster." + kind + "/1" or (not valid_payment_capabilities(value["capabilities"]) if kind == "payment" else value["capabilities"] != capabilities) or value["executable"] != "plugin" or not isinstance(value["sha256"], str) or not DIGEST.fullmatch(value["sha256"]):
         raise Rejected("Unsupported runtime manifest.")
     if kind == "payment":
@@ -184,8 +180,6 @@ def validate_manifest(value, core):
             raise Rejected("Payment runtime protocol requires Core 0.5.3 or newer.")
     if kind == "server" and (version_tuple(core) < (0, 6, 0) or version_tuple(value["core_min"]) < (0, 6, 0)):
         raise Rejected("Server modules require Core 0.6.0.")
-    if kind == "resource" and (version_tuple(core) < version_tuple(RESOURCE_MIN_CORE_VERSION) or version_tuple(value["core_min"]) < version_tuple(RESOURCE_MIN_CORE_VERSION)):
-        raise Rejected("Resource runtime protocol requires Core 0.5.10 or newer.")
     version_tuple(value["version"])
     if not version_tuple(value["core_min"]) <= version_tuple(core) < version_tuple(value["core_max_exclusive"]):
         raise Rejected("Plugin is incompatible with the selected core version.")
@@ -337,7 +331,7 @@ def unpack_archive(compressed, raw_resources=False):
             raise Rejected("Archive contains an unsafe path.")
         if root is None:
             root = parts[0]
-        if parts[0] != root or not re.fullmatch(r"aster-(?:smtp|(?:payment|resource|server)-[a-z][a-z0-9-]{0,47})-(?:0|[1-9][0-9]{0,5})\.(?:0|[1-9][0-9]{0,5})\.(?:0|[1-9][0-9]{0,5})-linux-amd64" + suffix, root):
+        if parts[0] != root or not re.fullmatch(r"aster-(?:smtp|(?:payment|server)-[a-z][a-z0-9-]{0,47})-(?:0|[1-9][0-9]{0,5})\.(?:0|[1-9][0-9]{0,5})\.(?:0|[1-9][0-9]{0,5})-linux-amd64" + suffix, root):
             raise Rejected("Archive root does not identify a runtime package.")
         data_start = offset + 512
         offset = data_start + (size + 511) // 512 * 512
@@ -527,7 +521,7 @@ def validate_targets(targets):
 
 
 def validate_policy(value):
-    if not isinstance(value, dict) or not {"schema", "revision"} <= set(value) <= {"schema", "revision", "smtp", "payment", "payments", "resource", "servers"} or type(value["schema"]) is not int or value["schema"] != 1 or type(value["revision"]) is not int or not 1 <= value["revision"] <= (1 << 64) - 1:
+    if not isinstance(value, dict) or not {"schema", "revision"} <= set(value) <= {"schema", "revision", "smtp", "payment", "payments", "servers"} or type(value["schema"]) is not int or value["schema"] != 1 or type(value["revision"]) is not int or not 1 <= value["revision"] <= (1 << 64) - 1:
         raise Rejected("Unsupported plugin policy.")
     payments = value.get("payments", [])
     if not isinstance(payments, list) or len(payments) > 64 or "payment" in value and payments:
@@ -542,24 +536,22 @@ def validate_policy(value):
         raise Rejected("Invalid server connections.")
     slots = set()
     for selected in servers:
-        if not isinstance(selected, dict) or not isinstance(selected.get("slot"), str) or not CONTROLLER_ID.fullmatch(selected["slot"]) or selected["slot"] in slots or selected.get("socket") != "/run/aster-server/" + selected["slot"] + "/plugin.sock":
+        if not isinstance(selected, dict) or not isinstance(selected.get("slot"), str) or not CONNECTION_ID.fullmatch(selected["slot"]) or selected["slot"] in slots or selected.get("socket") != "/run/aster-server/" + selected["slot"] + "/plugin.sock":
             raise Rejected("Server connections require unique ids and canonical sockets.")
         slots.add(selected["slot"])
-    selections = [(kind, value[kind]) for kind in ("smtp", "payment", "resource") if kind in value]
+    selections = [(kind, value[kind]) for kind in ("smtp", "payment") if kind in value]
     selections += [("payment", selected) for selected in payments]
     selections += [("server", selected) for selected in servers]
     for kind, selected in selections:
-        expected_keys = SELECTION_KEYS | ({"merchant_id"} if kind == "payment" else {"controller_id"} if kind == "resource" else set())
+        expected_keys = SELECTION_KEYS | ({"merchant_id"} if kind == "payment" else set())
         if selected in payments or selected in servers:
             expected_keys |= {"slot"}
         if not isinstance(selected, dict) or set(selected) != expected_keys or type(selected["enabled"]) is not bool or plugin_kind(selected["id"]) != kind or not isinstance(selected["manifest_sha256"], str) or not DIGEST.fullmatch(selected["manifest_sha256"]):
             raise Rejected("Unsupported runtime selection.")
         if kind == "payment" and (not isinstance(selected["merchant_id"], str) or not MERCHANT_ID.fullmatch(selected["merchant_id"])):
             raise Rejected("Payment requires an explicit non-secret merchant identity.")
-        if kind == "resource" and (not isinstance(selected["controller_id"], str) or not CONTROLLER_ID.fullmatch(selected["controller_id"])):
-            raise Rejected("Resource requires an explicit controller identity.")
         version_tuple(selected["version"])
-        if any(type(selected[key]) is not int or not (0 if kind == "resource" and key == "client_uid" else 1) <= selected[key] <= (1 << 32) - 1 for key in ("worker_uid", "client_uid")) or selected["worker_uid"] == selected["client_uid"] or kind == "resource" and selected["client_uid"] != 0:
+        if any(type(selected[key]) is not int or not 1 <= selected[key] <= (1 << 32) - 1 for key in ("worker_uid", "client_uid")) or selected["worker_uid"] == selected["client_uid"]:
             raise Rejected("Separate non-root worker and API identities are required.")
         absolute(selected["socket"])
         if len(selected["socket"]) > 100:
@@ -634,9 +626,9 @@ def mutate_policy(root, path, action, revision, core=CORE_VERSION, selection=Non
         raise Rejected("An explicit valid current revision is required.")
     if action == "migrate" and (kind != "payment" or slot is None):
         raise Rejected("Migration requires --kind payment and --slot matching the legacy plugin id.")
-    if kind not in ("smtp", "payment", "resource", "server"):
+    if kind not in ("smtp", "payment", "server"):
         raise Rejected("Unsupported runtime slot.")
-    if kind == "server" and (slot is None or not isinstance(slot, str) or not CONTROLLER_ID.fullmatch(slot)):
+    if kind == "server" and (slot is None or not isinstance(slot, str) or not CONNECTION_ID.fullmatch(slot)):
         raise Rejected("A server connection slot is required.")
     if slot is not None and (kind not in ("payment", "server") or not isinstance(slot, str) or not GATEWAY_ID.fullmatch(slot)):
         raise Rejected("A valid payment gateway slot is required.")
@@ -675,8 +667,8 @@ def mutate_policy(root, path, action, revision, core=CORE_VERSION, selection=Non
                 selected["manifest_sha256"] = manifest_hash
                 target[kind] = selected
             elif action == "remove":
-                if kind not in ("resource", "payment", "server") or kind not in target or target[kind]["enabled"]:
-                    raise Rejected("Only a disabled resource or payment selection can be removed.")
+                if kind not in ("payment", "server") or kind not in target or target[kind]["enabled"]:
+                    raise Rejected("Only a disabled payment selection can be removed.")
                 del target[kind]
             elif action in ("enable", "disable", "rollback"):
                 if kind not in target:
@@ -739,7 +731,7 @@ def main(argv=None):
     commands.add_parser("status")
     for name in ("select", "enable", "disable", "rollback", "remove", "migrate"):
         command = commands.add_parser(name)
-        command.add_argument("--kind", choices=["smtp", "payment", "resource", "server"])
+        command.add_argument("--kind", choices=["smtp", "payment", "server"])
         command.add_argument("--slot", help="Payment gateway or server connection id")
         command.add_argument("--revision", required=True, type=int)
         if name == "select":
@@ -750,7 +742,6 @@ def main(argv=None):
             command.add_argument("--socket")
             command.add_argument("--target", action="append", type=parse_target, default=[])
             command.add_argument("--merchant-id")
-            command.add_argument("--controller-id")
         if name == "rollback":
             command.add_argument("--version", required=True)
     options = parser.parse_args(argv)
@@ -776,8 +767,6 @@ def main(argv=None):
                     selection["socket"] = "/run/aster-" + (options.kind or plugin_kind(options.id)) + "/" + options.slot + "/plugin.sock"
                 if options.merchant_id is not None:
                     selection["merchant_id"] = options.merchant_id
-                if options.controller_id is not None:
-                    selection["controller_id"] = options.controller_id
             kind = options.kind or (plugin_kind(options.id) if options.action == "select" else "smtp")
             result = mutate_policy(options.root, options.policy, options.action, options.revision, options.core_version, selection, getattr(options, "version", None), kind=kind, slot=options.slot)
         print(json.dumps(result, sort_keys=True, ensure_ascii=False))

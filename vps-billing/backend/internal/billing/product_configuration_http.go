@@ -1,7 +1,7 @@
 package billing
 
 import (
-	"aster/billing/internal/controllers"
+	"aster/billing/internal/modulejobs"
 	"bytes"
 	"encoding/json"
 	"errors"
@@ -36,8 +36,7 @@ func provisioningJobPath(path string) (string, bool) {
 	return id, ok && validCancellationID(id)
 }
 
-// Product configuration has one intentional null: spec.resources for disabled
-// or preset modules. Keep the financial parser untouched: it deliberately
+// Product configuration permits null config only for a disabled module. Keep the financial parser untouched: it deliberately
 // forbids all nulls and has a different field grammar.
 func productConfigurationBody(w http.ResponseWriter, r *http.Request, target *ProductConfigurationInput) bool {
 	media, _, err := mime.ParseMediaType(r.Header.Get("Content-Type"))
@@ -59,7 +58,7 @@ func productConfigurationBody(w http.ResponseWriter, r *http.Request, target *Pr
 			return false
 		}
 		if t == nil {
-			return path == "$.spec.resources"
+			return path == "$.spec.config"
 		}
 		if t == json.Delim('{') {
 			seen := map[string]bool{}
@@ -84,7 +83,7 @@ func productConfigurationBody(w http.ResponseWriter, r *http.Request, target *Pr
 	}
 	var shape func(json.RawMessage, reflect.Type) bool
 	shape = func(raw json.RawMessage, t reflect.Type) bool {
-		if t == reflect.TypeOf((*controllers.Resources)(nil)) && bytes.Equal(bytes.TrimSpace(raw), []byte("null")) {
+		if t == reflect.TypeOf(modulejobs.ProductSpec{}.Config) && bytes.Equal(bytes.TrimSpace(raw), []byte("null")) {
 			return true
 		}
 		if t.Kind() == reflect.Pointer {
@@ -111,7 +110,7 @@ func productConfigurationBody(w http.ResponseWriter, r *http.Request, target *Pr
 	if valid {
 		d = json.NewDecoder(bytes.NewReader(raw))
 		d.DisallowUnknownFields()
-		valid = d.Decode(target) == nil
+		valid = d.Decode(target) == nil && target.Spec.Valid()
 	}
 	if !valid {
 		fail(w, r, 400, "INVALID_PRODUCT_CONFIGURATION", "产品配置格式不正确，请核对完整参数后重试")
@@ -121,8 +120,8 @@ func productConfigurationBody(w http.ResponseWriter, r *http.Request, target *Pr
 
 func (a *App) productConfigurationError(w http.ResponseWriter, r *http.Request, err error) {
 	switch {
-	case errors.Is(err, ErrProductConfiguration), errors.Is(err, controllers.ErrConfiguration):
-		fail(w, r, 400, "INVALID_PRODUCT_CONFIGURATION", "请检查主控标识、资源参数及操作原因")
+	case errors.Is(err, ErrProductConfiguration), errors.Is(err, modulejobs.ErrConfiguration):
+		fail(w, r, 400, "INVALID_PRODUCT_CONFIGURATION", "请检查模块标识、接口、配置及操作原因")
 	case errors.Is(err, ErrProductConfigurationConflict):
 		fail(w, r, 409, "PRODUCT_CONFIGURATION_CONFLICT", "产品配置已被修改，请重新读取后编辑")
 	case errors.Is(err, ErrProvisioningState):

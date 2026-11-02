@@ -34,7 +34,7 @@ jobs:
         working-directory: vps-billing/backend
         run: |
           go vet ./...
-          go test -race -count=1 ./internal/commerce ./internal/contracttest ./internal/financeapi ./internal/controllers ./controllerapi ./serviceapi ./cmd/server
+          go test -race -count=1 ./internal/commerce ./internal/contracttest ./internal/financeapi ./plugins/server.aster-cloud/internal/controllers ./plugins/server.aster-cloud/controllerapi ./plugins/server.aster-cloud/serviceapi ./cmd/server
       - name: Real MySQL commerce and payment acceptance
         working-directory: vps-billing/backend
         env:

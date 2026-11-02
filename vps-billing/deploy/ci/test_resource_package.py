@@ -24,7 +24,7 @@ spec.loader.exec_module(gate)
 class ResourcePackageGateTest(unittest.TestCase):
     def test_resource_package_starts_at_first_protocol_core_release(self):
         specification = importlib.util.spec_from_file_location(
-            "resource_package_builder", DIRECTORY.parent / "scripts/build-resource-plugin.py")
+            "resource_package_builder", DIRECTORY.parents[1] / "backend/plugins/server.aster-cloud/legacy/scripts/build-resource-plugin.py")
         builder = importlib.util.module_from_spec(specification)
         specification.loader.exec_module(builder)
         raw = builder.package(b"synthetic binary, never executed", b"project license", b"readme",
@@ -36,9 +36,9 @@ class ResourcePackageGateTest(unittest.TestCase):
         self.assertEqual(manifest["core_max_exclusive"], "0.6.0")
         self.assertEqual(manifest["version"], "0.1.1")
         self.assertEqual(manifest["protocol"], "aster.resource/1")
-        worker_source = (DIRECTORY.parents[1] / "backend/plugins/resourcebridge/config.go").read_text()
+        worker_source = (DIRECTORY.parents[1] / "backend/plugins/server.aster-cloud/legacy/resourcebridge/config.go").read_text()
         self.assertEqual(re.search(r'const Version = "([^"]+)"', worker_source)[1], manifest["version"])
-        core_source = (DIRECTORY.parents[1] / "backend/pkg/pluginapi/protocol.go").read_text()
+        core_source = (DIRECTORY.parents[1] / "backend/plugins/server.aster-cloud/legacy/pluginapi/protocol.go").read_text()
         self.assertEqual(re.search(r'ResourceMinCoreVersion\s*=\s*"([^"]+)"', core_source)[1], manifest["core_min"])
 
     def setUp(self):

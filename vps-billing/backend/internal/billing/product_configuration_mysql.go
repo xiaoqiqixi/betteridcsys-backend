@@ -1,7 +1,7 @@
 package billing
 
 import (
-	"aster/billing/internal/controllers"
+	"aster/billing/internal/modulejobs"
 	"context"
 	"database/sql"
 	"encoding/json"
@@ -19,7 +19,7 @@ func readProductConfiguration(ctx context.Context, q currencyQuerier, planID, lo
 	if err != nil {
 		return ProductConfiguration{}, err
 	}
-	c.Spec = controllers.ProductSpec{}
+	c.Spec = modulejobs.ProductSpec{}
 	if json.Unmarshal(raw, &c.Spec) != nil || !validProductConfiguration(c) {
 		return ProductConfiguration{}, ErrProductConfiguration
 	}

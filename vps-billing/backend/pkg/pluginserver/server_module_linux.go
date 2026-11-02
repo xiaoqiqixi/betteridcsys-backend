@@ -33,7 +33,7 @@ func (s ServerServer) Serve(ctx context.Context, listener *net.UnixListener) err
 	}}
 	stop := context.AfterFunc(ctx, func() { _ = server.Close() })
 	defer stop()
-	err := server.Serve(&boundedListener{Listener: listener, clientUID: s.ClientUID, slots: make(chan struct{}, 8)})
+	err := server.Serve(&boundedListener{Listener: listener, clientUID: s.ClientUID, allowRoot: true, slots: make(chan struct{}, 8)})
 	if errors.Is(err, http.ErrServerClosed) {
 		return nil
 	}

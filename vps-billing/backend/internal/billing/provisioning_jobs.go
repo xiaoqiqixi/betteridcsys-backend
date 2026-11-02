@@ -1,7 +1,7 @@
 package billing
 
 import (
-	"aster/billing/internal/controllers"
+	"aster/billing/internal/modulejobs"
 	"context"
 	"fmt"
 	"time"
@@ -10,32 +10,32 @@ import (
 const provisioningLease = 30 * time.Second
 
 type ProvisioningJob struct {
-	ID                  string              `json:"id"`
-	OrderID             string              `json:"order_id"`
-	State               string              `json:"state"`
-	RequestSHA256       string              `json:"request_sha256"`
-	ConfigurationSHA256 string              `json:"configuration_sha256"`
-	CreatedAt           time.Time           `json:"created_at"`
-	UpdatedAt           time.Time           `json:"updated_at"`
-	Result              *controllers.Result `json:"result,omitempty"`
+	ID                  string             `json:"id"`
+	OrderID             string             `json:"order_id"`
+	State               string             `json:"state"`
+	RequestSHA256       string             `json:"request_sha256"`
+	ConfigurationSHA256 string             `json:"configuration_sha256"`
+	CreatedAt           time.Time          `json:"created_at"`
+	UpdatedAt           time.Time          `json:"updated_at"`
+	Result              *modulejobs.Result `json:"result,omitempty"`
 }
 type ProvisioningClaim struct {
 	Job            ProvisioningJob
-	Request        controllers.Request
+	Request        modulejobs.Request
 	ClaimToken     string
 	LeaseExpiresAt time.Time
 }
 type ProvisioningJobStore interface {
 	CreateProvisioningJob(context.Context, User, string, string) (ProvisioningJob, bool, error)
 	ProvisioningJob(context.Context, User, string) (ProvisioningJob, error)
-	ProvisioningRequest(context.Context, string) (controllers.Request, error)
+	ProvisioningRequest(context.Context, string) (modulejobs.Request, error)
 	ClaimProvisioningJob(context.Context, string) (ProvisioningClaim, error)
-	CompleteProvisioningJob(context.Context, string, string, *controllers.Result) (ProvisioningJob, error)
-	ReconcileProvisioningJob(context.Context, string, controllers.Result) (ProvisioningJob, error)
+	CompleteProvisioningJob(context.Context, string, string, *modulejobs.Result) (ProvisioningJob, error)
+	ReconcileProvisioningJob(context.Context, string, modulejobs.Result) (ProvisioningJob, error)
 }
 type provisioningJobRecord struct {
 	Job            ProvisioningJob
-	Request        controllers.Request
+	Request        modulejobs.Request
 	ClaimToken     string
 	LeaseExpiresAt *time.Time
 	Attempts       int
@@ -48,7 +48,7 @@ func cloneProvisioningJob(j ProvisioningJob) ProvisioningJob {
 	}
 	return j
 }
-func cloneProvisioningRequest(r controllers.Request) controllers.Request {
+func cloneProvisioningRequest(r modulejobs.Request) modulejobs.Request {
 	r.Product = r.Product.Clone()
 	return r
 }
@@ -76,7 +76,7 @@ func newProvisioningRecord(o Order, s orderProductConfiguration) (provisioningJo
 		return provisioningJobRecord{}, ErrProvisioningUnavailable
 	}
 	id := ID()
-	r := controllers.Request{Protocol: controllers.Protocol, OperationID: id, OrderID: o.ID, OwnerRef: o.UserID, Hostname: o.Hostname, ConfigurationRevision: s.Revision, ConfigurationSHA256: s.SHA256, Product: s.Spec.Clone()}
+	r := modulejobs.Request{Protocol: modulejobs.Protocol, OperationID: id, OrderID: o.ID, OwnerRef: o.UserID, Hostname: o.Hostname, ConfigurationRevision: s.Revision, ConfigurationSHA256: s.SHA256, Product: s.Spec.Clone()}
 	_, h, err := r.BytesAndDigest()
 	if err != nil {
 		return provisioningJobRecord{}, ErrProductConfiguration
@@ -106,7 +106,7 @@ func claimProvisioning(r *provisioningJobRecord, now time.Time) error {
 	r.Attempts = 1
 	return nil
 }
-func completeProvisioning(r *provisioningJobRecord, token string, result *controllers.Result, now time.Time) error {
+func completeProvisioning(r *provisioningJobRecord, token string, result *modulejobs.Result, now time.Time) error {
 	if !r.valid() || r.Job.State != "sending" || token != r.ClaimToken {
 		return ErrProvisioningState
 	}
@@ -121,7 +121,7 @@ func completeProvisioning(r *provisioningJobRecord, token string, result *contro
 	r.Job.Result = &v
 	return nil
 }
-func reconcileProvisioning(r *provisioningJobRecord, result controllers.Result, now time.Time) error {
+func reconcileProvisioning(r *provisioningJobRecord, result modulejobs.Result, now time.Time) error {
 	if !r.valid() || !result.Matches(r.Request) {
 		return ErrProvisioningState
 	}
@@ -250,18 +250,18 @@ func (m *Memory) ProvisioningJob(ctx context.Context, actor User, jobID string) 
 	}
 	return cloneProvisioningJob(r.Job), nil
 }
-func (m *Memory) ProvisioningRequest(ctx context.Context, jobID string) (controllers.Request, error) {
+func (m *Memory) ProvisioningRequest(ctx context.Context, jobID string) (modulejobs.Request, error) {
 	if err := ctx.Err(); err != nil {
-		return controllers.Request{}, err
+		return modulejobs.Request{}, err
 	}
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	r, ok := m.provisioningJobs[jobID]
 	if !ok {
-		return controllers.Request{}, ErrNotFound
+		return modulejobs.Request{}, ErrNotFound
 	}
 	if !r.valid() {
-		return controllers.Request{}, ErrProvisioningState
+		return modulejobs.Request{}, ErrProvisioningState
 	}
 	return cloneProvisioningRequest(r.Request), nil
 }
@@ -295,7 +295,7 @@ func (m *Memory) ClaimProvisioningJob(ctx context.Context, jobID string) (Provis
 	}
 	return ProvisioningClaim{Job: cloneProvisioningJob(r.Job), Request: cloneProvisioningRequest(r.Request), ClaimToken: r.ClaimToken, LeaseExpiresAt: *r.LeaseExpiresAt}, nil
 }
-func (m *Memory) CompleteProvisioningJob(ctx context.Context, jobID, token string, result *controllers.Result) (ProvisioningJob, error) {
+func (m *Memory) CompleteProvisioningJob(ctx context.Context, jobID, token string, result *modulejobs.Result) (ProvisioningJob, error) {
 	if err := ctx.Err(); err != nil {
 		return ProvisioningJob{}, err
 	}
@@ -315,7 +315,7 @@ func (m *Memory) CompleteProvisioningJob(ctx context.Context, jobID, token strin
 	}
 	return cloneProvisioningJob(r.Job), nil
 }
-func (m *Memory) ReconcileProvisioningJob(ctx context.Context, jobID string, result controllers.Result) (ProvisioningJob, error) {
+func (m *Memory) ReconcileProvisioningJob(ctx context.Context, jobID string, result modulejobs.Result) (ProvisioningJob, error) {
 	if err := ctx.Err(); err != nil {
 		return ProvisioningJob{}, err
 	}

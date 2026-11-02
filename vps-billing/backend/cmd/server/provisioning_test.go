@@ -2,7 +2,7 @@ package main
 
 import (
 	"aster/billing/internal/billing"
-	"aster/billing/internal/controllers"
+	"aster/billing/internal/modulejobs"
 	"context"
 	"errors"
 	"flag"
@@ -30,14 +30,14 @@ func TestHostProvisioningExplicitEmptyFlagRemainsCommand(t *testing.T) {
 
 type hostJobFixture struct {
 	billing.ProvisioningJobStore
-	request          controllers.Request
+	request          modulejobs.Request
 	state            string
 	events           []string
 	completeErr      error
 	completeCanceled bool
 }
 
-func (s *hostJobFixture) ProvisioningRequest(context.Context, string) (controllers.Request, error) {
+func (s *hostJobFixture) ProvisioningRequest(context.Context, string) (modulejobs.Request, error) {
 	s.events = append(s.events, "read")
 	return s.request, nil
 }
@@ -49,7 +49,7 @@ func (s *hostJobFixture) ClaimProvisioningJob(context.Context, string) (billing.
 	s.state = "sending"
 	return billing.ProvisioningClaim{Request: s.request, ClaimToken: "private-claim"}, nil
 }
-func (s *hostJobFixture) CompleteProvisioningJob(ctx context.Context, _ string, token string, result *controllers.Result) (billing.ProvisioningJob, error) {
+func (s *hostJobFixture) CompleteProvisioningJob(ctx context.Context, _ string, token string, result *modulejobs.Result) (billing.ProvisioningJob, error) {
 	s.events = append(s.events, "complete")
 	s.completeCanceled = ctx.Err() != nil
 	if token != "private-claim" {
@@ -64,7 +64,7 @@ func (s *hostJobFixture) CompleteProvisioningJob(ctx context.Context, _ string, 
 	}
 	return billing.ProvisioningJob{ID: s.request.OperationID, State: s.state}, nil
 }
-func (s *hostJobFixture) ReconcileProvisioningJob(_ context.Context, _ string, result controllers.Result) (billing.ProvisioningJob, error) {
+func (s *hostJobFixture) ReconcileProvisioningJob(_ context.Context, _ string, result modulejobs.Result) (billing.ProvisioningJob, error) {
 	s.events = append(s.events, "reconcile")
 	if !result.Matches(s.request) {
 		return billing.ProvisioningJob{}, billing.ErrProvisioningState
@@ -80,12 +80,12 @@ type hostTransportFixture struct {
 	sends, lookups     int
 }
 
-func (c *hostTransportFixture) result() controllers.Result {
+func (c *hostTransportFixture) result() modulejobs.Result {
 	r := c.store.request
 	_, h, _ := r.BytesAndDigest()
-	return controllers.Result{Protocol: controllers.Protocol, OperationID: r.OperationID, OrderID: r.OrderID, RequestSHA256: h, Status: "accepted"}
+	return modulejobs.Result{Protocol: modulejobs.Protocol, OperationID: r.OperationID, OrderID: r.OrderID, RequestSHA256: h, Status: "accepted"}
 }
-func (c *hostTransportFixture) Send(context.Context, controllers.Request) (controllers.Result, error) {
+func (c *hostTransportFixture) Send(context.Context, modulejobs.Request) (modulejobs.Result, error) {
 	c.sends++
 	c.store.events = append(c.store.events, "send")
 	if c.cancel != nil {
@@ -93,15 +93,15 @@ func (c *hostTransportFixture) Send(context.Context, controllers.Request) (contr
 	}
 	return c.result(), c.sendErr
 }
-func (c *hostTransportFixture) Lookup(context.Context, controllers.Request) (controllers.Result, error) {
+func (c *hostTransportFixture) Lookup(context.Context, modulejobs.Request) (modulejobs.Result, error) {
 	c.lookups++
 	c.store.events = append(c.store.events, "lookup")
 	return c.result(), c.lookupErr
 }
 func hostFixture() (*hostJobFixture, *hostTransportFixture) {
-	p := controllers.ProductSpec{Mode: "preset", ControllerID: "primary", RemoteProductID: "sku-1"}
+	p := modulejobs.ProductSpec{Mode: "module", ModuleID: "server.fake", ConnectionID: "primary", Config: map[string]any{"preset": "sku-1"}}
 	h, _ := p.Digest()
-	s := &hostJobFixture{state: "queued", request: controllers.Request{Protocol: controllers.Protocol, OperationID: strings.Repeat("a", 32), OrderID: strings.Repeat("b", 32), OwnerRef: strings.Repeat("c", 32), Hostname: "web-1", ConfigurationRevision: 2, ConfigurationSHA256: h, Product: p}}
+	s := &hostJobFixture{state: "queued", request: modulejobs.Request{Protocol: modulejobs.Protocol, OperationID: strings.Repeat("a", 32), OrderID: strings.Repeat("b", 32), OwnerRef: strings.Repeat("c", 32), Hostname: "web-1", ConfigurationRevision: 2, ConfigurationSHA256: h, Product: p}}
 	return s, &hostTransportFixture{store: s}
 }
 func TestHostProvisioningDispatchOnce(t *testing.T) {
@@ -113,14 +113,14 @@ func TestHostProvisioningDispatchOnce(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			s, c := hostFixture()
 			if lost {
-				c.sendErr = controllers.ErrUncertain
+				c.sendErr = modulejobs.ErrUncertain
 			}
 			ctx, cancel := context.WithCancel(t.Context())
 			defer cancel()
 			if lost {
 				c.cancel = cancel
 			}
-			prepare := func(context.Context, string) (controllerTransport, error) {
+			prepare := func(context.Context, string) (moduleTransport, error) {
 				s.events = append(s.events, "prepare")
 				return c, nil
 			}
@@ -128,7 +128,7 @@ func TestHostProvisioningDispatchOnce(t *testing.T) {
 			want := "accepted"
 			if lost {
 				want = "uncertain"
-				if !errors.Is(err, controllers.ErrUncertain) {
+				if !errors.Is(err, modulejobs.ErrUncertain) {
 					t.Fatal(err)
 				}
 			} else if err != nil {
@@ -146,16 +146,16 @@ func TestHostProvisioningDispatchOnce(t *testing.T) {
 }
 func TestHostProvisioningPreparesBeforeClaim(t *testing.T) {
 	s, c := hostFixture()
-	_, err := performProvisioning(t.Context(), s, s.request.OperationID, false, func(context.Context, string) (controllerTransport, error) { return nil, controllers.ErrUnavailable })
-	if !errors.Is(err, controllers.ErrUnavailable) || s.state != "queued" || c.sends != 0 || !reflect.DeepEqual(s.events, []string{"read"}) {
+	_, err := performProvisioning(t.Context(), s, s.request.OperationID, false, func(context.Context, string) (moduleTransport, error) { return nil, modulejobs.ErrUnavailable })
+	if !errors.Is(err, modulejobs.ErrUnavailable) || s.state != "queued" || c.sends != 0 || !reflect.DeepEqual(s.events, []string{"read"}) {
 		t.Fatal(s.events, err)
 	}
 }
 func TestHostProvisioningCompletionFailureNeverRetries(t *testing.T) {
 	s, c := hostFixture()
 	s.completeErr = errors.New("private database information")
-	_, err := performProvisioning(t.Context(), s, s.request.OperationID, false, func(context.Context, string) (controllerTransport, error) { return c, nil })
-	if err != controllers.ErrUncertain || c.sends != 1 || s.state != "sending" {
+	_, err := performProvisioning(t.Context(), s, s.request.OperationID, false, func(context.Context, string) (moduleTransport, error) { return c, nil })
+	if err != modulejobs.ErrUncertain || c.sends != 1 || s.state != "sending" {
 		t.Fatal(err, c.sends, s.state)
 	}
 }
@@ -164,14 +164,14 @@ func TestHostProvisioningReconcileOnlyReadsRemote(t *testing.T) {
 		s, c := hostFixture()
 		s.state = "uncertain"
 		if lost {
-			c.lookupErr = controllers.ErrUncertain
+			c.lookupErr = modulejobs.ErrUncertain
 		}
-		job, err := performProvisioning(t.Context(), s, s.request.OperationID, true, func(context.Context, string) (controllerTransport, error) { return c, nil })
+		job, err := performProvisioning(t.Context(), s, s.request.OperationID, true, func(context.Context, string) (moduleTransport, error) { return c, nil })
 		if c.sends != 0 || c.lookups != 1 {
 			t.Fatal("reconcile sent a mutation")
 		}
 		if lost {
-			if err != controllers.ErrUncertain || s.state != "uncertain" {
+			if err != modulejobs.ErrUncertain || s.state != "uncertain" {
 				t.Fatal(err, s.state)
 			}
 		} else if err != nil || job.State != "accepted" || !reflect.DeepEqual(s.events, []string{"read", "lookup", "reconcile"}) {
@@ -186,7 +186,7 @@ func TestHostResourceRouteHasNoFallbackAndDoesNotClaimUnavailablePlugin(t *testi
 			t.Fatal("ambiguous route allowed", cfg)
 		}
 	}
-	prepare, e := hostProvisioningTransport("resource", "", "/not-installed-aster-plugins", "/not-installed-aster-policy")
+	prepare, e := hostProvisioningTransport("server", "", "/not-installed-aster-plugins", "/not-installed-aster-policy")
 	if e != nil {
 		t.Fatal(e)
 	}

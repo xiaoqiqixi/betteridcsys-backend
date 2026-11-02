@@ -37,7 +37,7 @@ func TestMySQLProductConfigurationSnapshotInsertionIsAtomic(t *testing.T) {
 				t.Fatal("rollback retry failed", err)
 			}
 			snapshot, ok := privateOrderConfiguration(t, f, order.ID)
-			if !ok || snapshot.Spec.RemoteProductID != "plan-123" {
+			if !ok || snapshot.Spec.Config["preset"] != "plan-123" {
 				t.Fatal("successful retry missing snapshot", snapshot)
 			}
 		})

@@ -1,7 +1,7 @@
 package billing
 
 import (
-	"aster/billing/internal/controllers"
+	"aster/billing/internal/modulejobs"
 	"context"
 	"database/sql"
 	"encoding/json"
@@ -125,10 +125,10 @@ func (m *MySQL) ProvisioningJob(ctx context.Context, actor User, jobID string) (
 	}
 	return cloneProvisioningJob(r.Job), nil
 }
-func (m *MySQL) ProvisioningRequest(ctx context.Context, jobID string) (controllers.Request, error) {
+func (m *MySQL) ProvisioningRequest(ctx context.Context, jobID string) (modulejobs.Request, error) {
 	r, err := readProvisioningJob(m.DB.QueryRowContext(ctx, "SELECT "+provisioningJobColumns+" FROM provisioning_jobs WHERE id=?", jobID))
 	if err != nil {
-		return controllers.Request{}, err
+		return modulejobs.Request{}, err
 	}
 	return cloneProvisioningRequest(r.Request), nil
 }
@@ -208,7 +208,7 @@ func (m *MySQL) ClaimProvisioningJob(ctx context.Context, jobID string) (Provisi
 	}
 	return ProvisioningClaim{Job: cloneProvisioningJob(r.Job), Request: cloneProvisioningRequest(r.Request), ClaimToken: r.ClaimToken, LeaseExpiresAt: *r.LeaseExpiresAt}, nil
 }
-func (m *MySQL) CompleteProvisioningJob(ctx context.Context, jobID, token string, result *controllers.Result) (ProvisioningJob, error) {
+func (m *MySQL) CompleteProvisioningJob(ctx context.Context, jobID, token string, result *modulejobs.Result) (ProvisioningJob, error) {
 	tx, err := m.DB.BeginTx(ctx, &sql.TxOptions{Isolation: sql.LevelReadCommitted})
 	if err != nil {
 		return ProvisioningJob{}, err
@@ -233,7 +233,7 @@ func (m *MySQL) CompleteProvisioningJob(ctx context.Context, jobID, token string
 	}
 	return cloneProvisioningJob(r.Job), nil
 }
-func (m *MySQL) ReconcileProvisioningJob(ctx context.Context, jobID string, result controllers.Result) (ProvisioningJob, error) {
+func (m *MySQL) ReconcileProvisioningJob(ctx context.Context, jobID string, result modulejobs.Result) (ProvisioningJob, error) {
 	tx, err := m.DB.BeginTx(ctx, &sql.TxOptions{Isolation: sql.LevelReadCommitted})
 	if err != nil {
 		return ProvisioningJob{}, err

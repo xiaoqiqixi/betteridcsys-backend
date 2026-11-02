@@ -2,7 +2,7 @@ package billing
 
 import (
 	api "aster/billing/internal/financeapi"
-	"aster/billing/serviceapi"
+	"regexp"
 	"strings"
 
 	"golang.org/x/crypto/bcrypt"
@@ -20,10 +20,14 @@ func checkoutPasswordHashes06(items []api.CartItemInput) ([]string, error) {
 			return nil, problem(400, "INVALID_GUEST_CREDENTIAL", "Use either an SSH key or a root password of 8–72 bytes")
 		}
 		hash, err := bcrypt.GenerateFromPassword([]byte(item.RootPassword), 12)
-		if err != nil || !serviceapi.ValidPasswordHash(string(hash)) {
+		if err != nil || !validGuestPasswordHash06(string(hash)) {
 			return nil, ErrCommerceUnavailable
 		}
 		hashes[i] = string(hash)
 	}
 	return hashes, nil
 }
+
+var guestPasswordHashPattern06 = regexp.MustCompile(`^\$2[aby]\$(?:1[0-6])\$[./A-Za-z0-9]{53}$`)
+
+func validGuestPasswordHash06(hash string) bool { return guestPasswordHashPattern06.MatchString(hash) }

@@ -2,9 +2,10 @@ package main
 
 import (
 	"aster/billing/internal/billing"
-	"aster/billing/internal/controllers"
 	api "aster/billing/internal/financeapi"
+	"aster/billing/internal/modulejobs"
 	"aster/billing/internal/runtimeplugins"
+	"aster/billing/pkg/pluginapi/serverv1"
 	"context"
 	"database/sql"
 	"encoding/json"
@@ -18,9 +19,9 @@ import (
 	"time"
 )
 
-type controllerTransport interface {
-	Send(context.Context, controllers.Request) (controllers.Result, error)
-	Lookup(context.Context, controllers.Request) (controllers.Result, error)
+type moduleTransport interface {
+	Send(context.Context, modulejobs.Request) (modulejobs.Result, error)
+	Lookup(context.Context, modulejobs.Request) (modulejobs.Result, error)
 }
 
 // An explicitly provided empty job ID is an invalid command, not a request to
@@ -40,19 +41,19 @@ func provisioningFlagsSelected(flags *flag.FlagSet) (dispatch, reconcile bool) {
 // This root-only path retains the legacy explicit host dispatch contract.
 // Commerce tasks also have an independently configured in-process dispatcher;
 // it never invokes this command or borrows these private host credentials.
-func performProvisioning(ctx context.Context, store billing.ProvisioningJobStore, jobID string, reconcile bool, prepare func(context.Context, string) (controllerTransport, error)) (billing.ProvisioningJob, error) {
+func performProvisioning(ctx context.Context, store billing.ProvisioningJobStore, jobID string, reconcile bool, prepare func(context.Context, string) (moduleTransport, error)) (billing.ProvisioningJob, error) {
 	request, err := store.ProvisioningRequest(ctx, jobID)
 	if err != nil {
 		return billing.ProvisioningJob{}, err
 	}
-	client, err := prepare(ctx, request.Product.ControllerID)
+	client, err := prepare(ctx, request.Product.ConnectionID)
 	if err != nil {
 		return billing.ProvisioningJob{}, err // Do not claim an unavailable target.
 	}
 	if reconcile {
 		result, err := client.Lookup(ctx, request)
 		if err != nil {
-			return billing.ProvisioningJob{}, controllers.ErrUncertain
+			return billing.ProvisioningJob{}, modulejobs.ErrUncertain
 		}
 		return store.ReconcileProvisioningJob(ctx, jobID, result)
 	}
@@ -62,10 +63,10 @@ func performProvisioning(ctx context.Context, store billing.ProvisioningJobStore
 	}
 	_, expected, beforeErr := request.BytesAndDigest()
 	_, claimed, claimErr := claim.Request.BytesAndDigest()
-	var result *controllers.Result
+	var result *modulejobs.Result
 	var sendErr error
-	if beforeErr != nil || claimErr != nil || expected != claimed || request.Product.ControllerID != claim.Request.Product.ControllerID {
-		sendErr = controllers.ErrUncertain
+	if beforeErr != nil || claimErr != nil || expected != claimed || request.Product.ConnectionID != claim.Request.Product.ConnectionID {
+		sendErr = modulejobs.ErrUncertain
 	} else {
 		value, err := client.Send(ctx, claim.Request)
 		sendErr = err
@@ -79,10 +80,10 @@ func performProvisioning(ctx context.Context, store billing.ProvisioningJobStore
 	defer cancel()
 	job, err := store.CompleteProvisioningJob(finish, jobID, claim.ClaimToken, result)
 	if err != nil {
-		return billing.ProvisioningJob{}, controllers.ErrUncertain
+		return billing.ProvisioningJob{}, modulejobs.ErrUncertain
 	}
 	if sendErr != nil || job.State == "uncertain" {
-		return job, controllers.ErrUncertain
+		return job, modulejobs.ErrUncertain
 	}
 	return job, nil
 }
@@ -105,7 +106,7 @@ func runHostProvisioning(out io.Writer, jobID string, reconcile bool) int {
 	}
 	// These dedicated host files are not accepted from web requests and are not
 	// borrowed from API runtime environment, session secrets or plugin settings.
-	dsn, err := controllers.ReadHostFile(os.Getenv("PROVISIONING_MYSQL_DSN_FILE"), true, 16<<10)
+	dsn, err := modulejobs.ReadHostFile(os.Getenv("PROVISIONING_MYSQL_DSN_FILE"), true, 16<<10)
 	if err != nil {
 		return emit(2)
 	}
@@ -153,7 +154,7 @@ func runHostProvisioning(out io.Writer, jobID string, reconcile bool) int {
 	}
 	if err != nil {
 		switch {
-		case errors.Is(err, controllers.ErrUncertain):
+		case errors.Is(err, modulejobs.ErrUncertain):
 			response.Status, response.Code = "uncertain", "PROVISIONING_UNCERTAIN"
 		case errors.Is(err, billing.ErrProvisioningState):
 			response.Status, response.Code = "blocked", "PROVISIONING_STATE_CONFLICT"
@@ -171,28 +172,61 @@ func runHostProvisioning(out io.Writer, jobID string, reconcile bool) int {
 
 // Selection exists only in the explicit root host command, never the web
 // settings/API. Choosing resource disables direct HTTPS fallback completely.
-func hostProvisioningTransport(mode, policyPath, pluginRoot, pluginPolicy string) (func(context.Context, string) (controllerTransport, error), error) {
-	switch mode {
-	case "", "https":
-		if pluginRoot != "" || pluginPolicy != "" {
-			return nil, controllers.ErrUnavailable
-		}
-		policy, err := controllers.LoadPolicy(policyPath)
+func hostProvisioningTransport(mode, obsoletePolicy, pluginRoot, pluginPolicy string) (func(context.Context, string) (moduleTransport, error), error) {
+	if mode != "" && mode != "server" || obsoletePolicy != "" || pluginRoot == "" || pluginPolicy == "" {
+		return nil, modulejobs.ErrUnavailable
+	}
+	manager := runtimeplugins.New(pluginRoot, pluginPolicy)
+	return func(ctx context.Context, id string) (moduleTransport, error) {
+		p, err := manager.PrepareServer(ctx, id)
 		if err != nil {
 			return nil, err
 		}
-		return func(ctx context.Context, id string) (controllerTransport, error) { return policy.Client(ctx, id) }, nil
-	case "resource":
-		if policyPath != "" || pluginRoot == "" || pluginPolicy == "" {
-			return nil, controllers.ErrUnavailable
-		}
-		manager := runtimeplugins.New(pluginRoot, pluginPolicy)
-		return func(ctx context.Context, id string) (controllerTransport, error) {
-			return manager.PrepareResource(ctx, id)
-		}, nil
-	default:
-		return nil, controllers.ErrUnavailable
+		return moduleJobTransport{p}, nil
+	}, nil
+}
+
+type moduleJobTransport struct{ serverv1.Processor }
+
+func (c moduleJobTransport) Send(ctx context.Context, r modulejobs.Request) (modulejobs.Result, error) {
+	return c.call(ctx, r, false)
+}
+func (c moduleJobTransport) Lookup(ctx context.Context, r modulejobs.Request) (modulejobs.Result, error) {
+	return c.call(ctx, r, true)
+}
+func (c moduleJobTransport) call(ctx context.Context, r modulejobs.Request, lookup bool) (modulejobs.Result, error) {
+	if !r.Valid() {
+		return modulejobs.Result{}, modulejobs.ErrConfiguration
 	}
+	described, err := c.Call(ctx, serverv1.Request{Protocol: serverv1.Protocol, Method: "describe"})
+	if err != nil || described.Description == nil || described.Description.ID != r.Product.ModuleID {
+		return modulejobs.Result{}, modulejobs.ErrUnavailable
+	}
+	request := serverv1.Request{Protocol: serverv1.Protocol, Method: "create", OperationID: r.OperationID, ServiceID: r.OrderID, OwnerRef: r.OwnerRef, Config: r.Product.Config, Input: serverv1.Fields{"hostname": r.Hostname}}
+	if err = request.Seal(); err != nil {
+		return modulejobs.Result{}, err
+	}
+	if lookup {
+		request = serverv1.Request{Protocol: serverv1.Protocol, Method: "operation_status", OperationID: r.OperationID, ServiceID: r.OrderID, OwnerRef: r.OwnerRef, Digest: request.Digest}
+	}
+	response, err := c.Call(ctx, request)
+	if err != nil || !response.Matches(request) {
+		return modulejobs.Result{}, modulejobs.ErrUncertain
+	}
+	_, hash, _ := r.BytesAndDigest()
+	out := modulejobs.Result{Protocol: modulejobs.Protocol, OperationID: r.OperationID, OrderID: r.OrderID, RequestSHA256: hash, ResourceID: response.ResourceID}
+	switch response.State {
+	case "done":
+		out.Status = "succeeded"
+	case "accepted":
+		out.Status = "accepted"
+	case "failed":
+		out.Status = "rejected"
+		out.ResourceID = ""
+	default:
+		return out, modulejobs.ErrUncertain
+	}
+	return out, nil
 }
 
 // A host command opts into the local socket exception only for a Unix DSN.

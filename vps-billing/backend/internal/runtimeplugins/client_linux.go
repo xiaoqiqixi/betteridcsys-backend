@@ -14,6 +14,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"strings"
 	"sync"
 	"syscall"
 	"time"
@@ -76,7 +77,7 @@ func (m *Manager) State() State {
 }
 
 func dialApproved(ctx context.Context, selection pluginapi.Selection, rules trust) (*net.UnixConn, error) {
-	if uint32(os.Geteuid()) != selection.ClientUID {
+	if uint32(os.Geteuid()) != selection.ClientUID && !(os.Geteuid() == 0 && strings.HasPrefix(selection.ID, "server.")) {
 		return nil, ErrUnavailable
 	}
 	parent, err := protectedOpen(filepath.Dir(selection.Socket), true, trust{owner: selection.WorkerUID, systemRoot: rules.systemRoot})

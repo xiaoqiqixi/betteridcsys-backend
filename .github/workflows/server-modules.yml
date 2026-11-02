@@ -23,4 +23,6 @@ jobs:
           go test -race -count=1 ./pkg/pluginapi/... ./pkg/pluginserver ./internal/runtimeplugins ./plugins/server-template ./plugins/server.aster-cloud/...
           go build ./...
       - name: Protected plugin installation and lifecycle regression
-        run: python3 -B vps-billing/deploy/scripts/test-plugin-manager.py
+        run: |
+          python3 -B vps-billing/deploy/scripts/test-plugin-manager.py
+          python3 -B vps-billing/backend/plugins/server.aster-cloud/legacy/scripts/test-resource-manager.py

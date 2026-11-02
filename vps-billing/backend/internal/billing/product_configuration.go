@@ -1,7 +1,7 @@
 package billing
 
 import (
-	"aster/billing/internal/controllers"
+	"aster/billing/internal/modulejobs"
 	"context"
 	"errors"
 	"time"
@@ -15,16 +15,16 @@ var ErrProvisioningUnavailable = errors.New("provisioning configuration unavaila
 // ProductConfiguration is administrator-only, independent of public financial
 // PlanSnapshot. Controller endpoints and credentials never belong in this data.
 type ProductConfiguration struct {
-	PlanID              string                  `json:"plan_id"`
-	Revision            int64                   `json:"revision"`
-	PriceRevision       int64                   `json:"price_revision"`
-	Spec                controllers.ProductSpec `json:"spec"`
-	ConfigurationSHA256 string                  `json:"configuration_sha256"`
+	PlanID              string                 `json:"plan_id"`
+	Revision            int64                  `json:"revision"`
+	PriceRevision       int64                  `json:"price_revision"`
+	Spec                modulejobs.ProductSpec `json:"spec"`
+	ConfigurationSHA256 string                 `json:"configuration_sha256"`
 }
 type ProductConfigurationInput struct {
-	Revision int64                   `json:"revision"`
-	Spec     controllers.ProductSpec `json:"spec"`
-	Reason   string                  `json:"reason"`
+	Revision int64                  `json:"revision"`
+	Spec     modulejobs.ProductSpec `json:"spec"`
+	Reason   string                 `json:"reason"`
 }
 type ProductConfigurationStore interface {
 	ProductConfiguration(context.Context, User, string) (ProductConfiguration, error)
@@ -33,13 +33,13 @@ type ProductConfigurationStore interface {
 type orderProductConfiguration struct {
 	PlanID    string
 	Revision  int64
-	Spec      controllers.ProductSpec
+	Spec      modulejobs.ProductSpec
 	SHA256    string
 	CreatedAt time.Time
 }
 
 func defaultProductConfiguration(planID string) ProductConfiguration {
-	spec := controllers.DisabledSpec()
+	spec := modulejobs.DisabledSpec()
 	hash, _ := spec.Digest()
 	return ProductConfiguration{PlanID: planID, Revision: 1, Spec: spec, ConfigurationSHA256: hash}
 }

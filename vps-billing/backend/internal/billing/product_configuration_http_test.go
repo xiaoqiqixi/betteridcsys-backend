@@ -1,7 +1,7 @@
 package billing
 
 import (
-	"aster/billing/internal/controllers"
+	"aster/billing/internal/modulejobs"
 	"encoding/json"
 	"io"
 	"net/http"
@@ -11,7 +11,7 @@ import (
 	"testing"
 )
 
-func productInputJSON(t *testing.T, spec controllers.ProductSpec) string {
+func productInputJSON(t *testing.T, spec modulejobs.ProductSpec) string {
 	t.Helper()
 	raw, err := json.Marshal(ProductConfigurationInput{Revision: 1, Spec: spec, Reason: "Operator reviewed product configuration"})
 	if err != nil {
@@ -20,12 +20,12 @@ func productInputJSON(t *testing.T, spec controllers.ProductSpec) string {
 	return string(raw)
 }
 func TestProductConfigurationHTTPParserStrictExactNullableShape(t *testing.T) {
-	if reflect.TypeOf(controllers.Resources{}).NumField() != 17 {
-		t.Fatal("resource field contract changed; review exact shape fixtures")
+	if reflect.TypeOf(modulejobs.ProductSpec{}).NumField() != 4 {
+		t.Fatal("module binding field contract changed; review exact shape fixtures")
 	}
 	custom := productInputJSON(t, customProductSpec())
 	preset := productInputJSON(t, presetProductSpec())
-	disabled := productInputJSON(t, controllers.DisabledSpec())
+	disabled := productInputJSON(t, modulejobs.DisabledSpec())
 	for _, raw := range []string{custom, preset, disabled, custom + " \n\t"} {
 		r := httptest.NewRequest("POST", "http://localhost/", strings.NewReader(raw))
 		r.Header.Set("Content-Type", "application/json; charset=utf-8")
@@ -37,35 +37,36 @@ func TestProductConfigurationHTTPParserStrictExactNullableShape(t *testing.T) {
 	}
 	invalid := []struct{ name, raw string }{
 		{"null_root", "null"}, {"null_spec", strings.Replace(preset, `"spec":{`, `"spec":null,"ignored":{`, 1)},
-		{"missing_root_revision", strings.Replace(preset, `"revision":1,`, "", 1)},
-		{"missing_root_reason", strings.Replace(preset, `,"reason":"Operator reviewed product configuration"`, "", 1)},
-		{"missing_resources", strings.Replace(preset, `,"resources":null`, "", 1)},
-		{"missing_custom_zero_field", strings.Replace(custom, `"data_disk_gib":0,`, "", 1)},
+		{"missing_revision", strings.Replace(preset, `"revision":1,`, "", 1)},
+		{"missing_reason", strings.Replace(preset, `,"reason":"Operator reviewed product configuration"`, "", 1)},
+		{"missing_config", strings.Replace(preset, `,"config":{"preset":"plan-123"}`, "", 1)},
+		{"missing_module_id", strings.Replace(custom, `"module_id":"server.fake",`, "", 1)},
 		{"extra_root", strings.Replace(preset, `"revision":1`, `"revision":1,"endpoint":"https://forbidden.invalid"`, 1)},
-		{"extra_spec", strings.Replace(preset, `"mode":"preset"`, `"mode":"preset","credentials":"not-supported"`, 1)},
-		{"extra_resource", strings.Replace(custom, `"cpu_cores":2`, `"cpu_cores":2,"extra":0`, 1)},
+		{"extra_spec", strings.Replace(preset, `"mode":"module"`, `"mode":"module","credentials":"unsupported"`, 1)},
+		{"nested_config", strings.Replace(custom, `"capacity":2`, `"capacity":{"extra":0}`, 1)},
 		{"duplicate_root", strings.Replace(preset, `"revision":1`, `"revision":1,"revision":1`, 1)},
-		{"duplicate_spec", strings.Replace(preset, `"mode":"preset"`, `"mode":"preset","mode":"disabled"`, 1)},
-		{"duplicate_resource", strings.Replace(custom, `"cpu_cores":2`, `"cpu_cores":2,"cpu_cores":4`, 1)},
+		{"duplicate_spec", strings.Replace(preset, `"mode":"module"`, `"mode":"module","mode":"disabled"`, 1)},
+		{"duplicate_config", strings.Replace(custom, `"capacity":2`, `"capacity":2,"capacity":4`, 1)},
 		{"case_root", strings.Replace(preset, `"revision":1`, `"Revision":1`, 1)},
-		{"case_spec", strings.Replace(preset, `"controller_id":`, `"Controller_ID":`, 1)},
-		{"case_resource", strings.Replace(custom, `"cpu_cores":2`, `"CPU_CORES":2`, 1)},
-		{"case_alias_extra", strings.Replace(custom, `"cpu_cores":2`, `"cpu_cores":2,"CPU_CORES":2`, 1)},
-		{"unicode_key", strings.Replace(custom, `"image_id":`, `"image_іd":`, 1)},
+		{"case_spec", strings.Replace(preset, `"connection_id":`, `"Connection_ID":`, 1)},
+		{"case_module", strings.Replace(custom, `"module_id":`, `"Module_ID":`, 1)},
+		{"case_alias_extra", strings.Replace(custom, `"module_id":"server.fake"`, `"module_id":"server.fake","Module_ID":"server.fake"`, 1)},
+		{"unicode_key", strings.Replace(custom, `"image":`, `"іmage":`, 1)},
 		{"null_revision", strings.Replace(preset, `"revision":1`, `"revision":null`, 1)},
 		{"null_reason", strings.Replace(preset, `"reason":"Operator reviewed product configuration"`, `"reason":null`, 1)},
-		{"null_controller", strings.Replace(preset, `"controller_id":"local-test"`, `"controller_id":null`, 1)},
-		{"null_numeric_resource", strings.Replace(custom, `"data_disk_gib":0`, `"data_disk_gib":null`, 1)},
-		{"null_string_resource", strings.Replace(custom, `"system_storage_id":""`, `"system_storage_id":null`, 1)},
-		{"array_resources", strings.Replace(preset, `"resources":null`, `"resources":[]`, 1)},
-		{"empty_resource_object", strings.Replace(preset, `"resources":null`, `"resources":{}`, 1)},
+		{"null_connection", strings.Replace(preset, `"connection_id":"local-test"`, `"connection_id":null`, 1)},
+		{"null_numeric_config", strings.Replace(custom, `"data":0`, `"data":null`, 1)},
+		{"null_string_config", strings.Replace(custom, `"storage":""`, `"storage":null`, 1)},
+		{"array_config", strings.Replace(preset, `"config":{"preset":"plan-123"}`, `"config":[]`, 1)},
+		{"disabled_config_object", strings.Replace(disabled, `"config":null`, `"config":{}`, 1)},
 		{"array_root", "[]"}, {"wrong_revision_type", strings.Replace(preset, `"revision":1`, `"revision":"1"`, 1)},
-		{"fractional_integer", strings.Replace(custom, `"cpu_cores":2`, `"cpu_cores":2.5`, 1)},
-		{"overflow_integer", strings.Replace(custom, `"cpu_cores":2`, `"cpu_cores":9223372036854775808`, 1)},
+		{"fractional_revision", strings.Replace(custom, `"revision":1`, `"revision":1.5`, 1)},
+		{"overflow_config", strings.Replace(custom, `"capacity":2`, `"capacity":9223372036854775808`, 1)},
 		{"trailing_object", preset + ` {}`}, {"trailing_null", preset + ` null`}, {"trailing_garbage", preset + `x`},
 		{"invalid_utf8", strings.Replace(preset, "Operator", string([]byte{0xff}), 1)},
 		{"oversize", strings.Replace(preset, "Operator reviewed product configuration", strings.Repeat("x", 17<<10), 1)},
 	}
+
 	for _, tc := range invalid {
 		t.Run(tc.name, func(t *testing.T) {
 			r := httptest.NewRequest("POST", "http://localhost/", strings.NewReader(tc.raw))
@@ -161,16 +162,16 @@ func TestProductConfigurationHTTPPermissionsCSRFAndPublicPrivacy(t *testing.T) {
 	if status, _, out = productHTTPRaw(t, admin, "POST", path, input); status != 409 || out["error"].(map[string]any)["code"] != "PRODUCT_CONFIGURATION_CONFLICT" {
 		t.Fatal("stale config save accepted", status, out)
 	}
-	// Null resources is valid only for preset/disabled, not a custom resource order.
+	// Null config is valid only for a disabled module.
 	current, err := config.ProductConfiguration(t.Context(), f.admin, pid)
 	if err != nil {
 		t.Fatal(err)
 	}
-	bad := ProductConfigurationInput{Revision: current.Revision, Spec: controllers.ProductSpec{Mode: "custom", ControllerID: "local-test"}, Reason: "invalid custom"}
+	bad := ProductConfigurationInput{Revision: current.Revision, Spec: modulejobs.ProductSpec{Mode: "module", ModuleID: "server.fake", ConnectionID: "local-test"}, Reason: "invalid custom"}
 	if status, out = admin.request("POST", path, bad, ""); status != 400 || out["error"].(map[string]any)["code"] != "INVALID_PRODUCT_CONFIGURATION" {
 		t.Fatal("custom nil resources accepted", status, out)
 	}
-	invalid := ProductConfigurationInput{Revision: current.Revision, Spec: controllers.ProductSpec{Mode: "preset", ControllerID: "https://forbidden.invalid", RemoteProductID: "x"}, Reason: "invalid controller"}
+	invalid := ProductConfigurationInput{Revision: current.Revision, Spec: modulejobs.ProductSpec{Mode: "module", ModuleID: "server.fake", ConnectionID: "https://forbidden.invalid", Config: map[string]any{"preset": "x"}}, Reason: "invalid controller"}
 	if status, out = admin.request("POST", path, invalid, ""); status != 400 {
 		t.Fatal("URL injected as controller ID", status, out)
 	}
@@ -184,7 +185,7 @@ func TestProductConfigurationHTTPPermissionsCSRFAndPublicPrivacy(t *testing.T) {
 			t.Fatal(tc.path, status, out)
 		}
 		raw, _ := json.Marshal(out)
-		for _, private := range []string{"controller_id", "remote_product_id", "configuration_sha256", "compute_node_id", "configuration_revision"} {
+		for _, private := range []string{"connection_id", "module_id", "configuration_sha256", "capacity", "configuration_revision"} {
 			if strings.Contains(string(raw), private) {
 				t.Fatal("private module configuration leaked", tc.path, string(raw))
 			}

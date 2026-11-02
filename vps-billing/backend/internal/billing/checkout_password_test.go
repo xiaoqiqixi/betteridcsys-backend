@@ -2,7 +2,6 @@ package billing
 
 import (
 	api "aster/billing/internal/financeapi"
-	"aster/billing/serviceapi"
 	"strings"
 	"testing"
 
@@ -13,7 +12,7 @@ func TestCheckoutPasswordHashesPreserveCredentialsWithoutPlaintext(t *testing.T)
 	password := "Customer-checkout-secret!2026"
 	items := []api.CartItemInput{{RootPassword: password}, {SSHKeyIDs: []string{"key"}}}
 	hashes, err := checkoutPasswordHashes06(items)
-	if err != nil || len(hashes) != 2 || hashes[1] != "" || !serviceapi.ValidPasswordHash(hashes[0]) {
+	if err != nil || len(hashes) != 2 || hashes[1] != "" || !validGuestPasswordHash06(hashes[0]) {
 		t.Fatal("checkout credential derivation failed", err)
 	}
 	if strings.Contains(hashes[0], password) || bcrypt.CompareHashAndPassword([]byte(hashes[0]), []byte(password)) != nil {

@@ -1,7 +1,7 @@
 package billing
 
 import (
-	"aster/billing/internal/controllers"
+	"aster/billing/internal/modulejobs"
 	"encoding/json"
 	"errors"
 	"reflect"
@@ -40,9 +40,9 @@ func provisioningOrder(t *testing.T, f catalogFixture, pid string, paid bool) Or
 	}
 	return settled.Order
 }
-func provisioningResult(r controllers.Request, status string) controllers.Result {
+func provisioningResult(r modulejobs.Request, status string) modulejobs.Result {
 	_, h, _ := r.BytesAndDigest()
-	v := controllers.Result{Protocol: controllers.Protocol, OperationID: r.OperationID, OrderID: r.OrderID, RequestSHA256: h, Status: status}
+	v := modulejobs.Result{Protocol: modulejobs.Protocol, OperationID: r.OperationID, OrderID: r.OrderID, RequestSHA256: h, Status: status}
 	if status == "succeeded" {
 		v.ResourceID = "resource-test-123"
 	}
@@ -122,10 +122,10 @@ func runProvisioningJobs(t *testing.T, makeFixture func(*testing.T) catalogFixtu
 			}
 		}
 		request, err := jobs.ProvisioningRequest(ctx, job.ID)
-		if err != nil || request.OwnerRef != f.customer.ID || request.OrderID != paid.ID || request.Product.RemoteProductID != "plan-123" || !request.Valid() {
+		if err != nil || request.OwnerRef != f.customer.ID || request.OrderID != paid.ID || request.Product.Config["preset"] != "plan-123" || !request.Valid() {
 			t.Fatal(request, err)
 		}
-		_, err = config.UpdateProductConfiguration(ctx, f.admin, pid, ProductConfigurationInput{Revision: 2, Spec: controllers.DisabledSpec(), Reason: "Future orders disabled"})
+		_, err = config.UpdateProductConfiguration(ctx, f.admin, pid, ProductConfigurationInput{Revision: 2, Spec: modulejobs.DisabledSpec(), Reason: "Future orders disabled"})
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -218,16 +218,16 @@ func runProvisioningJobs(t *testing.T, makeFixture func(*testing.T) catalogFixtu
 			if claim.Job.State != "sending" || claim.ClaimToken == "" || !reflect.DeepEqual(claim.Request, req) {
 				t.Fatal(claim)
 			}
-			claim.Request.Product.Resources.CPUCores = 88
+			claim.Request.Product.Config["capacity"] = 88
 			unchanged, err := jobs.ProvisioningRequest(ctx, job.ID)
-			if err != nil || unchanged.Product.Resources.CPUCores != 2 {
+			if err != nil || unchanged.Product.Config["capacity"] != float64(2) {
 				t.Fatal("claim aliased stored request", err)
 			}
 			if _, err = jobs.CompleteProvisioningJob(ctx, job.ID, ID(), nil); !errors.Is(err, ErrProvisioningState) {
 				t.Fatal("wrong claim token changed job", err)
 			}
 			result := provisioningResult(req, outcome)
-			var completion *controllers.Result = &result
+			var completion *modulejobs.Result = &result
 			want := outcome
 			switch outcome {
 			case "lost":

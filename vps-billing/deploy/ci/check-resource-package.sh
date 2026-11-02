@@ -10,7 +10,7 @@ fail() { printf 'FAIL: %s\n' "$*" >&2; exit 1; }
 [[ -d $1 && ! -L $1 ]] || fail 'Source root must be an existing directory, not a symlink.'
 source_root=$(cd -- "$1" && pwd -P)
 project_root="$source_root/vps-billing"
-for file in LICENSE vps-billing/backend/go.mod vps-billing/docs/RESOURCE_PLUGINS.md vps-billing/deploy/scripts/build-resource-plugin.py vps-billing/deploy/scripts/plugin-manager.py vps-billing/deploy/ci/resource_package_gate.py; do
+for file in LICENSE vps-billing/backend/go.mod vps-billing/docs/RESOURCE_PLUGINS.md vps-billing/backend/plugins/server.aster-cloud/legacy/scripts/build-resource-plugin.py vps-billing/deploy/scripts/plugin-manager.py vps-billing/deploy/ci/resource_package_gate.py; do
   [[ -f "$source_root/$file" && ! -L "$source_root/$file" ]] || fail "Missing regular source prerequisite: $file"
 done
 [[ -x /usr/bin/python3 && -x /usr/bin/mktemp && -x /usr/bin/rm ]] || fail 'System Python3, mktemp and rm are required.'
@@ -43,8 +43,8 @@ trap 'exit 143' TERM
 package="$build_dir/resource.tar.gz"
 # No inherited database secret is needed by either build or privileged verify.
 unset ASTER_MYSQL_TEST_DSN
-/usr/bin/python3 -I "$project_root/deploy/scripts/build-resource-plugin.py" --go "$go_tool" --output "$package"
-manager="$project_root/deploy/scripts/plugin-manager.py"
+/usr/bin/python3 -I "$project_root/backend/plugins/server.aster-cloud/legacy/scripts/build-resource-plugin.py" --go "$go_tool" --output "$package"
+manager="$project_root/backend/plugins/server.aster-cloud/legacy/scripts/plugin-manager.py"
 package_sha=$(/usr/bin/python3 -I -c 'import hashlib,sys; print(hashlib.sha256(open(sys.argv[1],"rb").read()).hexdigest())' "$package")
 manager_sha=$(/usr/bin/python3 -I -c 'import hashlib,sys; print(hashlib.sha256(open(sys.argv[1],"rb").read()).hexdigest())' "$manager")
 "${privilege[@]}" /usr/bin/python3 -I "$project_root/deploy/ci/resource_package_gate.py" "$package" "$package_sha" "$manager" "$manager_sha"

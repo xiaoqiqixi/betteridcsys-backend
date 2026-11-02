@@ -1,7 +1,7 @@
 package billing
 
 import (
-	"aster/billing/internal/controllers"
+	"aster/billing/internal/modulejobs"
 	"context"
 	"encoding/json"
 	"errors"
@@ -22,11 +22,11 @@ func productConfigurationFixture(t *testing.T, makeFixture func(*testing.T) cata
 	}
 	return f, out.Plan.ID, f.store.(ProductConfigurationStore)
 }
-func presetProductSpec() controllers.ProductSpec {
-	return controllers.ProductSpec{Mode: "preset", ControllerID: "local-test", RemoteProductID: "plan-123"}
+func presetProductSpec() modulejobs.ProductSpec {
+	return modulejobs.ProductSpec{Mode: "module", ModuleID: "server.fake", ConnectionID: "local-test", Config: map[string]any{"preset": "plan-123"}}
 }
-func customProductSpec() controllers.ProductSpec {
-	return controllers.ProductSpec{Mode: "custom", ControllerID: "local-test", Resources: &controllers.Resources{ComputeNodeID: "node-12", ImageID: "image-1", CPUCores: 2, MemoryMiB: 2048, SystemDiskGiB: 40, NetworkType: "normal", TrafficDirection: "all", IPv4Count: 1}}
+func customProductSpec() modulejobs.ProductSpec {
+	return modulejobs.ProductSpec{Mode: "module", ModuleID: "server.fake", ConnectionID: "local-test", Config: map[string]any{"capacity": float64(2), "image": "image-1", "data": float64(0), "storage": ""}}
 }
 func privateOrderConfiguration(t *testing.T, f catalogFixture, id string) (orderProductConfiguration, bool) {
 	t.Helper()
@@ -130,13 +130,13 @@ func runProductConfigurationSuite(t *testing.T, makeFixture func(*testing.T) cat
 		}
 		input := ProductConfigurationInput{Revision: 1, Spec: customProductSpec(), Reason: "Operator reviewed provisioning parameters"}
 		saved, err := store.UpdateProductConfiguration(ctx, f.admin, pid, input)
-		if err != nil || saved.Revision != 2 || saved.PriceRevision != initial.PriceRevision+1 || saved.Spec.Mode != "custom" {
+		if err != nil || saved.Revision != 2 || saved.PriceRevision != initial.PriceRevision+1 || saved.Spec.Mode != "module" {
 			t.Fatal(saved, err)
 		}
-		input.Spec.Resources.CPUCores = 99
-		saved.Spec.Resources.CPUCores = 88
+		input.Spec.Config["capacity"] = 99
+		saved.Spec.Config["capacity"] = 88
 		got, err := store.ProductConfiguration(ctx, f.admin, pid)
-		if err != nil || got.Spec.Resources.CPUCores != 2 {
+		if err != nil || got.Spec.Config["capacity"] != float64(2) {
 			t.Fatal("mutable pointer escaped", got, err)
 		}
 		newCurrencies, err := f.store.Currencies(ctx, true)
@@ -166,7 +166,7 @@ func runProductConfigurationSuite(t *testing.T, makeFixture func(*testing.T) cat
 			t.Fatal(err)
 		}
 		snapshot, ok := privateOrderConfiguration(t, f, next.ID)
-		if !ok || snapshot.Revision != 2 || snapshot.Spec.Resources.CPUCores != 2 || snapshot.SHA256 != got.ConfigurationSHA256 {
+		if !ok || snapshot.Revision != 2 || snapshot.Spec.Config["capacity"] != float64(2) || snapshot.SHA256 != got.ConfigurationSHA256 {
 			t.Fatal("new order did not freeze module parameters", snapshot, ok)
 		}
 		raw, _ := json.Marshal(next)
@@ -175,7 +175,7 @@ func runProductConfigurationSuite(t *testing.T, makeFixture func(*testing.T) cat
 				t.Fatal("private snapshot leaked into Order", string(raw))
 			}
 		}
-		_, err = store.UpdateProductConfiguration(ctx, f.admin, pid, ProductConfigurationInput{Revision: 2, Spec: controllers.DisabledSpec(), Reason: "Disable future dispatch"})
+		_, err = store.UpdateProductConfiguration(ctx, f.admin, pid, ProductConfigurationInput{Revision: 2, Spec: modulejobs.DisabledSpec(), Reason: "Disable future dispatch"})
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -233,7 +233,7 @@ func runProductConfigurationSuite(t *testing.T, makeFixture func(*testing.T) cat
 			t.Fatal("stale admin survived disable", err)
 		}
 		f.changeActor(f.admin)
-		for _, bad := range []ProductConfigurationInput{{Revision: 0, Spec: presetProductSpec(), Reason: "x"}, {Revision: MaxMinor, Spec: presetProductSpec(), Reason: "x"}, {Revision: 1, Spec: presetProductSpec(), Reason: " "}, {Revision: 1, Spec: controllers.ProductSpec{Mode: "preset", ControllerID: "https://secret.invalid", RemoteProductID: "x"}, Reason: "x"}, {Revision: 1, Spec: controllers.ProductSpec{Mode: "disabled", RemoteProductID: "x"}, Reason: "x"}} {
+		for _, bad := range []ProductConfigurationInput{{Revision: 0, Spec: presetProductSpec(), Reason: "x"}, {Revision: MaxMinor, Spec: presetProductSpec(), Reason: "x"}, {Revision: 1, Spec: presetProductSpec(), Reason: " "}, {Revision: 1, Spec: modulejobs.ProductSpec{Mode: "module", ModuleID: "server.fake", ConnectionID: "https://secret.invalid", Config: map[string]any{"preset": "x"}}, Reason: "x"}, {Revision: 1, Spec: modulejobs.ProductSpec{Mode: "disabled", Config: map[string]any{"preset": "x"}}, Reason: "x"}} {
 			if _, err := store.UpdateProductConfiguration(ctx, f.admin, pid, bad); !errors.Is(err, ErrProductConfiguration) {
 				t.Fatal("bad module params accepted", bad, err)
 			}

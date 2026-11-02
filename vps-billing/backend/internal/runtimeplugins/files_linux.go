@@ -133,9 +133,6 @@ func selectionFor(policy pluginapi.Policy, kind string) *pluginapi.Selection {
 	if kind == "payment" {
 		return policy.Payment
 	}
-	if kind == "resource" {
-		return policy.Resource
-	}
 	return policy.SMTP
 }
 func validateSelection(s *pluginapi.Selection, kind string, rules trust) error {
@@ -149,17 +146,7 @@ func validateSelection(s *pluginapi.Selection, kind string, rules trust) error {
 	if kind == "server" {
 		prefix = "server."
 	}
-	if kind == "resource" {
-		prefix = "resource."
-	}
-	if !pluginapi.ValidID(s.ID) || !strings.HasPrefix(s.ID, prefix) || !pluginapi.ValidVersion(s.Version) || !pluginapi.ValidDigest(s.ManifestSHA256) || !cleanAbsolute(s.Socket) || len(s.Socket) > 100 || s.WorkerUID == 0 || kind != "resource" && s.ClientUID == 0 || (!rules.allowSameUID && s.WorkerUID == s.ClientUID) || len(s.AllowedTargets) > 8 || kind != "payment" && kind != "server" && s.Enabled && len(s.AllowedTargets) == 0 {
-		return ErrUnavailable
-	}
-	if kind == "resource" {
-		if (!rules.allowSameUID && s.ClientUID != 0) || !pluginapi.ValidControllerID(s.ControllerID) || s.MerchantID != "" {
-			return ErrUnavailable
-		}
-	} else if s.ControllerID != "" {
+	if !pluginapi.ValidID(s.ID) || !strings.HasPrefix(s.ID, prefix) || !pluginapi.ValidVersion(s.Version) || !pluginapi.ValidDigest(s.ManifestSHA256) || !cleanAbsolute(s.Socket) || len(s.Socket) > 100 || s.WorkerUID == 0 || s.ClientUID == 0 || (!rules.allowSameUID && s.WorkerUID == s.ClientUID) || len(s.AllowedTargets) > 8 || kind != "payment" && kind != "server" && s.Enabled && len(s.AllowedTargets) == 0 {
 		return ErrUnavailable
 	}
 	if kind == "payment" && (s.ID == "payment.disabled" || !paymentv1.ValidID(s.MerchantID)) || kind == "smtp" && s.MerchantID != "" {
@@ -175,16 +162,16 @@ func validateSelection(s *pluginapi.Selection, kind string, rules trust) error {
 	return nil
 }
 func validatePolicyKind(policy pluginapi.Policy, kind string, rules trust) error {
-	if policy.Schema != 1 || policy.Revision == 0 || kind != "smtp" && kind != "payment" && kind != "resource" && !(strings.HasPrefix(kind, "payment:") && pluginapi.ValidGatewayID(strings.TrimPrefix(kind, "payment:"))) && !(strings.HasPrefix(kind, "server:") && pluginapi.ValidConnectionID(strings.TrimPrefix(kind, "server:"))) {
+	if policy.Schema != 1 || policy.Revision == 0 || kind != "smtp" && kind != "payment" && !(strings.HasPrefix(kind, "payment:") && pluginapi.ValidGatewayID(strings.TrimPrefix(kind, "payment:"))) && !(strings.HasPrefix(kind, "server:") && pluginapi.ValidConnectionID(strings.TrimPrefix(kind, "server:"))) {
 		return ErrUnavailable
 	}
-	if validateSelection(policy.SMTP, "smtp", rules) != nil || validateSelection(policy.Payment, "payment", rules) != nil || validateSelection(policy.Resource, "resource", rules) != nil {
+	if validateSelection(policy.SMTP, "smtp", rules) != nil || validateSelection(policy.Payment, "payment", rules) != nil {
 		return ErrUnavailable
 	}
 	if len(policy.Payments) > 64 || policy.Payment != nil && len(policy.Payments) > 0 {
 		return ErrUnavailable
 	}
-	all := []*pluginapi.Selection{policy.SMTP, policy.Payment, policy.Resource}
+	all := []*pluginapi.Selection{policy.SMTP, policy.Payment}
 	for _, selected := range all {
 		if selected != nil && selected.Slot != "" {
 			return ErrUnavailable
@@ -275,7 +262,7 @@ func loadApprovalKind(root, policyPath, kind string, rules trust, inspectDisable
 		return nil, ErrUnavailable
 	}
 	var manifest pluginapi.Manifest
-	if pluginapi.DecodeStrict(raw, pluginapi.MaxManifestBytes, &manifest) != nil || manifest.ID != s.ID || manifest.Version != s.Version || kind == "payment" && manifest.Protocol != pluginapi.PaymentProtocol || kind == "smtp" && manifest.Protocol != pluginapi.SMTPProtocol || kind == "resource" && manifest.Protocol != pluginapi.ResourceProtocol || kind == "server" && manifest.Protocol != pluginapi.ServerProtocol {
+	if pluginapi.DecodeStrict(raw, pluginapi.MaxManifestBytes, &manifest) != nil || manifest.ID != s.ID || manifest.Version != s.Version || kind == "payment" && manifest.Protocol != pluginapi.PaymentProtocol || kind == "smtp" && manifest.Protocol != pluginapi.SMTPProtocol || kind == "server" && manifest.Protocol != pluginapi.ServerProtocol {
 		return nil, ErrUnavailable
 	}
 	if manifest.Validate(pluginapi.CoreVersion) != nil {
@@ -328,11 +315,6 @@ func OpenApprovedPayment(root, policyPath string, slot ...string) (*Approval, er
 		kind += ":" + slot[0]
 	}
 	return loadApprovalKind(root, policyPath, kind, trust{})
-}
-
-// OpenApprovedResource is the independent host-only resource worker slot.
-func OpenApprovedResource(root, policyPath string) (*Approval, error) {
-	return loadApprovalKind(root, policyPath, "resource", trust{})
 }
 
 func OpenApprovedServer(root, policyPath, slot string) (*Approval, error) {

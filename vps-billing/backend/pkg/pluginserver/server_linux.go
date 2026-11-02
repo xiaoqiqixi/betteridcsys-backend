@@ -35,6 +35,7 @@ type Server struct {
 type boundedListener struct {
 	net.Listener
 	clientUID uint32
+	allowRoot bool
 	slots     chan struct{}
 }
 type boundedConn struct {
@@ -60,7 +61,7 @@ func (l *boundedListener) Accept() (net.Conn, error) {
 			continue
 		}
 		uid, err := pluginapi.PeerUID(unix)
-		if err != nil || uid != l.clientUID {
+		if err != nil || uid != l.clientUID && !(l.allowRoot && uid == 0) {
 			connection.Close()
 			continue
 		}
