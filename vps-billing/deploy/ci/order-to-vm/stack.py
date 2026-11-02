@@ -677,12 +677,19 @@ http {{
 
     def browser(self):
         self.log("Playwright customer and staff journey")
+        browser_uid = int(self.command(["id", "-u", "runner"]).stdout)
+        browser_gid = int(self.command(["id", "-g", "runner"]).stdout)
+        browser_directory = self.root / "browser"
+        browser_directory.mkdir(mode=0o700)
+        os.chown(browser_directory, browser_uid, browser_gid)
         profiles = {}
         for name in ("customer", "staff"):
-            profile = self.private / ("firefox-" + name)
+            profile = browser_directory / ("firefox-" + name)
             profile.mkdir(mode=0o700)
             self.command(["certutil", "-N", "--empty-password", "-d", "sql:" + str(profile)])
             self.command(["certutil", "-A", "-d", "sql:" + str(profile), "-n", "Acceptance", "-t", "C,,", "-i", self.root / "ca.crt"])
+            for path in [profile, *profile.iterdir()]:
+                os.chown(path, browser_uid, browser_gid)
             profiles[name] = str(profile)
         self.browser_setup = {"origin": "https://localhost:19445", "profiles": profiles, "product": self.products[0]["id"],
             "staffPassword": self.admin_password, **{name + "Password": self.password() for name in ("customer", "root", "second", "reset", "reinstall")}}
@@ -693,7 +700,7 @@ http {{
                 self.browser_setup[key] += "aA1!"
                 self.secrets.append(self.browser_setup[key])
         log = (self.private / "browser.log").open("wb")
-        process = subprocess.Popen(["node", str(HERE / "customer.mjs")], cwd=ROOT,
+        process = subprocess.Popen(["runuser", "-u", "runner", "--", shutil.which("node"), str(HERE / "customer.mjs")], cwd=ROOT,
             stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=log, text=True, start_new_session=True,
             env=dict(self.env, NODE_EXTRA_CA_CERTS=str(self.root / "ca.crt")))
         self.processes.append(("browser", process, log))
