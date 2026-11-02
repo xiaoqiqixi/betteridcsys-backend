@@ -40,6 +40,8 @@ func (a *App) registerServiceDispatch06() {
 			if err != nil {
 				result.Failed++
 				_, _ = m.DB.ExecContext(ctx, "UPDATE service_tasks SET updated_at=UTC_TIMESTAMP(6) WHERE id=? AND status IN ('queued','running','uncertain')", t.ID)
+			} else if (task.Status == "failed" || task.Status == "uncertain") && task.Status != t.Status {
+				result.Failed++
 			} else if task.Status != t.Status {
 				result.Processed++
 			}

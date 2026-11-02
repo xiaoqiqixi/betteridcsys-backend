@@ -409,7 +409,8 @@ func (a *App) adminManagedService06(ctx context.Context, actor User, view api.Ad
 		if err != nil {
 			return out, err
 		}
-		if action == "provision" && s.View.Status == "failed" && s.View.ResourceID == nil {
+		queuedAction, queuedPayload := action, payload
+		if action == "provision" && s.View.Status == "failed" {
 			var ambiguous int
 			if err = tx.QueryRowContext(ctx, "SELECT COUNT(*) FROM service_tasks WHERE service_id=? AND status IN ('running','uncertain')", view.ID).Scan(&ambiguous); err != nil {
 				return out, err
@@ -417,12 +418,32 @@ func (a *App) adminManagedService06(ctx context.Context, actor User, view api.Ad
 			if ambiguous != 0 {
 				return out, serviceConflict06()
 			}
+			if s.View.ResourceID != nil {
+				// The resource was created but its initial image/credential setup
+				// definitively failed. An explicit staff retry creates a new setup
+				// operation, never another resource and never an uncertain replay.
+				var previous string
+				err = tx.QueryRowContext(ctx, "SELECT id FROM service_tasks WHERE service_id=? AND action='reinstall' AND status='failed' AND JSON_UNQUOTE(JSON_EXTRACT(payload,'$.source'))='bootstrap' ORDER BY created_at DESC,id DESC LIMIT 1", view.ID).Scan(&previous)
+				if errors.Is(err, sql.ErrNoRows) {
+					return out, serviceConflict06()
+				}
+				if err != nil {
+					return out, err
+				}
+				prior, err := readServiceTask06(ctx, tx, previous, "")
+				if err != nil {
+					return out, err
+				}
+				queuedAction, queuedPayload = "reinstall", prior.Payload
+				queuedPayload.RequestSHA256, queuedPayload.ReceiptKnown = "", false
+			}
 			if _, err = tx.ExecContext(ctx, "UPDATE services SET status='provisioning',revision=revision+1 WHERE id=?", view.ID); err != nil {
 				return out, err
 			}
 			s.View.Status = "provisioning"
+			s.View.Revision++
 		}
-		if !taskStateAllowed06(s, action, payload.Source) {
+		if !taskStateAllowed06(s, queuedAction, queuedPayload.Source) {
 			return out, serviceConflict06()
 		}
 		var existing string
@@ -437,7 +458,7 @@ func (a *App) adminManagedService06(ctx context.Context, actor User, view api.Ad
 			}
 			out.Task = task.View
 		} else if errors.Is(err, sql.ErrNoRows) {
-			out.Task, err = queueServiceTask06(ctx, tx, view.ID, action, payload, time.Now().UTC())
+			out.Task, err = queueServiceTask06(ctx, tx, view.ID, queuedAction, queuedPayload, time.Now().UTC())
 			if err != nil {
 				return out, err
 			}

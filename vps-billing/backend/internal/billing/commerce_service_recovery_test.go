@@ -39,6 +39,7 @@ func TestMySQLCommerceServiceClaimLostAcknowledgementNeverDispatches(t *testing.
 	response := httptest.NewRecorder()
 	request := httptest.NewRequest("POST", "/api/v1/services/"+sid+"/power", bytes.NewBufferString(`{"action":"start"}`))
 	request.Header.Set("Idempotency-Key", key)
+	request.Header.Set("Content-Type", "application/json")
 	if !app.serviceActions06HTTP(response, request, f.customer, "/services/"+sid+"/power") || response.Code != 200 {
 		t.Fatal(response.Code, response.Body.String())
 	}
@@ -141,5 +142,90 @@ func TestMySQLCommerceAutomationProvisionBootstrapAndActivation(t *testing.T) {
 	controller.mu.Unlock()
 	if provisions != 1 || actions != 1 {
 		t.Fatal("setup repeated", provisions, actions)
+	}
+}
+
+func TestMySQLCommerceFailedBootstrapRequiresExplicitStaffRetry(t *testing.T) {
+	f := mysqlCatalogFixture(t)
+	m := f.store.(*MySQL)
+	sid, _ := paidService06(t, f)
+	controller, runtime := serviceControllerFixture06(t, m, f.customer.ID, sid)
+	if _, err := m.DB.Exec("UPDATE services SET status='provisioning' WHERE id=?", sid); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := m.DB.Exec("UPDATE service_tasks SET status='succeeded' WHERE service_id=? AND action='provision'", sid); err != nil {
+		t.Fatal(err)
+	}
+	tx, err := m.DB.BeginTx(t.Context(), nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	setup, err := queueServiceTask06(t.Context(), tx, sid, "reinstall", serviceActionPayload06{Version: 1, Source: "bootstrap", Params: serviceapi.Params{ImageID: "debian-12"}}, time.Now().UTC())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err = tx.Commit(); err != nil {
+		t.Fatal(err)
+	}
+	controller.actionStatus = "rejected"
+	app := NewApp(m, Config{Demo: true, Origin: "http://localhost", Secret: ID() + ID(), Services: runtime, CommerceContractVersion: "0.6"})
+	settings, err := m.AutomationSettings(t.Context())
+	if err != nil {
+		t.Fatal(err)
+	}
+	settings.AutoProvision = true
+	result, err := app.Automation.jobs["dispatch_provisioning"](t.Context(), settings, time.Now().UTC().Add(time.Minute))
+	if err != nil || result.Failed != 1 {
+		t.Fatal("controller rejection absent from automation failures", result, err)
+	}
+	state, err := readServiceTask06(t.Context(), m.DB, setup.ID, "")
+	if err != nil || state.View.Status != "failed" {
+		t.Fatal(state.View, err)
+	}
+	if _, err = app.Automation.jobs["dispatch_provisioning"](t.Context(), settings, time.Now().UTC().Add(2*time.Minute)); err != nil {
+		t.Fatal(err)
+	}
+	controller.mu.Lock()
+	sent := controller.sends
+	controller.actionStatus = ""
+	controller.mu.Unlock()
+	if sent != 1 {
+		t.Fatal("failed setup was retried automatically")
+	}
+	server := httptest.NewServer(app.Handler())
+	defer server.Close()
+	admin := client(t, server.URL, f.admin.Email, "CatalogFixture!2026")
+	customer := client(t, server.URL, f.customer.Email, "CatalogFixture!2026")
+	input := api.AdminServiceActionInput{Action: "provision"}
+	key := ID()
+	status, body := customer.request("POST", "/api/v1/admin/services/"+sid+"/actions", input, key)
+	if status != 403 {
+		t.Fatal(status, body)
+	}
+	contracttest.Error(t, body)
+	status, body = admin.request("POST", "/api/v1/admin/services/"+sid+"/actions", input, key)
+	if status != 200 {
+		t.Fatal(status, body)
+	}
+	contracttest.Response(t, "POST", "/admin/services/{id}/actions", body)
+	id := body["data"].(map[string]any)["id"].(string)
+	if id == setup.ID {
+		t.Fatal("explicit retry reused rejected operation")
+	}
+	for range 2 {
+		task, err := app.DispatchServiceTask06(t.Context(), id, true, true)
+		if err != nil || task.Status != "succeeded" {
+			t.Fatal(task, err)
+		}
+	}
+	view, err := m.Service06(t.Context(), f.customer.ID, sid)
+	if err != nil || view.Status != "active" {
+		t.Fatal(view, err)
+	}
+	controller.mu.Lock()
+	sent, provisions := controller.sends, controller.provisions
+	controller.mu.Unlock()
+	if sent != 2 || provisions != 0 {
+		t.Fatal("setup retry duplicated a resource", sent, provisions)
 	}
 }
