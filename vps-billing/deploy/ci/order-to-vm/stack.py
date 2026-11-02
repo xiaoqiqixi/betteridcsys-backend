@@ -286,9 +286,13 @@ class Stack:
                 "guest": {"enabled": True, "families": {i: "linux" for i in images}},
                 "storage": {"enabled": True, "directory": str(self.root / "snapshots"), "inbox_directory": str(self.root / "inbox"), "max_artifact_bytes": 12 << 30, "max_total_bytes": 24 << 30}}
         self.node_config = self.write(self.private / "node.json", node)
-        doctor = json.loads(self.command([BIN / "aster-node", "--config", self.node_config, "--doctor"]).stdout)
-        require(doctor["ready"], "node doctor not ready")
+        result = self.command([BIN / "aster-node", "--config", self.node_config, "--doctor"], check=False)
+        require(result.stdout.strip(), "node configuration rejected before readiness inspection")
+        doctor = json.loads(result.stdout)
         self.evidence["node_doctor"] = doctor
+        self.write(self.report / "summary.json", self.evidence, 0o644)
+        failed = [check["name"] for check in doctor["checks"] if not check["passed"]]
+        require(result.returncode == 0 and doctor["ready"], "node doctor failed: " + ", ".join(failed))
         self.spawn("node", [BIN / "aster-node", "--config", self.node_config])
         self.billing_token = self.password()
         self.admin_token = self.password()
