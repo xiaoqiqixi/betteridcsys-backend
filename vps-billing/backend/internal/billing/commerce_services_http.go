@@ -17,6 +17,10 @@ func (a *App) commerceServicesHTTP(w http.ResponseWriter, r *http.Request, u Use
 		return false
 	}
 	if len(parts) == 1 && !a.commerceContract06(r) {
+		if r.Method == "DELETE" {
+			fail(w, r, 405, "METHOD_NOT_ALLOWED", "Method not allowed")
+			return true
+		}
 		return false
 	}
 	if len(parts) > 2 && parts[2] != "cancellation" && parts[2] != "renew" {

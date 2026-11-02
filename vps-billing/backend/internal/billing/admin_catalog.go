@@ -86,7 +86,7 @@ func validCatalogRevisions(revision, currencyRevision int64) bool {
 }
 func catalogReason(reason string) (string, bool) {
 	reason = strings.TrimSpace(reason)
-	return reason, reason != "" && validText(reason, 500, true)
+	return reason, reason != "" && validLegacyText(reason, 500, true)
 }
 func validCatalogID(id string) bool {
 	if len(id) < 1 || len(id) > 64 {
@@ -103,7 +103,7 @@ func normalizeCatalog(input CatalogInput, config CurrencyConfiguration) (Catalog
 	input.Name = strings.TrimSpace(input.Name)
 	var ok bool
 	input.Reason, ok = catalogReason(input.Reason)
-	if !ok || input.Name == "" || input.Region == "" || !validText(input.Name, 120, false) || !validText(input.Region, 480, false) || utf8.RuneCountInString(input.Region) > 120 || !validText(input.Description, 500, true) ||
+	if !ok || input.Name == "" || input.Region == "" || !validLegacyText(input.Name, 120, false) || !validLegacyText(input.Region, 480, false) || utf8.RuneCountInString(input.Region) > 120 || !validLegacyText(input.Description, 500, true) ||
 		input.CPU < 1 || input.CPU > 4096 || input.MemoryGB < 1 || input.MemoryGB > 1048576 || input.DiskGB < 1 || input.DiskGB > 16777216 || input.TransferTB < 1 || input.TransferTB > 1048576 || len(input.Prices) > 32 || input.Prices == nil {
 		return CatalogInput{}, config, ErrCatalog
 	}

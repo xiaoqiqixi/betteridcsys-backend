@@ -92,7 +92,7 @@ func normalizeAccountQuery(q accountQuery) (accountQuery, error) {
 		q.Limit = 50
 	}
 	q.Q = strings.TrimSpace(q.Q)
-	if q.Limit < 1 || q.Limit > 100 || !validText(q.Q, 120, false) || q.Role != "" && q.Role != "admin" && q.Role != "customer" || q.Status != "" && q.Status != "active" && q.Status != "disabled" || q.Before != "" && !auditOwner.MatchString(q.Before) {
+	if q.Limit < 1 || q.Limit > 100 || !validLegacyText(q.Q, 120, false) || q.Role != "" && q.Role != "admin" && q.Role != "customer" || q.Status != "" && q.Status != "active" && q.Status != "disabled" || q.Before != "" && !auditOwner.MatchString(q.Before) {
 		return q, ErrAccountQuery
 	}
 	return q, nil
@@ -100,7 +100,7 @@ func normalizeAccountQuery(q accountQuery) (accountQuery, error) {
 func prepareAccountWrite(w accountWrite) (accountWrite, string, error) {
 	w.Name = strings.TrimSpace(w.Name)
 	w.Reason = strings.TrimSpace(w.Reason)
-	if w.Reason == "" || !validText(w.Reason, 500, false) {
+	if w.Reason == "" || !validLegacyText(w.Reason, 500, false) {
 		return w, "", ErrAccountInput
 	}
 	if w.Operation != "create" && (!auditOwner.MatchString(w.ID) || w.Revision < 1 || w.Revision > MaxMinor) {
@@ -108,7 +108,7 @@ func prepareAccountWrite(w accountWrite) (accountWrite, string, error) {
 	}
 	switch w.Operation {
 	case "create", "update":
-		if w.Name == "" || !validText(w.Name, 120, false) || w.Role != "customer" && w.Role != "admin" {
+		if w.Name == "" || !validLegacyText(w.Name, 120, false) || w.Role != "customer" && w.Role != "admin" {
 			return w, "", ErrAccountInput
 		}
 	case "password", "revoke":

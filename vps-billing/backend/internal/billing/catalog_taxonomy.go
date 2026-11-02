@@ -145,20 +145,20 @@ func validTaxonomy(c TaxonomyConfiguration) bool {
 	}
 	types, regions := map[string]bool{}, map[string]bool{}
 	for _, v := range c.Types {
-		if !validCatalogID(v.ID) || types[v.ID] || v.Name == "" || strings.TrimSpace(v.Name) != v.Name || !validText(v.Name, 120, false) || v.SortOrder < 0 || v.SortOrder > 1000000 {
+		if !validCatalogID(v.ID) || types[v.ID] || v.Name == "" || strings.TrimSpace(v.Name) != v.Name || !validLegacyText(v.Name, 120, false) || v.SortOrder < 0 || v.SortOrder > 1000000 {
 			return false
 		}
 		types[v.ID] = true
 	}
 	for _, v := range c.Regions {
-		if !validCatalogID(v.ID) || regions[v.ID] || !types[v.TypeID] || strings.TrimSpace(v.Name) == "" || !validText(v.Name, 480, false) || utf8.RuneCountInString(v.Name) > 120 || v.SortOrder < 0 || v.SortOrder > 1000000 {
+		if !validCatalogID(v.ID) || regions[v.ID] || !types[v.TypeID] || strings.TrimSpace(v.Name) == "" || !validLegacyText(v.Name, 480, false) || utf8.RuneCountInString(v.Name) > 120 || v.SortOrder < 0 || v.SortOrder > 1000000 {
 			return false
 		}
 		regions[v.ID] = true
 	}
 	nodes := map[string]bool{}
 	for _, v := range c.Nodes {
-		if !validCatalogID(v.ID) || nodes[v.ID] || !regions[v.RegionID] || v.Name == "" || strings.TrimSpace(v.Name) != v.Name || !validText(v.Name, 120, false) || v.SortOrder < 0 || v.SortOrder > 1000000 {
+		if !validCatalogID(v.ID) || nodes[v.ID] || !regions[v.RegionID] || v.Name == "" || strings.TrimSpace(v.Name) != v.Name || !validLegacyText(v.Name, 120, false) || v.SortOrder < 0 || v.SortOrder > 1000000 {
 			return false
 		}
 		nodes[v.ID] = true

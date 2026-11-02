@@ -61,6 +61,12 @@ func validText(s string, max int, multiline bool) bool {
 	return true
 }
 
+// The deprecated 0.5 interfaces bound UTF-8 bytes. Keep those limits separate
+// from the 0.6 contract's character limits during the compatibility release.
+func validLegacyText(s string, max int, multiline bool) bool {
+	return len(s) <= max && validText(s, max, multiline)
+}
+
 var dnsLabel = regexp.MustCompile(`^[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?$`)
 
 // These URLs are display links only. The server never resolves or fetches them.

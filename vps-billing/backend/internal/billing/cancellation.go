@@ -40,7 +40,7 @@ func normalizeCancellationInput(actor User, orderID, reason string) (string, err
 		return "", ErrNotFound
 	}
 	reason = strings.TrimSpace(reason)
-	if !validCancellationID(orderID) || reason == "" || !validText(reason, 500, false) {
+	if !validCancellationID(orderID) || reason == "" || !validLegacyText(reason, 500, false) {
 		return "", ErrCancellationInput
 	}
 	return reason, nil
