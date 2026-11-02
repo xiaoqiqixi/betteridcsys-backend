@@ -1,12 +1,10 @@
-// payment-manifest writes the manifest for a locally built reference plugin.
-// It hashes the file without executing it. Core does not import these plugins.
+// payment-manifest writes the manifest for a locally built payment template.
+// It hashes the file without executing it. Core does not import the template.
 package main
 
 import (
 	"aster/billing/pkg/pluginapi"
 	paymenttemplate "aster/billing/plugins/payment-template"
-	banktransfer "aster/billing/plugins/payment.bank-transfer"
-	"aster/billing/plugins/payment.stripe"
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
@@ -17,12 +15,10 @@ import (
 )
 
 func main() {
-	plugin := flag.String("plugin", "", "template, bank-transfer or stripe")
+	plugin := flag.String("plugin", "", "template")
 	binary := flag.String("binary", "", "built Linux executable to hash, never execute")
 	flag.Parse()
-	factories := map[string]func(string) pluginapi.Manifest{"template": paymenttemplate.Manifest, "bank-transfer": banktransfer.Manifest, "stripe": stripe.Manifest}
-	factory := factories[*plugin]
-	if factory == nil || *binary == "" || flag.NArg() != 0 {
+	if *plugin != "template" || *binary == "" || flag.NArg() != 0 {
 		fmt.Fprintln(os.Stderr, "Specify --plugin and --binary.")
 		os.Exit(2)
 	}
@@ -38,9 +34,9 @@ func main() {
 		fmt.Fprintln(os.Stderr, "Invalid executable size.")
 		os.Exit(1)
 	}
-	manifest := factory(hex.EncodeToString(digest.Sum(nil)))
+	manifest := paymenttemplate.Manifest(hex.EncodeToString(digest.Sum(nil)))
 	if manifest.Validate(pluginapi.CoreVersion) != nil {
-		fmt.Fprintln(os.Stderr, "Invalid reference manifest.")
+		fmt.Fprintln(os.Stderr, "Invalid template manifest.")
 		os.Exit(1)
 	}
 	if json.NewEncoder(os.Stdout).Encode(manifest) != nil {

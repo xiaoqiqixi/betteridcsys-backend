@@ -5,8 +5,10 @@ import (
 	"aster/billing/internal/runtimeplugins"
 	"aster/billing/pkg/pluginapi"
 	"aster/billing/pkg/pluginapi/paymentv1"
+	"aster/billing/plugins/paymentfixture"
 	"context"
 	"net/http/httptest"
+	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -26,11 +28,14 @@ type gatewayFlowRuntime struct {
 
 func (g *gatewayFlowRuntime) CreatePayment(ctx context.Context, c paymentv1.Config, in paymentv1.Intent) (paymentv1.Checkout, error) {
 	out, err := g.gatewayTestRuntime.CreatePayment(ctx, c, in)
-	out.Flow, out.URL = g.flow, ""
-	if g.flow == "qr" {
+	out.Flow = g.flow
+	switch g.flow {
+	case "qr":
+		out.URL = ""
 		out.QRPayload = "fixture:payment/" + in.AttemptID
-	} else {
-		out.Instructions, out.Reference, out.ExpiresAt = "Fixture receiving account\nInclude the reference.", in.AttemptID, time.Time{}
+	case "instructions":
+		out.URL = ""
+		out.Instructions, out.Reference, out.ExpiresAt = "Fixture instructions for "+c.GatewayID+"\nDo not send funds.", in.AttemptID, time.Time{}
 	}
 	return out, err
 }
@@ -52,14 +57,16 @@ func gatewayFlowContract(t *testing.T, f catalogFixture, adminPassword, customer
 		migrationExec(t, t.Context(), db.DB, "UPDATE plans SET available=TRUE WHERE id='starter'")
 		migrationExec(t, t.Context(), db.DB, "UPDATE plan_prices SET available=TRUE WHERE plan_id='starter' AND currency='CNY'")
 	}
-	for _, flow := range []string{"instructions", "qr"} {
+	for _, flow := range []string{"redirect", "qr", "instructions"} {
 		t.Run(flow, func(t *testing.T) {
 			p := newPaymentHTTPRuntime(t)
 			p.selection.Slot = flow
 			p.manifest.Payment.Flow = flow
 			p.manifest.Payment.Name = map[string]string{"en": "Fixture"}
-			p.manifest.Payment.CheckoutHosts = []string{}
-			if flow == "qr" {
+			if flow != "redirect" {
+				p.manifest.Payment.CheckoutHosts = []string{}
+			}
+			if flow != "instructions" {
 				p.manifest.Capabilities = append(p.manifest.Capabilities, pluginapi.PaymentQueryCapability)
 			}
 			g := &gatewayFlowRuntime{gatewayTestRuntime: &gatewayTestRuntime{slots: map[string]*paymentHTTPRuntime{flow: p}}, flow: flow}
@@ -79,6 +86,20 @@ func gatewayFlowContract(t *testing.T, f catalogFixture, adminPassword, customer
 			pid := data["payment_id"].(string)
 			if data["status"] != flow || flow == "instructions" && data["expires_at"] != nil {
 				t.Fatal(data)
+			}
+			switch flow {
+			case "redirect":
+				if checkoutURL, ok := data["checkout_url"].(string); !ok || !strings.HasPrefix(checkoutURL, "https://"+paymentfixture.CheckoutHost+"/checkout?session=fixture_") {
+					t.Fatal("fixture redirect lost", data)
+				}
+			case "qr":
+				if data["qr_payload"] != "fixture:payment/"+pid {
+					t.Fatal("fixture QR payload lost", data)
+				}
+			case "instructions":
+				if data["instructions"] != "Fixture instructions for "+flow+"\nDo not send funds." || data["reference"] != pid {
+					t.Fatal("fixture instructions or reference lost", data)
+				}
 			}
 			status, out = customer.request("POST", path, body, "flow-"+invoice.ID)
 			creates, _ := p.counts()
@@ -116,7 +137,7 @@ func gatewayFlowContract(t *testing.T, f catalogFixture, adminPassword, customer
 			g.mu.Unlock()
 			status, out = customer.request("GET", poll, nil, "")
 			want := "pending"
-			if flow == "qr" {
+			if flow != "instructions" {
 				want = "succeeded"
 			}
 			if status != 200 || out["data"].(map[string]any)["status"] != want {
@@ -144,7 +165,7 @@ func gatewayFlowContract(t *testing.T, f catalogFixture, adminPassword, customer
 					t.Fatal("another gateway changed this attempt's status", status, out)
 				}
 			}
-			if flow == "qr" {
+			if flow != "instructions" {
 				raw, signature := p.signed(t, e)
 				status, out = paymentHTTPNotify(t, &paymentHTTPHarness{server: srv}, "POST", "/api/v1/payment-callbacks/"+flow, raw, signature, "")
 				if status != 200 {

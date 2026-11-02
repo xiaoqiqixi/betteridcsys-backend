@@ -2,40 +2,21 @@ package billing
 
 import (
 	"aster/billing/internal/contracttest"
-	"aster/billing/pkg/pluginapi/paymentv1"
-	banktransfer "aster/billing/plugins/payment.bank-transfer"
-	"context"
 	"net/http/httptest"
-	"strings"
 	"testing"
 )
 
-type bankSlotRuntime struct {
-	*gatewayTestRuntime
-	processors map[string]*banktransfer.Processor
-}
-
-func (g *bankSlotRuntime) CreatePayment(ctx context.Context, cfg paymentv1.Config, in paymentv1.Intent) (paymentv1.Checkout, error) {
-	return g.processors[cfg.GatewayID].Create(ctx, cfg, in)
-}
-func (g *bankSlotRuntime) VerifyPaymentCallback(ctx context.Context, cfg paymentv1.Config, in paymentv1.Callback) (paymentv1.VerifiedEvent, error) {
-	return g.processors[cfg.GatewayID].Verify(ctx, cfg, in)
-}
-
-func TestMySQLGatewayBankTransferManualConfirmation(t *testing.T) {
+func TestMySQLGatewayInstructionsManualConfirmation(t *testing.T) {
 	f := mysqlCatalogFixture(t)
 	m := f.store.(*MySQL)
-	g := &bankSlotRuntime{gatewayTestRuntime: &gatewayTestRuntime{slots: map[string]*paymentHTTPRuntime{}}, processors: map[string]*banktransfer.Processor{}}
-	for _, id := range []string{"bank-a", "bank-b"} {
+	g := &gatewayFlowRuntime{gatewayTestRuntime: &gatewayTestRuntime{slots: map[string]*paymentHTTPRuntime{}}, flow: "instructions"}
+	for _, id := range []string{"instructions-a", "instructions-b"} {
 		p := newPaymentHTTPRuntime(t)
-		p.manifest = banktransfer.Manifest(strings.Repeat("a", 64))
-		p.selection.ID, p.selection.Version, p.selection.Slot, p.selection.MerchantID = banktransfer.ID, p.manifest.Version, id, "merchant-"+id
+		p.manifest.Payment.Flow = "instructions"
+		p.manifest.Payment.Name = map[string]string{"en": "Fixture instructions"}
+		p.manifest.Payment.CheckoutHosts = []string{}
+		p.selection.Slot, p.selection.MerchantID = id, "merchant-"+id
 		g.slots[id] = p
-		processor, err := banktransfer.New(banktransfer.Config{MerchantID: p.selection.MerchantID, Instructions: "Transfer to receiving account " + id})
-		if err != nil {
-			t.Fatal(err)
-		}
-		g.processors[id] = processor
 	}
 	srv := httptest.NewServer(NewApp(m, Config{Demo: true, Origin: "http://localhost", Secret: ID() + ID(), CommerceContractVersion: "0.6", PaymentRuntime: g}).Handler())
 	defer srv.Close()
@@ -43,10 +24,10 @@ func TestMySQLGatewayBankTransferManualConfirmation(t *testing.T) {
 	customer := client(t, srv.URL, f.customer.Email, "CatalogFixture!2026")
 	status, out := customer.request("GET", "/api/v1/payment-gateways?currency=CNY", nil, "")
 	if status != 200 || len(out["data"].([]any)) != 2 {
-		t.Fatal("two bank slots unavailable", status, out)
+		t.Fatal("two instructions slots unavailable", status, out)
 	}
 	contracttest.Response(t, "GET", "/payment-gateways", out)
-	for _, id := range []string{"bank-a", "bank-b"} {
+	for _, id := range []string{"instructions-a", "instructions-b"} {
 		t.Run(id, func(t *testing.T) {
 			status, out := admin.request("POST", "/api/v1/admin/invoices", invoice06Input(f.customer.ID, 1000), "create-"+id)
 			if status != 200 {
@@ -65,16 +46,16 @@ func TestMySQLGatewayBankTransferManualConfirmation(t *testing.T) {
 			contracttest.Response(t, "POST", "/invoices/{id}/pay", out)
 			checkout := out["data"].(map[string]any)
 			pid := checkout["payment_id"].(string)
-			if checkout["status"] != "instructions" || checkout["instructions"] != "Transfer to receiving account "+id || checkout["reference"] != pid || checkout["amount"].(map[string]any)["amount_minor"] != float64(600) {
+			if checkout["status"] != "instructions" || checkout["instructions"] != "Fixture instructions for "+id+"\nDo not send funds." || checkout["reference"] != pid || checkout["expires_at"] != nil || checkout["amount"].(map[string]any)["amount_minor"] != float64(600) {
 				t.Fatal("wrong slot or remaining balance", checkout)
 			}
 			status, _ = paymentHTTPNotify(t, &paymentHTTPHarness{server: srv}, "POST", "/api/v1/payment-callbacks/"+id, []byte(`{"status":"paid"}`), "forged", "")
 			if status != 400 {
-				t.Fatal("bank callback accepted", status)
+				t.Fatal("forged callback accepted", status)
 			}
 			confirmation := invoice06Payment(600, pid)
 			if status, _ := customer.request("POST", manual, confirmation, "confirm-"+id); status != 403 {
-				t.Fatal("customer confirmed a bank receipt", status)
+				t.Fatal("customer confirmed a manual receipt", status)
 			}
 			for range 2 {
 				status, out = admin.request("POST", manual, confirmation, "confirm-"+id)

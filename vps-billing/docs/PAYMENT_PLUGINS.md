@@ -7,6 +7,10 @@ Core owns invoices, attempts, integer money, authorization and settlement. Worke
 receive payment snapshots and return checkout data or authenticated evidence;
 they have no database, provisioning or accounting interface.
 
+The repository provides the slot framework, SDK, author template and conformance
+runner. It ships no concrete payment gateways. `backend/plugins/paymentfixture/`
+is a synthetic test fixture; it never contacts a provider or moves money.
+
 ## SDK and protocol
 
 The Go SDK is `backend/pkg/pluginapi/paymentv1` and `backend/pkg/pluginserver`.
@@ -90,7 +94,7 @@ string/zero timestamp. Return only the fields belonging to the declared flow.
 
 | Flow | Additional fields and validation |
 | --- | --- |
-| `redirect` | `checkout_url`: HTTPS, exact approved DNS host, no credentials or port. Explicit Core 0.6 redirect flows preserve provider fragments such as Stripe's; legacy declarations still reject fragments. |
+| `redirect` | `checkout_url`: HTTPS, exact approved DNS host, no credentials or port. Explicit Core 0.6 redirect flows preserve opaque provider fragments; legacy declarations still reject fragments. |
 | `qr` | `qr_payload`: plain text, at most 2048 characters. Core/frontend render it as QR data, never HTML. |
 | `instructions` | `instructions`: plain text, at most 8000 characters; `reference`: at most 120 characters. Never return HTML or secrets. |
 
@@ -145,47 +149,53 @@ all calls to that worker. Neither API accepts credentials.
 
 ## Build, approve and operate
 
-Reference plugins are `payment.bank-transfer` (offline instructions) and
-`payment.stripe` (Stripe Checkout, query and refund). The template collects no
-funds. From the repository root, build a reviewable archive without activation:
+The author template collects no funds and rejects every callback. From the
+repository root, build its reviewable archive without activation:
 
 ```sh
 python3 -B vps-billing/deploy/scripts/build-payment-plugin.py \
-  --plugin bank-transfer --output /path/to/new-bank-transfer.tar.gz
+  --plugin template --output /path/to/new-payment-template.tar.gz
 ```
 
-Use `--plugin stripe` or `template` for the other examples. The helper builds static
-Linux amd64 code, derives the manifest from the plugin, includes dependency notices
-and verifies the installer's archive format. Output is exclusive; existing files
-are never overwritten. Third-party archives use the same six-file inventory and
-protected-input rules in [PLUGINS.md](PLUGINS.md). Review source, dependencies and
-provenance before trusting any digest.
+The helper supports only the template. It builds static Linux amd64 code, derives
+the manifest from the template, includes dependency notices and verifies the
+installer's archive format. Output is exclusive; existing files are never
+overwritten. For your own plugin, adapt the build helper and manifest generator
+to your module and declarations, including its dependency license inventory.
+Third-party archives use the same six-file inventory and protected-input rules in
+[PLUGINS.md](PLUGINS.md). Review source, dependencies and provenance before trusting
+any digest.
 
-The following root commands assume a reviewed archive in a root-owned protected
-directory, a dedicated non-login `aster-pay-bank` user, shared socket group
-`aster-plugins`, and actual worker/API numeric UIDs. The worker must not belong to
-the API secret-reading group. Create each worker separately; UIDs and sockets
-cannot be shared. Use short slot IDs with the supplied service user naming, or
-provide a per-instance `User=` override for longer IDs.
+The following root commands illustrate installing an author-supplied
+`payment.example` plugin, version `1.0.0`, in slot `example`. They assume a reviewed
+archive in a root-owned protected directory, a dedicated non-login
+`aster-pay-example` user, shared socket group `aster-plugins`, and actual worker/API
+numeric UIDs. The worker must not belong to the API secret-reading group. Create
+each worker separately; UIDs and sockets cannot be shared. Use short slot IDs with
+the supplied service user naming, or provide a per-instance `User=` override for
+longer IDs.
 
 ```sh
 python3 /opt/aster/current/deploy/scripts/plugin-manager.py install \
-  /var/lib/aster-install/bank-transfer.tar.gz --sha256 "$REVIEWED_ARCHIVE_SHA256"
+  /var/lib/aster-install/payment-example.tar.gz --sha256 "$REVIEWED_ARCHIVE_SHA256"
 python3 /opt/aster/current/deploy/scripts/plugin-manager.py select \
-  --kind payment --slot bank --revision 0 --id payment.bank-transfer --version 1.0.0 \
-  --worker-uid 1102 --client-uid 1100 --merchant-id bank-account
+  --kind payment --slot example --revision 0 --id payment.example --version 1.0.0 \
+  --worker-uid 1102 --client-uid 1100 --merchant-id example-merchant
 python3 /opt/aster/current/deploy/scripts/plugin-manager.py enable \
-  --kind payment --slot bank --revision 1
-systemctl enable --now aster-payment@bank.service
+  --kind payment --slot example --revision 1
+systemctl enable --now aster-payment@example.service
 ```
 
 Revisions belong to the whole approval policy; read `status` and substitute the
-current revision before each mutation. Selection starts disabled. For Stripe add
-`--target api.stripe.com:443`; offline plugins need no targets. The socket is
-`/run/aster-payment/<slot>/plugin.sock`. The template uses
+current revision before each mutation. Selection starts disabled. If the plugin
+needs outbound network access, approve each required destination with
+`--target api.example.com:443`, substituting the provider's actual host and port;
+offline plugins need no targets. The socket is
+`/run/aster-payment/<slot>/plugin.sock`. The systemd service template uses
 `LoadCredential=payment:/etc/aster/payment/<slot>/`; a root-owned mode 0600
-`config.json` becomes the worker's `payment_config.json`. See each plugin README
-for its config. No database, session or SMTP secrets are inherited.
+`config.json` becomes the worker's `payment_config.json`. Document required
+credentials and their format in your plugin README. No database, session or SMTP
+secrets are inherited.
 
 Use `disable`, `enable`, `rollback --version X.Y.Z` or `remove`, always with
 `--kind payment --slot ID --revision N`. `remove` requires a disabled selection
@@ -214,7 +224,9 @@ hooks. Run `go test -race ./...` in the author's module.
 
 Repository CI runs the plugin fixtures and SDK on Linux, actual systemd workers
 with separate UIDs/sockets/credential mounts, and payment contracts/settlement
-tests against native MySQL. macOS cross-compilation is build evidence only.
+tests against native MySQL. Fixture-based Core tests cover `redirect`, `qr` and
+`instructions`, including manual confirmation for instructions, without concrete
+gateway implementations. macOS cross-compilation is build evidence only.
 Third-party authors must additionally provide official API sources, signature
 fixtures, timeout/replay behavior and sandbox-account acceptance. CI never contacts
 a real payment provider. Core trusts approved verification code; process isolation

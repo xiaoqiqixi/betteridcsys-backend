@@ -8,11 +8,11 @@ import (
 )
 
 func TestFlowsLimitsAndPassiveLogos(t *testing.T) {
-	d := Declarations{Name: map[string]string{"en": "Bank", "zh-CN": "银行转账"}, Flow: "instructions", Currencies: []Currency{{"USD", 2}}, Min: []CurrencyAmount{{"USD", 100}}, Max: []CurrencyAmount{{"USD", 500}}}
+	d := Declarations{Name: map[string]string{"en": "Fixture", "zh-CN": "测试支付"}, Flow: "instructions", Currencies: []Currency{{"USD", 2}}, Min: []CurrencyAmount{{"USD", 100}}, Max: []CurrencyAmount{{"USD", 500}}}
 	if d.Validate() != nil || d.WithinLimits("USD", 99) || d.WithinLimits("USD", 501) || !d.WithinLimits("USD", 100) {
 		t.Fatal("invalid limits")
 	}
-	c := Checkout{ProviderID: "payment.bank-transfer", SessionID: "a", Flow: "instructions", Instructions: "Bank\nAccount 123", Reference: "invoice-1"}
+	c := Checkout{ProviderID: "payment.fixture", SessionID: "a", Flow: "instructions", Instructions: "Fixture instructions\nDo not send funds.", Reference: "invoice-1"}
 	if ValidateCheckout(c, c.ProviderID, d, time.Now()) != nil {
 		t.Fatal("instructions rejected")
 	}
@@ -62,8 +62,8 @@ func TestQueryCannotInventOrCrossSettlement(t *testing.T) {
 }
 
 func TestExplicitRedirectPreservesFragmentWithinApprovedHost(t *testing.T) {
-	d := Declarations{Flow: "redirect", Currencies: []Currency{{"USD", 2}}, CheckoutHosts: []string{"checkout.stripe.com"}}
-	c := Checkout{ProviderID: "payment.stripe", SessionID: "session", Flow: "redirect", URL: "https://checkout.stripe.com/c/pay/session#opaque%2Fdata", ExpiresAt: time.Now().Add(time.Hour)}
+	d := Declarations{Flow: "redirect", Currencies: []Currency{{"USD", 2}}, CheckoutHosts: []string{"checkout.example.test"}}
+	c := Checkout{ProviderID: "payment.fixture", SessionID: "session", Flow: "redirect", URL: "https://checkout.example.test/c/pay/session#opaque%2Fdata", ExpiresAt: time.Now().Add(time.Hour)}
 	if ValidateCheckout(c, c.ProviderID, d, time.Now()) != nil {
 		t.Fatal("approved provider fragment rejected")
 	}
@@ -72,7 +72,7 @@ func TestExplicitRedirectPreservesFragmentWithinApprovedHost(t *testing.T) {
 	if ValidateCheckout(c, c.ProviderID, legacy, time.Now()) == nil {
 		t.Fatal("legacy fragment rule changed")
 	}
-	for _, raw := range []string{"https://checkout.stripe.com.evil.test/c#x", "https://evil.test/#https://checkout.stripe.com", "https://user@checkout.stripe.com/#x", "https://checkout.stripe.com:8443/#x", "http://checkout.stripe.com/#x", "https://checkout.stripe.com/#x\n", "https://checkout.stripe.com/#" + strings.Repeat("x", 2048)} {
+	for _, raw := range []string{"https://checkout.example.test.evil.test/c#x", "https://evil.test/#https://checkout.example.test", "https://user@checkout.example.test/#x", "https://checkout.example.test:8443/#x", "http://checkout.example.test/#x", "https://checkout.example.test/#x\n", "https://checkout.example.test/#" + strings.Repeat("x", 2048)} {
 		c.URL = raw
 		if ValidateCheckout(c, c.ProviderID, d, time.Now()) == nil {
 			t.Fatal("unsafe redirect accepted", raw[:30])

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Build a reference payment plugin archive; never install or approve it."""
+"""Build a payment template archive; never install or approve it."""
 import argparse
 import gzip
 import hashlib
@@ -13,7 +13,7 @@ import sys
 import tarfile
 import tempfile
 
-PLUGINS = {"template": "payment-template", "bank-transfer": "payment.bank-transfer", "stripe": "payment.stripe"}
+PLUGINS = {"template": "payment-template"}
 
 
 def package(manifest, binary, license_text, readme, go_license, go_patents, go_version):

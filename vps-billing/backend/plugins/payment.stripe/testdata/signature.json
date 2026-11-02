@@ -1,6 +1,0 @@
-{
-  "Body": "{\"id\":\"evt_fixture\",\"type\":\"checkout.session.completed\",\"data\":{\"object\":{\"id\":\"cs_fixture\"}}}",
-  "Secret": "whsec_fixture_secret",
-  "Header": "t=1700000000,v1=3eeed9f1811cbcc79addcf0811a29f6cfe320ba92bd362054b0bcb0c67e8fd4f",
-  "Timestamp": 1700000000
-}

@@ -44,12 +44,10 @@ jobs:
       - name: Linux socket protocol and plugin conformance
         working-directory: vps-billing/backend
         run: go test -race -count=1 ./pkg/pluginapi/... ./pkg/pluginserver/... ./internal/runtimeplugins/... ./plugins/...
-      - name: Build installable reference plugin archives
+      - name: Build installable payment template archive
         run: |
           set -euo pipefail
           payment_packages=$(mktemp -d "$RUNNER_TEMP/payment-packages.XXXXXXXX")
-          for plugin in template bank-transfer stripe; do
-            python3 -B vps-billing/deploy/scripts/build-payment-plugin.py --plugin "$plugin" --output "$payment_packages/$plugin.tar.gz"
-          done
+          python3 -B vps-billing/deploy/scripts/build-payment-plugin.py --plugin template --output "$payment_packages/template.tar.gz"
       - name: Real systemd instance isolation
         run: sudo python3 -B vps-billing/deploy/ci/payment-slots-native.py
