@@ -41,6 +41,20 @@ type Memory struct {
 	paymentReceipts            []paymentReceipt
 }
 
+// Only the public, fixed demonstration credentials are reused. Returning an
+// array of values keeps each store's users, IDs and password changes isolated.
+var demoUserTemplates = sync.OnceValue(func() [3]User {
+	var users [3]User
+	for i, v := range []struct{ email, name, role, password string }{{"demo@aster.local", "林先生", "customer", "DemoCustomer!2026"}, {"admin@aster.local", "演示管理员", "admin", "DemoAdmin!2026"}, {"other@aster.local", "另一位客户", "customer", "DemoOther!2026"}} {
+		h, err := bcrypt.GenerateFromPassword([]byte(v.password), bcrypt.DefaultCost)
+		if err != nil {
+			panic(err)
+		}
+		users[i] = User{Email: v.email, Name: v.name, Role: v.role, PasswordHash: string(h), Revision: 1}
+	}
+	return users
+})
+
 func NewMemory() *Memory {
 	m := &Memory{users: map[string]User{}, sessions: map[string]Session{}, plans: Catalog(), orders: []Order{}, invoices: []Invoice{}, services: []Service{}, audits: []Audit{}, requests: map[string]memoRequest{}}
 	m.staffPolicies = map[string]staffPolicy{}
@@ -59,9 +73,8 @@ func NewMemory() *Memory {
 		"standard":    {"CNY": {7900, true}},
 		"performance": {"CNY": {15900, true}},
 	}
-	for _, v := range []struct{ email, name, role, password string }{{"demo@aster.local", "林先生", "customer", "DemoCustomer!2026"}, {"admin@aster.local", "演示管理员", "admin", "DemoAdmin!2026"}, {"other@aster.local", "另一位客户", "customer", "DemoOther!2026"}} {
-		h, _ := bcrypt.GenerateFromPassword([]byte(v.password), bcrypt.DefaultCost)
-		u := User{ID: ID(), Email: v.email, Name: v.name, Role: v.role, PasswordHash: string(h), Revision: 1}
+	for _, u := range demoUserTemplates() {
+		u.ID = ID()
 		m.users[u.ID] = u
 		if u.Role == "admin" {
 			m.staffPolicies[u.ID] = ownerPolicy()

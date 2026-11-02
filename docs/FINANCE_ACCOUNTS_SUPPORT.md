@@ -2,8 +2,8 @@
 
 The pinned API is `vps-billing/contract/openapi.json`. Account, support, content,
 staff and settings handlers validate incoming documents and return that contract's
-response shapes. `Accounts and support` CI runs their contract/security tests with
-real MySQL 8.4 and rejects skipped acceptance tests.
+response shapes. `Accounts and support` CI runs the full backend race suite and
+contract/security tests with real MySQL 8.4 and rejects skipped acceptance tests.
 
 ## Authorization and credentials
 

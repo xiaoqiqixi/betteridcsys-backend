@@ -56,6 +56,16 @@ type App struct {
 	dummyHash    []byte
 }
 
+// Unknown accounts still perform a full-cost password comparison. The random
+// dummy password has no account and only needs to be hashed once per process.
+var loginDummyHash = sync.OnceValue(func() string {
+	h, err := bcrypt.GenerateFromPassword([]byte(ID()), bcrypt.DefaultCost)
+	if err != nil {
+		panic(err)
+	}
+	return string(h)
+})
+
 func NewApp(s Store, c Config) *App {
 	return NewAppWithIntegrations(s, c, integrations.Default())
 }
@@ -68,7 +78,6 @@ func NewAppWithIntegrations(s Store, c Config, registry *integrations.Registry) 
 	if registry == nil {
 		registry = integrations.Default()
 	}
-	h, _ := bcrypt.GenerateFromPassword([]byte(ID()), bcrypt.DefaultCost)
 	smtpService := newSMTPService(s, c.SMTPKey)
 	if c.PaymentRuntime == nil && c.Plugins != nil {
 		c.PaymentRuntime = c.Plugins
@@ -77,7 +86,7 @@ func NewAppWithIntegrations(s Store, c Config, registry *integrations.Registry) 
 		smtpService.runtime = c.Plugins
 		smtpService.sender = c.Plugins
 	}
-	a := &App{Automation: &AutomationRegistry{jobs: map[string]AutomationJob{}}, SMTP: smtpService, Integrations: registry.WithManagedEmail(smtpService), Store: s, Config: c, attempts: map[string]bucket{}, dummyHash: h}
+	a := &App{Automation: &AutomationRegistry{jobs: map[string]AutomationJob{}}, SMTP: smtpService, Integrations: registry.WithManagedEmail(smtpService), Store: s, Config: c, attempts: map[string]bucket{}, dummyHash: []byte(loginDummyHash())}
 	a.registerCommerceAutomation()
 	a.registerAccountAutomation()
 	return a
