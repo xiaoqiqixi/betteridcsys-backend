@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log/slog"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -62,7 +63,7 @@ func TestMySQLCommerceFinanceRuntimePerformance(t *testing.T) {
 		}
 	}
 	financePerfExplain(t, ctx, f)
-	app := NewApp(m, Config{Demo: true, Origin: "http://localhost", Secret: strings.Repeat("f", 64), CommerceContractVersion: "0.6"})
+	app := NewApp(m, Config{Demo: true, Origin: "http://localhost", Secret: strings.Repeat("f", 64), CommerceContractVersion: "0.6", Logger: slog.New(slog.NewJSONHandler(io.Discard, nil))})
 	server := httptest.NewServer(app.Handler())
 	defer server.Close()
 	client := server.Client()
@@ -72,7 +73,7 @@ func TestMySQLCommerceFinanceRuntimePerformance(t *testing.T) {
 	for _, path := range []string{
 		"/session", "/invoices", "/admin/invoices", "/orders", "/admin/orders",
 		"/services", "/admin/services", "/audit-events", "/admin/audit-events",
-		"/products", "/admin/products", "/products/starter", "/admin/products/starter",
+		"/products", "/admin/products", "/products/perf-product-0", "/admin/products/perf-product-0",
 		"/overview", "/admin/overview?currency=CNY", "/admin/customer-accounts",
 		"/currencies", "/admin/currencies", "/catalog-taxonomy", "/admin/catalog-taxonomy",
 		"/invoices/" + httpPerfID(financePerfSeed, "invoice-0"),
@@ -120,6 +121,13 @@ func TestMySQLCommerceFinanceRuntimePerformance(t *testing.T) {
 		N      int     `json:"samples"`
 	}
 	results := []measurement{}
+	// Resolve every read route before timing; legacy migrated products can be
+	// hidden and are not a valid public product-detail fixture.
+	for _, e := range endpoints {
+		if e.method == http.MethodGet {
+			request(e)
+		}
+	}
 	// Profiles are a separate phase, so they do not perturb these percentiles.
 	for _, e := range endpoints {
 		for range 5 {
