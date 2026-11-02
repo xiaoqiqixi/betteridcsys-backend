@@ -16,10 +16,6 @@ type staffPolicy struct {
 	Permissions []string
 }
 
-type staffPolicyStore interface {
-	StaffPolicy(context.Context, string) (staffPolicy, error)
-}
-
 // staff resolves membership and permissions afresh on every request. It never
 // treats the session's role or a previous successful request as authority.
 func (a *App) staff(perm string, h http.HandlerFunc) http.HandlerFunc {
@@ -37,12 +33,7 @@ func (a *App) staff(perm string, h http.HandlerFunc) http.HandlerFunc {
 			fail(w, r, 403, "FORBIDDEN", "Permission denied")
 			return
 		}
-		s, ok := a.Store.(staffPolicyStore)
-		if !ok {
-			fail(w, r, 403, "FORBIDDEN", "Permission denied")
-			return
-		}
-		p, err := s.StaffPolicy(r.Context(), u.ID)
+		p, err := a.requestStaffPolicy(r.Context(), u.ID)
 		if err != nil && !errors.Is(err, ErrNotFound) {
 			a.internal(w, r, err)
 			return

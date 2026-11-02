@@ -290,7 +290,7 @@ func (a *App) sessionUser(ctx context.Context, u User) (financeapi.SessionUser, 
 	}
 	v := financeapi.SessionUser{ID: u.ID, Email: u.Email, Name: u.Name, Role: u.Role, Locale: p.Locale, Currency: p.Currency, EmailVerified: p.EmailVerified}
 	if u.Role == "admin" {
-		policy, e := a.Store.StaffPolicy(ctx, u.ID)
+		policy, e := a.requestStaffPolicy(ctx, u.ID)
 		if e != nil {
 			return v, e
 		}

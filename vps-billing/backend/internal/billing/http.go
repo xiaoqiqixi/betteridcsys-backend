@@ -113,7 +113,7 @@ func (a *App) token(r *http.Request) string {
 	}
 	return c.Value
 }
-func (a *App) current(r *http.Request) (User, error) {
+func (a *App) currentUncached(r *http.Request) (User, error) {
 	if u, ok := bearerUser(r); ok {
 		return u, nil
 	}
@@ -188,7 +188,7 @@ func (a *App) Handler() http.Handler {
 		}
 		ctx, cancel := context.WithTimeout(r.Context(), 12*time.Second)
 		defer cancel()
-		r = r.WithContext(ctx)
+		r = r.WithContext(context.WithValue(ctx, requestAuthorizationKey{}, &requestAuthorization{app: a}))
 		a.serve(w, r)
 	}))
 }
