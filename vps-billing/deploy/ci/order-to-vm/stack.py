@@ -249,11 +249,11 @@ class Stack:
         self.log("checkout credential and overdue billing regression tests on MySQL 8.4")
         self.sql("finance", "CREATE DATABASE aster_e2e_regression_test CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci")
         result = self.command([self.bin / "scheduler.test", "-test.v", "-test.timeout=4m",
-            "-test.run=^(TestMySQLCheckoutPasswordSurvivesPaymentAndBootstrap|TestOverdueDecisionSurvivesSchedulerClockAndRenewalRace|TestMySQLCommerceAutomationBillingJobsAndFailureIsolation)$"],
+            "-test.run=^(TestMySQLCheckoutPasswordSurvivesPaymentAndBootstrap|TestOverdueDecisionSurvivesSchedulerClockAndRenewalRace|TestMySQLCommerceAutomationBillingJobsAndFailureIsolation|TestOrderToVMSchedulerWaitsForBusyJob|TestOrderToVMSchedulerPreservesFailedReceipts)$"],
             env=dict(self.env, ASTER_MYSQL_TEST_DSN="root@unix(" + str(self.private / "mysql-finance/mysql.sock") + ")/aster_e2e_regression_test?parseTime=true"), check=False, timeout=250)
         self.write(self.private / "regressions.log", result.stdout + result.stderr)
-        require(result.returncode == 0 and b"--- SKIP:" not in result.stdout and result.stdout.count(b"--- PASS:") >= 3, "real MySQL regression tests failed or skipped")
-        self.complete_step("mysql-regressions", tests=3)
+        require(result.returncode == 0 and b"--- SKIP:" not in result.stdout and result.stdout.count(b"--- PASS:") >= 5, "real MySQL regression tests failed or skipped")
+        self.complete_step("mysql-regressions", tests=5)
 
     def network(self):
         self.log("dedicated libvirt bridge and pinned IPv4 filter")

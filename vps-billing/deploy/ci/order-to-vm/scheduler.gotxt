@@ -3,37 +3,142 @@
 package billing
 
 import (
+	api "aster/billing/internal/financeapi"
+	"aster/billing/internal/runtimeplugins"
 	"context"
+	"database/sql"
+	"errors"
+	"fmt"
 	"os"
 	"runtime"
 	"testing"
 	"time"
-	"aster/billing/internal/runtimeplugins"
 )
 
 func TestOrderToVMScheduler(t *testing.T) {
 	if runtime.GOOS != "linux" || os.Getenv("GITHUB_ACTIONS") != "true" || os.Getenv("ASTER_E2E_SCHEDULER") != "1" {
 		t.Fatal("scheduler fixture requires the disposable Actions stack")
 	}
-	read := func(name string) string { b, e := os.ReadFile(os.Getenv(name)); if e != nil { t.Fatal("private runtime configuration unavailable") }; return string(b) }
+	read := func(name string) string {
+		b, e := os.ReadFile(os.Getenv(name))
+		if e != nil {
+			t.Fatal("private runtime configuration unavailable")
+		}
+		return string(b)
+	}
 	ctx, cancel := context.WithTimeout(t.Context(), 90*time.Second)
 	defer cancel()
 	m, err := OpenMySQL(ctx, read("MYSQL_DSN_FILE"), false)
-	if err != nil { t.Fatal("real MySQL unavailable", err) }
+	if err != nil {
+		t.Fatal("real MySQL unavailable", err)
+	}
 	defer m.DB.Close()
 	plugins := runtimeplugins.New(os.Getenv("PLUGIN_DIRECTORY"), os.Getenv("PLUGIN_POLICY_FILE"))
 	key, err := LoadSMTPKey(os.Getenv("SMTP_ENCRYPTION_KEY_FILE"))
-	if err != nil { t.Fatal(err) }
+	if err != nil {
+		t.Fatal(err)
+	}
 	a := NewApp(m, Config{CommerceContractVersion: "0.6", Services: NewServerModules06(plugins), Plugins: plugins, SMTPKey: key, Origin: os.Getenv("APP_ORIGIN"), Secret: read("SESSION_SECRET_FILE"), SecureCookie: true})
 	at, err := time.Parse(time.RFC3339, os.Getenv("ASTER_E2E_AT"))
-	if err != nil { t.Fatal("explicit scheduler clock required") }
+	if err != nil {
+		t.Fatal("explicit scheduler clock required")
+	}
 	name := os.Getenv("ASTER_E2E_JOB")
 	job := a.Automation.jobs[name]
-	if job == nil { t.Fatal("unknown registered scheduler job") }
-	if _, err := m.RunAutomationJob(ctx, name, at, job); err != nil { t.Fatal("scheduler job failed", name, err) }
-	var status string
-	var failed int
-	if err := m.DB.QueryRowContext(ctx, "SELECT status,failed FROM automation_runs WHERE job=? AND scheduled_at=?", name, at.UTC().Truncate(time.Minute)).Scan(&status, &failed); err != nil || status != "succeeded" || failed != 0 {
-		t.Fatal("scheduler receipt did not succeed", name, status, failed, err)
+	if job == nil {
+		t.Fatal("unknown registered scheduler job")
+	}
+	if err := waitOrderToVMScheduler(ctx, m, name, at, job, nil); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func waitOrderToVMScheduler(ctx context.Context, m *MySQL, name string, at time.Time, job AutomationJob, busy func()) error {
+	tick := time.NewTicker(100 * time.Millisecond)
+	defer tick.Stop()
+	for {
+		if _, err := m.RunAutomationJob(ctx, name, at, job); err != nil {
+			return err
+		}
+		var status string
+		var failed int
+		err := m.DB.QueryRowContext(ctx, "SELECT status,failed FROM automation_runs WHERE job=? AND scheduled_at=?", name, at.UTC().Truncate(time.Minute)).Scan(&status, &failed)
+		if err == nil && status == "succeeded" && failed == 0 {
+			return nil
+		}
+		if err != nil && !errors.Is(err, sql.ErrNoRows) {
+			return err
+		}
+		if err == nil && status != "running" {
+			return fmt.Errorf("scheduler receipt did not succeed: %s %s (%d failures)", name, status, failed)
+		}
+		// The API's real scheduler can own this job's advisory lock. Retry
+		// admission for this same minute only while no terminal receipt exists.
+		if busy != nil {
+			busy()
+		}
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		case <-tick.C:
+		}
+	}
+}
+
+func TestOrderToVMSchedulerWaitsForBusyJob(t *testing.T) {
+	f := mysqlCatalogFixture(t)
+	m := f.store.(*MySQL)
+	ctx, cancel := context.WithTimeout(t.Context(), 10*time.Second)
+	defer cancel()
+	conn, err := m.DB.Conn(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer conn.Close()
+	var locked int
+	if err := conn.QueryRowContext(ctx, "SELECT GET_LOCK('aster:job:close_tickets',0)").Scan(&locked); err != nil || locked != 1 {
+		t.Fatal("lock unavailable", err)
+	}
+	released := false
+	at := time.Now().UTC().Add(time.Hour)
+	job := func(context.Context, api.AutomationSettings, time.Time) (AutomationResult, error) {
+		return AutomationResult{}, nil
+	}
+	err = waitOrderToVMScheduler(ctx, m, "close_tickets", at, job, func() {
+		if released {
+			return
+		}
+		if _, err := conn.ExecContext(ctx, "SELECT RELEASE_LOCK('aster:job:close_tickets')"); err != nil {
+			t.Fatal(err)
+		}
+		released = true
+	})
+	if err != nil || !released {
+		t.Fatal("busy lock did not recover through observed receipt", err)
+	}
+	var count int
+	if err := m.DB.QueryRowContext(ctx, "SELECT COUNT(*) FROM automation_runs WHERE job='close_tickets' AND scheduled_at=? AND status='succeeded'", at.UTC().Truncate(time.Minute)).Scan(&count); err != nil || count != 1 {
+		t.Fatal("tick did not execute exactly once", count, err)
+	}
+}
+
+func TestOrderToVMSchedulerPreservesFailedReceipts(t *testing.T) {
+	f := mysqlCatalogFixture(t)
+	m := f.store.(*MySQL)
+	ctx, cancel := context.WithTimeout(t.Context(), 10*time.Second)
+	defer cancel()
+	called := 0
+	job := func(context.Context, api.AutomationSettings, time.Time) (AutomationResult, error) {
+		called++
+		return AutomationResult{Failed: 1}, nil
+	}
+	at := time.Now().UTC().Add(time.Hour)
+	for range 2 {
+		if err := waitOrderToVMScheduler(ctx, m, "close_tickets", at, job, func() { t.Fatal("failed receipt was retried") }); err == nil {
+			t.Fatal("failed receipt was accepted")
+		}
+	}
+	if called != 1 {
+		t.Fatal("failed job executed again", called)
 	}
 }

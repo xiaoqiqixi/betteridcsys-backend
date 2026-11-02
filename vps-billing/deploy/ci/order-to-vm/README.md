@@ -42,10 +42,13 @@ and guest-network ping provide independent assertions.
 The scheduler test binary contains a CI-only overlay that invokes the real
 registered automation jobs with an explicit clock. It adds no production clock
 endpoint. Every job must produce a successful receipt. Polling observes actual
-state and has bounded deadlines; no fixed delay stands in for readiness.
+state and has bounded deadlines; no fixed delay stands in for readiness. A busy
+scheduler lock is polled for the same scheduled minute, while failed receipts
+remain failures and are never replayed.
 
 The fixture also runs the checkout credential, overdue-clock, and billing
-automation regression tests against real MySQL 8.4. These must pass without skips.
+automation regression tests against real MySQL 8.4, including lock contention
+and failed-receipt retention. These must pass without skips.
 
 ## Failure evidence
 
