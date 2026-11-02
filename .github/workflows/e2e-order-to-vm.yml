@@ -1,0 +1,84 @@
+name: Order to VM
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: order-to-vm-${{ github.ref }}
+  cancel-in-progress: false
+jobs:
+  e2e-order-to-vm:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - name: Validate immutable stack pins
+        id: pins
+        run: python3 -B vps-billing/deploy/ci/order-to-vm/stack.py pins >> "$GITHUB_OUTPUT"
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          repository: xiaoqiqixi/betteridcsys-cloud
+          ref: ${{ steps.pins.outputs.cloud }}
+          path: artifacts/e2e-cloud
+          persist-credentials: false
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          repository: xiaoqiqixi/betteridcsys-frontend
+          ref: ${{ steps.pins.outputs.frontend }}
+          path: artifacts/e2e-frontend
+          persist-credentials: false
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e
+        with:
+          go-version: '1.27.3'
+          cache: true
+          cache-dependency-path: |
+            vps-billing/backend/go.sum
+            artifacts/e2e-cloud/aster-cloud/go.sum
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1
+        with:
+          node-version: '24.19.0'
+          package-manager-cache: false
+      - uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830
+        with:
+          path: artifacts/e2e-downloads
+          key: order-vm-downloads-${{ runner.os }}-${{ hashFiles('E2E_STACK.json', 'vps-billing/deploy/ci/mysql-distribution.json') }}
+      - uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830
+        id: binaries
+        with:
+          path: artifacts/e2e-bin
+          key: order-vm-bin-v1-${{ runner.os }}-${{ hashFiles('E2E_STACK.json', 'vps-billing/backend/**', 'vps-billing/deploy/ci/order-to-vm/**') }}
+      - name: Install native hypervisor and browser dependencies
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install --no-install-recommends -y libvirt-daemon-system libvirt-clients qemu-system-x86 qemu-utils cloud-image-utils libguestfs-tools nginx libnss3-tools libaio1t64 libssl3t64 libtirpc3t64
+          sudo systemctl start libvirtd
+          npm install --prefix artifacts/e2e-browser --ignore-scripts --no-audit --no-fund --save-exact @playwright/test@1.64.0
+          node artifacts/e2e-browser/node_modules/playwright/cli.js install --with-deps firefox
+      - name: Verify and cache both NoCloud images and MySQL 8.4 packages
+        run: python3 -B vps-billing/deploy/ci/order-to-vm/stack.py download
+      - name: Build pinned native binaries
+        if: steps.binaries.outputs.cache-hit != 'true'
+        run: bash vps-billing/deploy/ci/order-to-vm/build.sh
+      - name: Build pinned frontend bundle
+        working-directory: artifacts/e2e-frontend
+        run: |
+          npm ci --ignore-scripts --no-audit --no-fund
+          npm run build
+      - name: Real stack acceptance with strict TLS and mTLS
+        env:
+          PLAYWRIGHT_BROWSERS_PATH: /home/runner/.cache/ms-playwright
+        run: |
+          sudo --preserve-env=GITHUB_ACTIONS,GITHUB_RUN_ID,GITHUB_RUN_ATTEMPT,GITHUB_SHA,PLAYWRIGHT_BROWSERS_PATH \
+            python3 -B vps-billing/deploy/ci/order-to-vm/stack.py run
+      - name: Retain bounded acceptance evidence
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        with:
+          name: order-to-vm-${{ github.run_id }}-${{ github.run_attempt }}
+          path: artifacts/e2e-report/
+          if-no-files-found: error
+          retention-days: 7

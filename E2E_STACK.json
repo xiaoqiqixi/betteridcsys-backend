@@ -1,0 +1,30 @@
+{
+  "schema": 1,
+  "integration": "core",
+  "cloud": {
+    "repository": "xiaoqiqixi/betteridcsys-cloud",
+    "source_sha": "ba52445794c44105fdb61c7b6d2bf6dde7277d26"
+  },
+  "frontend": {
+    "repository": "xiaoqiqixi/betteridcsys-frontend",
+    "source_sha": "0d69f196fb5d648fe576c77635beb3863f683cc4"
+  },
+  "images": [
+    {
+      "id": "ubuntu-24",
+      "name": "Ubuntu minimal",
+      "version": "24.04",
+      "url": "https://cloud-images.ubuntu.com/minimal/releases/noble/release-20261017/ubuntu-24.04-minimal-cloudimg-amd64.img",
+      "sha256": "b3296484e362ba2e713489a5de6225c719d9500962bde25d15f2f21e512c7658",
+      "min_disk_gb": 4
+    },
+    {
+      "id": "ubuntu-22",
+      "name": "Ubuntu minimal",
+      "version": "22.04",
+      "url": "https://cloud-images.ubuntu.com/minimal/releases/jammy/release-20261020/ubuntu-22.04-minimal-cloudimg-amd64.img",
+      "sha256": "6a05f0e81090bfa0aad89d6caeedb8ea70c91a89e8961fe5f7347a5ae1ccc84a",
+      "min_disk_gb": 4
+    }
+  ]
+}
