@@ -23,7 +23,8 @@ func TestServerRPCConsumesOneAuthenticatedRequestAndHidesErrors(t *testing.T) {
 	envelope := pluginapi.ServerRequest{Protocol: pluginapi.ServerProtocol, Version: "1.0.0", ConnectionID: "east", RequestID: state.nonce, TimeoutMS: 1000, Payload: payload}
 	raw, _ := json.Marshal(envelope)
 	run := func() *httptest.ResponseRecorder {
-		r := httptest.NewRequest("POST", "/v1/server/call", bytes.NewReader(raw))
+		r := httptest.NewRequest("POST", "http://plugin.local/v1/server/call", bytes.NewReader(raw))
+		r.Header.Set("Content-Type", "application/json")
 		r = r.WithContext(context.WithValue(r.Context(), sessionKey{}, state))
 		w := httptest.NewRecorder()
 		s.serveHTTP(w, r)
