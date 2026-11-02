@@ -125,7 +125,15 @@ func (m *MySQL) AdminOverview06(ctx context.Context, currency string, at time.Ti
 	today := time.Date(at.UTC().Year(), at.UTC().Month(), at.UTC().Day(), 0, 0, 0, 0, time.UTC)
 	month := time.Date(today.Year(), today.Month(), 1, 0, 0, 0, 0, time.UTC)
 	previous := month.AddDate(0, -1, 0)
-	err = tx.QueryRowContext(ctx, `SELECT (SELECT COUNT(*) FROM users WHERE role='customer'),(SELECT COUNT(*) FROM users WHERE role='customer' AND created_at>=? AND created_at<=?),(SELECT COUNT(*) FROM services WHERE currency=? AND status='active'),(SELECT COUNT(*) FROM orders WHERE currency=? AND status='pending_payment'),(SELECT COUNT(*) FROM tickets WHERE status<>'closed'),(SELECT COUNT(*) FROM invoices WHERE currency=? AND status='unpaid' AND due_at<?),(SELECT COALESCE(SUM(amount_minor-amount_paid_minor-credit_applied_minor),0) FROM invoices WHERE currency=? AND status='unpaid')`, month, at, currency, currency, currency, at, currency).Scan(&out.Counts.Clients, &out.Counts.NewClientsMonth, &out.Counts.ActiveServices, &out.Counts.PendingOrders, &out.Counts.OpenTickets, &out.Counts.OverdueInvoices, &out.Outstanding.AmountMinor)
+	// Compute both customer counts in one scan, and both unpaid-invoice
+	// aggregates in another. Aggregate subqueries still return one row for an
+	// empty database and share this overview's repeatable-read snapshot.
+	err = tx.QueryRowContext(ctx, `SELECT clients.total,clients.new_month,
+(SELECT COUNT(*) FROM services WHERE currency=? AND status='active'),
+(SELECT COUNT(*) FROM orders WHERE currency=? AND status='pending_payment'),
+(SELECT COUNT(*) FROM tickets WHERE status<>'closed'),invoices.overdue,invoices.outstanding
+FROM (SELECT COUNT(*) total,COALESCE(SUM(created_at>=? AND created_at<=?),0) new_month FROM users WHERE role='customer') clients
+CROSS JOIN (SELECT COALESCE(SUM(due_at<?),0) overdue,COALESCE(SUM(amount_minor-amount_paid_minor-credit_applied_minor),0) outstanding FROM invoices WHERE currency=? AND status='unpaid') invoices`, currency, currency, month, at, at, currency).Scan(&out.Counts.Clients, &out.Counts.NewClientsMonth, &out.Counts.ActiveServices, &out.Counts.PendingOrders, &out.Counts.OpenTickets, &out.Counts.OverdueInvoices, &out.Outstanding.AmountMinor)
 	if err != nil {
 		return out, err
 	}
