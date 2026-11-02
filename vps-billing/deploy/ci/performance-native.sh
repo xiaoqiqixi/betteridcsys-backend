@@ -99,7 +99,7 @@ def reject():
 
 root = Path(os.environ.get('ASTER_NATIVE_MYSQL_FIXTURE_ROOT', ''))
 parent = os.environ.get('ASTER_NATIVE_FIXTURE_ROOT', '')
-if not re.fullmatch(r'/run/aster-native\.[A-Za-z0-9]{8}', parent):
+if not re.fullmatch(r'/var/lib/aster-native\.[A-Za-z0-9]{8}', parent):
     reject()
 if root.parent != Path(parent) or not re.fullmatch(r'aster-mysql\.[A-Za-z0-9]{8}', root.name):
     reject()
@@ -131,7 +131,7 @@ perf_harness_sha=${perf_harness_sha%% *}
 cleanup() {
   local perf_result=$? perf_removed=false
   trap - EXIT INT TERM
-  if [[ $perf_scratch =~ ^/run/aster-native\.[A-Za-z0-9]{8}/aster-performance\.[A-Za-z0-9]{8}$ && -d $perf_scratch && ! -L $perf_scratch && $(stat -c %u -- "$perf_scratch") == "$EUID" ]]; then
+  if [[ $perf_scratch =~ ^/var/lib/aster-native\.[A-Za-z0-9]{8}/aster-performance\.[A-Za-z0-9]{8}$ && -d $perf_scratch && ! -L $perf_scratch && $(stat -c %u -- "$perf_scratch") == "$EUID" ]]; then
     rm -rf --one-file-system -- "$perf_scratch" || true
   fi
   [[ ! -e $perf_scratch && ! -L $perf_scratch ]] && perf_removed=true

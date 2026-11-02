@@ -30,7 +30,7 @@ case $VERSION_ID in
   *) fail 'Only Ubuntu 22.04/24.04 is supported.' ;;
 esac
 [[ -n ${GITHUB_ENV:-} && -f $GITHUB_ENV && -w $GITHUB_ENV ]] || fail 'Missing job environment output.'
-for command in sudo apt-get dpkg-deb sha256sum curl; do
+for command in sudo apt-get dpkg-deb sha256sum curl findmnt; do
   command -v "$command" >/dev/null || fail "Missing $command."
 done
 
@@ -41,12 +41,22 @@ controller_dir=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)
 sudo env GITHUB_ACTIONS=true RUNNER_ENVIRONMENT=github-hosted \
   /usr/bin/python3 -I "$controller_dir/prepare-browser.py"
 
-# /run is visible to the hardened API; PrivateTmp and ProtectHome intentionally
-# hide ordinary temporary/home directories. Never reuse an existing path.
-fixture_root=$(sudo mktemp -d /run/aster-native.XXXXXXXX)
-[[ $fixture_root =~ ^/run/aster-native\.[A-Za-z0-9]{8}$ ]] || fail 'Unexpected scratch path.'
+# Keep extracted executables and MySQL data on the runner data filesystem.
+# /run may be mounted noexec; PrivateTmp and ProtectHome also hide ordinary
+# temporary/home directories from the hardened API. Never reuse a path.
+fixture_root=$(sudo mktemp -d /var/lib/aster-native.XXXXXXXX)
+[[ $fixture_root =~ ^/var/lib/aster-native\.[A-Za-z0-9]{8}$ ]] || fail 'Unexpected scratch path.'
 sudo chown -- "$(id -u):$(id -g)" "$fixture_root"
 printf 'ASTER_NATIVE_FIXTURE_ROOT=%s\n' "$fixture_root" >>"$GITHUB_ENV"
+for mount_path in /run "$fixture_root"; do
+  mount_options=$(findmnt --noheadings --output OPTIONS --target "$mount_path")
+  mount_noexec=false
+  [[ ,$mount_options, != *,noexec,* ]] || mount_noexec=true
+  mount_label=fixture
+  [[ $mount_path != /run ]] || mount_label=runtime
+  printf 'NATIVE_MOUNT_EXEC_POLICY %s noexec=%s\n' "$mount_label" "$mount_noexec"
+  [[ $mount_label != fixture || $mount_noexec == false ]] || fail 'Private fixture filesystem does not permit execution.'
+done
 mkdir "$fixture_root/packages" "$fixture_root/nginx"
 
 apt_security=(-o Acquire::Retries=0 -o APT::Get::AllowUnauthenticated=false

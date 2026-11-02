@@ -84,7 +84,7 @@ jobs:
         if: always()
         run: |
           if [[ -n ${ASTER_NATIVE_FIXTURE_ROOT:-} ]]; then
-            [[ $ASTER_NATIVE_FIXTURE_ROOT =~ ^/run/aster-native\.[A-Za-z0-9]{8}$ ]]
+            [[ $ASTER_NATIVE_FIXTURE_ROOT =~ ^/var/lib/aster-native\.[A-Za-z0-9]{8}$ ]]
             [[ -d $ASTER_NATIVE_FIXTURE_ROOT && ! -L $ASTER_NATIVE_FIXTURE_ROOT ]]
             [[ $(stat -c %u "$ASTER_NATIVE_FIXTURE_ROOT") == "$(id -u)" ]]
             sudo rm -rf --one-file-system -- "$ASTER_NATIVE_FIXTURE_ROOT"
@@ -136,7 +136,7 @@ jobs:
         if: always()
         run: |
           if [[ -n ${ASTER_NATIVE_FIXTURE_ROOT:-} ]]; then
-            [[ $ASTER_NATIVE_FIXTURE_ROOT =~ ^/run/aster-native\.[A-Za-z0-9]{8}$ ]]
+            [[ $ASTER_NATIVE_FIXTURE_ROOT =~ ^/var/lib/aster-native\.[A-Za-z0-9]{8}$ ]]
             [[ -d $ASTER_NATIVE_FIXTURE_ROOT && ! -L $ASTER_NATIVE_FIXTURE_ROOT ]]
             [[ $(stat -c %u "$ASTER_NATIVE_FIXTURE_ROOT") == "$(id -u)" ]]
             sudo rm -rf --one-file-system -- "$ASTER_NATIVE_FIXTURE_ROOT"
@@ -324,7 +324,7 @@ jobs:
         if: always()
         run: |
           if [[ -n ${ASTER_NATIVE_FIXTURE_ROOT:-} ]]; then
-            [[ $ASTER_NATIVE_FIXTURE_ROOT =~ ^/run/aster-native\.[A-Za-z0-9]{8}$ ]]
+            [[ $ASTER_NATIVE_FIXTURE_ROOT =~ ^/var/lib/aster-native\.[A-Za-z0-9]{8}$ ]]
             [[ -d $ASTER_NATIVE_FIXTURE_ROOT && ! -L $ASTER_NATIVE_FIXTURE_ROOT ]]
             [[ $(stat -c %u "$ASTER_NATIVE_FIXTURE_ROOT") == "$(id -u)" ]]
             sudo rm -rf --one-file-system -- "$ASTER_NATIVE_FIXTURE_ROOT"
