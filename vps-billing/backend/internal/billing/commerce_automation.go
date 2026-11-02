@@ -42,6 +42,7 @@ func eachAutomationTarget06(ctx context.Context, targets []automationTarget06, f
 	return result, nil
 }
 func (a *App) registerBillingAutomation06() {
+	a.registerServiceDispatch06()
 	_ = a.RegisterAutomationJob("generate_renewals", func(ctx context.Context, s api.AutomationSettings, at time.Time) (AutomationResult, error) {
 		m, ok := a.Store.(*MySQL)
 		if !ok {

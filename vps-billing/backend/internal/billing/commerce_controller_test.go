@@ -22,6 +22,7 @@ type fakeServiceController06 struct {
 	actionStatus             string
 	operationStatus          string
 	lastParams               serviceapi.Params
+	actions                  map[string]string
 	lastRequest              controllerapi.Request
 }
 
@@ -43,6 +44,10 @@ func (c *fakeServiceController06) Action(_ context.Context, _ string, r servicea
 	defer c.mu.Unlock()
 	c.sends++
 	c.lastParams = r.Params
+	if c.actions == nil {
+		c.actions = map[string]string{}
+	}
+	c.actions[r.OperationID] = r.Action
 	if c.sendErr != nil {
 		return serviceapi.ActionResult{}, false, c.sendErr
 	}
@@ -60,7 +65,7 @@ func (c *fakeServiceController06) Operation(_ context.Context, _, _, op string) 
 		status = "succeeded"
 	}
 	at := time.Now().UTC()
-	return serviceapi.Operation{OperationID: op, Status: status, Code: "COMPLETED", FinishedAt: &at}, nil
+	return serviceapi.Operation{OperationID: op, Action: c.actions[op], Status: status, Code: "COMPLETED", FinishedAt: &at}, nil
 }
 func (c *fakeServiceController06) Console(context.Context, string, string) (serviceapi.Console, error) {
 	return serviceapi.Console{URL: "https://console.example.test/console/#opaque-single-use-ticket", ExpiresAt: time.Now().UTC().Add(time.Minute)}, nil
