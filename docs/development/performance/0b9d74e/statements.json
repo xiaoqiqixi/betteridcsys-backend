@@ -1,0 +1,8 @@
+{
+  "pool_wait_count": 0,
+  "pool_wait_ms": 0,
+  "scope": "all SELECTs in the disposable schema before profiling",
+  "statements": [],
+  "source_commit": "0b9d74ec067c3d3f12d53a6ca26e52f0fc16d87e",
+  "source_run": "https://github.com/xiaoqiqixi/betteridcsys-backend/actions/runs/41399855457"
+}

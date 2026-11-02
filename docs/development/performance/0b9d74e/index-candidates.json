@@ -1,0 +1,346 @@
+{
+  "candidates": [
+    {
+      "sql": "SELECT id FROM orders ORDER BY created_at DESC,id DESC LIMIT 51",
+      "ddl": "CREATE INDEX ix_orders_date_id ON orders(created_at,id)",
+      "before": {
+        "p50_ms": 15.419069,
+        "p95_ms": 16.530244
+      },
+      "after": {
+        "p50_ms": 0.39357,
+        "p95_ms": 0.441222
+      },
+      "before_plan": {
+        "query_block": {
+          "select_id": 1,
+          "cost_info": {
+            "query_cost": "8121.00"
+          },
+          "ordering_operation": {
+            "using_filesort": true,
+            "table": {
+              "table_name": "orders",
+              "access_type": "index",
+              "key": "ix_orders_user_date",
+              "used_key_parts": [
+                "user_id",
+                "created_at"
+              ],
+              "key_length": "136",
+              "rows_examined_per_scan": 54744,
+              "rows_produced_per_join": 54744,
+              "filtered": "100.00",
+              "using_index": true,
+              "cost_info": {
+                "read_cost": "2646.60",
+                "eval_cost": "5474.40",
+                "prefix_cost": "8121.00",
+                "data_read_per_join": "136M"
+              },
+              "used_columns": [
+                "id",
+                "created_at"
+              ]
+            }
+          }
+        }
+      },
+      "after_plan": {
+        "query_block": {
+          "select_id": 1,
+          "cost_info": {
+            "query_cost": "5171.15"
+          },
+          "ordering_operation": {
+            "using_filesort": false,
+            "table": {
+              "table_name": "orders",
+              "access_type": "index",
+              "key": "ix_orders_date_id",
+              "used_key_parts": [
+                "created_at",
+                "id"
+              ],
+              "key_length": "136",
+              "rows_examined_per_scan": 51,
+              "rows_produced_per_join": 45049,
+              "filtered": "100.00",
+              "backward_index_scan": true,
+              "using_index": true,
+              "cost_info": {
+                "read_cost": "666.25",
+                "eval_cost": "4504.90",
+                "prefix_cost": "5171.15",
+                "data_read_per_join": "112M"
+              },
+              "used_columns": [
+                "id",
+                "created_at"
+              ]
+            }
+          }
+        }
+      }
+    },
+    {
+      "sql": "SELECT id FROM orders WHERE status='pending_payment' ORDER BY created_at DESC,id DESC LIMIT 51",
+      "ddl": "CREATE INDEX ix_orders_status_date_id ON orders(status,created_at,id)",
+      "before": {
+        "p50_ms": 15.808692,
+        "p95_ms": 17.1221
+      },
+      "after": {
+        "p50_ms": 0.414838,
+        "p95_ms": 0.472203
+      },
+      "before_plan": {
+        "query_block": {
+          "select_id": 1,
+          "cost_info": {
+            "query_cost": "8121.00"
+          },
+          "ordering_operation": {
+            "using_filesort": true,
+            "table": {
+              "table_name": "orders",
+              "access_type": "ALL",
+              "rows_examined_per_scan": 54744,
+              "rows_produced_per_join": 10948,
+              "filtered": "20.00",
+              "cost_info": {
+                "read_cost": "7026.12",
+                "eval_cost": "1094.88",
+                "prefix_cost": "8121.00",
+                "data_read_per_join": "27M"
+              },
+              "used_columns": [
+                "id",
+                "status",
+                "created_at"
+              ],
+              "attached_condition": "(`aster_migration_test_273ab21738b1626aca7283f1448b4757`.`orders`.`status` = 'pending_payment')"
+            }
+          }
+        }
+      },
+      "after_plan": {
+        "query_block": {
+          "select_id": 1,
+          "cost_info": {
+            "query_cost": "2593.75"
+          },
+          "ordering_operation": {
+            "using_filesort": false,
+            "table": {
+              "table_name": "orders",
+              "access_type": "ref",
+              "possible_keys": [
+                "ix_orders_status_date_id"
+              ],
+              "key": "ix_orders_status_date_id",
+              "used_key_parts": [
+                "status"
+              ],
+              "key_length": "1",
+              "ref": [
+                "const"
+              ],
+              "rows_examined_per_scan": 19604,
+              "rows_produced_per_join": 19604,
+              "filtered": "100.00",
+              "backward_index_scan": true,
+              "using_index": true,
+              "cost_info": {
+                "read_cost": "633.35",
+                "eval_cost": "1960.40",
+                "prefix_cost": "2593.75",
+                "data_read_per_join": "48M"
+              },
+              "used_columns": [
+                "id",
+                "status",
+                "created_at"
+              ],
+              "attached_condition": "(`aster_migration_test_273ab21738b1626aca7283f1448b4757`.`orders`.`status` = 'pending_payment')"
+            }
+          }
+        }
+      }
+    },
+    {
+      "sql": "SELECT id FROM invoices ORDER BY issued_at DESC,id DESC LIMIT 51",
+      "ddl": "CREATE INDEX ix_invoices_date_id ON invoices(issued_at,id)",
+      "before": {
+        "p50_ms": 14.934564,
+        "p95_ms": 15.346565
+      },
+      "after": {
+        "p50_ms": 0.359415,
+        "p95_ms": 0.40339
+      },
+      "before_plan": {
+        "query_block": {
+          "select_id": 1,
+          "cost_info": {
+            "query_cost": "7477.05"
+          },
+          "ordering_operation": {
+            "using_filesort": true,
+            "table": {
+              "table_name": "invoices",
+              "access_type": "index",
+              "key": "ix_invoices_user_date",
+              "used_key_parts": [
+                "user_id",
+                "issued_at"
+              ],
+              "key_length": "136",
+              "rows_examined_per_scan": 50261,
+              "rows_produced_per_join": 50261,
+              "filtered": "100.00",
+              "using_index": true,
+              "cost_info": {
+                "read_cost": "2450.95",
+                "eval_cost": "5026.10",
+                "prefix_cost": "7477.05",
+                "data_read_per_join": "36M"
+              },
+              "used_columns": [
+                "id",
+                "issued_at"
+              ]
+            }
+          }
+        }
+      },
+      "after_plan": {
+        "query_block": {
+          "select_id": 1,
+          "cost_info": {
+            "query_cost": "5181.75"
+          },
+          "ordering_operation": {
+            "using_filesort": false,
+            "table": {
+              "table_name": "invoices",
+              "access_type": "index",
+              "key": "ix_invoices_date_id",
+              "used_key_parts": [
+                "issued_at",
+                "id"
+              ],
+              "key_length": "136",
+              "rows_examined_per_scan": 51,
+              "rows_produced_per_join": 45635,
+              "filtered": "100.00",
+              "backward_index_scan": true,
+              "using_index": true,
+              "cost_info": {
+                "read_cost": "618.25",
+                "eval_cost": "4563.50",
+                "prefix_cost": "5181.75",
+                "data_read_per_join": "33M"
+              },
+              "used_columns": [
+                "id",
+                "issued_at"
+              ]
+            }
+          }
+        }
+      }
+    },
+    {
+      "sql": "SELECT id FROM invoices WHERE status='unpaid' ORDER BY issued_at DESC,id DESC LIMIT 51",
+      "ddl": "CREATE INDEX ix_invoices_status_date_id ON invoices(status,issued_at,id)",
+      "before": {
+        "p50_ms": 14.727768,
+        "p95_ms": 16.127745
+      },
+      "after": {
+        "p50_ms": 0.420443,
+        "p95_ms": 0.459008
+      },
+      "before_plan": {
+        "query_block": {
+          "select_id": 1,
+          "cost_info": {
+            "query_cost": "7480.58"
+          },
+          "ordering_operation": {
+            "using_filesort": true,
+            "table": {
+              "table_name": "invoices",
+              "access_type": "ALL",
+              "rows_examined_per_scan": 50261,
+              "rows_produced_per_join": 8376,
+              "filtered": "16.67",
+              "cost_info": {
+                "read_cost": "6642.90",
+                "eval_cost": "837.68",
+                "prefix_cost": "7480.58",
+                "data_read_per_join": "6M"
+              },
+              "used_columns": [
+                "id",
+                "status",
+                "issued_at"
+              ],
+              "attached_condition": "(`aster_migration_test_273ab21738b1626aca7283f1448b4757`.`invoices`.`status` = 'unpaid')"
+            }
+          }
+        }
+      },
+      "after_plan": {
+        "query_block": {
+          "select_id": 1,
+          "cost_info": {
+            "query_cost": "2593.75"
+          },
+          "ordering_operation": {
+            "using_filesort": false,
+            "table": {
+              "table_name": "invoices",
+              "access_type": "ref",
+              "possible_keys": [
+                "ix_invoices_status_date_id"
+              ],
+              "key": "ix_invoices_status_date_id",
+              "used_key_parts": [
+                "status"
+              ],
+              "key_length": "1",
+              "ref": [
+                "const"
+              ],
+              "rows_examined_per_scan": 19604,
+              "rows_produced_per_join": 19604,
+              "filtered": "100.00",
+              "backward_index_scan": true,
+              "using_index": true,
+              "cost_info": {
+                "read_cost": "633.35",
+                "eval_cost": "1960.40",
+                "prefix_cost": "2593.75",
+                "data_read_per_join": "14M"
+              },
+              "used_columns": [
+                "id",
+                "status",
+                "issued_at"
+              ],
+              "attached_condition": "(`aster_migration_test_273ab21738b1626aca7283f1448b4757`.`invoices`.`status` = 'unpaid')"
+            }
+          }
+        }
+      }
+    }
+  ],
+  "samples": 100,
+  "scope": "SQL selector experiment; indexes are not deployed",
+  "seed": "finance-perf-v1",
+  "warmup_requests": 5,
+  "source_commit": "0b9d74ec067c3d3f12d53a6ca26e52f0fc16d87e",
+  "source_run": "https://github.com/xiaoqiqixi/betteridcsys-backend/actions/runs/41399855457"
+}
