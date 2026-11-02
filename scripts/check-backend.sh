@@ -9,7 +9,10 @@ trap 'rm -rf -- "$scratch"' EXIT
 cd "$root/vps-billing/backend"
 go mod download
 go mod verify
-go test -mod=readonly -race -count=1 -v -timeout=20m ./... | tee "$scratch/tests.log"
+# The expanded billing suite includes production-cost password hashing and real
+# per-test MySQL schemas; main run 41378494681 exhausted 20m during billing.
+# Keep the complete race suite and no-skip gate with a bounded 30m package budget.
+go test -mod=readonly -race -count=1 -v -timeout=30m ./... | tee "$scratch/tests.log"
 if grep -Eq -- '^[[:space:]]*--- SKIP:' "$scratch/tests.log"; then
   echo 'Real MySQL regression must not skip tests.' >&2; exit 1
 fi

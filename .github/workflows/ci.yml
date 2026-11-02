@@ -150,7 +150,7 @@ jobs:
         os: [ubuntu-22.04, ubuntu-24.04]
     runs-on: ${{ matrix.os }}
     # Distribution provisioning has exceeded 20 minutes on hosted mirrors.
-    # Budget provisioning separately; the real Go suite keeps its 20m timeout.
+    # Budget provisioning separately from the complete 30m Go race suite.
     timeout-minutes: 50
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1

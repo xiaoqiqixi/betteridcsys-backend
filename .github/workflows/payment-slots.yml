@@ -25,8 +25,22 @@ jobs:
         run: bash vps-billing/deploy/ci/prepare-native-runner.sh
       - name: Gateway isolation, flows and settlement on real MySQL
         run: RUNNER_TEMP="$ASTER_NATIVE_FIXTURE_ROOT" bash vps-billing/deploy/ci/mysql-native.sh -- bash scripts/check-payment-gateways.sh
+  backend-mysql:
+    # Keep the complete suite separate from gateway acceptance so neither uses
+    # the other's 35m job budget. The full package has a bounded 30m Go deadline.
+    runs-on: ubuntu-24.04
+    timeout-minutes: 50
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e
+        with:
+          go-version: '1.27.3'
+          cache: false
+      - name: Prepare isolated native runner
+        run: bash vps-billing/deploy/ci/prepare-native-runner.sh
       - name: Payment settlement, gateway contracts and all MySQL regressions
-        if: ${{ !cancelled() }}
         run: RUNNER_TEMP="$ASTER_NATIVE_FIXTURE_ROOT" bash vps-billing/deploy/ci/mysql-native.sh -- bash scripts/check-backend.sh
   slots-linux:
     runs-on: ubuntu-24.04
