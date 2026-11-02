@@ -46,6 +46,7 @@ jobs:
           node-version: '24.19.0'
           package-manager-cache: false
       - uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830
+        id: downloads
         with:
           path: artifacts/e2e-downloads
           key: order-vm-downloads-${{ runner.os }}-${{ hashFiles('E2E_STACK.json', 'vps-billing/deploy/ci/mysql-distribution.json') }}
@@ -53,7 +54,7 @@ jobs:
         id: binaries
         with:
           path: artifacts/e2e-bin
-          key: order-vm-bin-v1-${{ runner.os }}-${{ hashFiles('E2E_STACK.json', 'vps-billing/backend/**', 'vps-billing/deploy/ci/order-to-vm/**') }}
+          key: order-vm-bin-v2-${{ runner.os }}-${{ hashFiles('E2E_STACK.json', 'vps-billing/backend/**', 'vps-billing/deploy/ci/order-to-vm/build.sh', 'vps-billing/deploy/ci/order-to-vm/scheduler.gotxt') }}
       - name: Install native hypervisor and browser dependencies
         run: |
           sudo apt-get update -qq
@@ -63,9 +64,21 @@ jobs:
           node artifacts/e2e-browser/node_modules/playwright/cli.js install --with-deps firefox
       - name: Verify and cache both NoCloud images and MySQL 8.4 packages
         run: python3 -B vps-billing/deploy/ci/order-to-vm/stack.py download
+      - name: Save verified downloads before acceptance
+        if: steps.downloads.outputs.cache-hit != 'true'
+        uses: actions/cache/save@0057852bfaa89a56745cba8c7296529d2fc39830
+        with:
+          path: artifacts/e2e-downloads
+          key: order-vm-downloads-${{ runner.os }}-${{ hashFiles('E2E_STACK.json', 'vps-billing/deploy/ci/mysql-distribution.json') }}
       - name: Build pinned native binaries
         if: steps.binaries.outputs.cache-hit != 'true'
         run: bash vps-billing/deploy/ci/order-to-vm/build.sh
+      - name: Save completed binaries before acceptance
+        if: steps.binaries.outputs.cache-hit != 'true'
+        uses: actions/cache/save@0057852bfaa89a56745cba8c7296529d2fc39830
+        with:
+          path: artifacts/e2e-bin
+          key: order-vm-bin-v2-${{ runner.os }}-${{ hashFiles('E2E_STACK.json', 'vps-billing/backend/**', 'vps-billing/deploy/ci/order-to-vm/build.sh', 'vps-billing/deploy/ci/order-to-vm/scheduler.gotxt') }}
       - name: Build pinned frontend bundle
         working-directory: artifacts/e2e-frontend
         run: |
