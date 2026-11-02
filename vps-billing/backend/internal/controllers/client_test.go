@@ -36,6 +36,10 @@ func writeFixture(t *testing.T, path string, raw []byte, mode os.FileMode) {
 	if err := os.WriteFile(path, raw, mode); err != nil {
 		t.Fatal(err)
 	}
+	// Native CI uses umask 077; permission tests must set their exact mode.
+	if err := os.Chmod(path, mode); err != nil {
+		t.Fatal(err)
+	}
 }
 
 func TestProtectedHostPolicy(t *testing.T) {
