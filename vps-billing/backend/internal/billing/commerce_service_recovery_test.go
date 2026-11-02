@@ -107,8 +107,11 @@ func TestMySQLCommerceAutomationProvisionBootstrapAndActivation(t *testing.T) {
 		t.Fatal(result, err)
 	}
 	s, err := m.Service06(t.Context(), f.customer.ID, sid)
-	if err != nil || s.Status != "provisioning" || s.ResourceID != nil {
-		t.Fatal("activated before setup", s, err)
+	controller.mu.Lock()
+	allocated := controller.view.ResourceID
+	controller.mu.Unlock()
+	if err != nil || s.Status != "provisioning" || s.ResourceID == nil || *s.ResourceID != allocated || s.Capabilities != (api.ServiceCapabilities{}) {
+		t.Fatal("allocated resource was lost or became usable before setup", s, err)
 	}
 	if result, err := job(t.Context(), settings, at.Add(2*time.Minute)); err != nil || result.Failed != 0 {
 		t.Fatal(result, err)
@@ -128,7 +131,7 @@ func TestMySQLCommerceAutomationProvisionBootstrapAndActivation(t *testing.T) {
 		t.Fatal(result, err)
 	}
 	s, err = m.Service06(t.Context(), f.customer.ID, sid)
-	if err != nil || s.Status != "active" {
+	if err != nil || s.Status != "active" || s.ResourceID == nil || *s.ResourceID != allocated {
 		t.Fatal(s, err)
 	}
 	contracttest.Data(t, "AdminService", map[string]any{"data": s})
