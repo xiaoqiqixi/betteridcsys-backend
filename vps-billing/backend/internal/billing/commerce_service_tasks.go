@@ -20,6 +20,7 @@ type serviceActionPayload06 struct {
 	Reason        string                 `json:"reason,omitempty"`
 	Params        serviceapi.Params      `json:"params"`
 	RequestSHA256 string                 `json:"request_sha256,omitempty"`
+	ReceiptKnown  bool                   `json:"receipt_known,omitempty"`
 	Provision     *controllerapi.Request `json:"provision,omitempty"`
 	Change        *planChange06          `json:"change,omitempty"`
 	Bootstrap     bool                   `json:"bootstrap,omitempty"`
@@ -323,6 +324,11 @@ func (m *MySQL) finishServiceTask06(ctx context.Context, id, status, code, resou
 		}
 		if code == "MANUAL" {
 			message = "Administrator confirmed the manual service operation"
+		}
+		if status == "running" {
+			if _, err = tx.ExecContext(ctx, "UPDATE service_tasks SET payload=JSON_SET(payload,'$.receipt_known',JSON_EXTRACT('true','$')) WHERE id=?", id); err != nil {
+				return out, err
+			}
 		}
 		if _, err = tx.ExecContext(ctx, "UPDATE service_tasks SET status=?,message=?,updated_at=?,finished_at=? WHERE id=?", status, message, now, finished, id); err != nil {
 			return out, err

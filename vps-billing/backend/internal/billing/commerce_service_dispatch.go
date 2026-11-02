@@ -274,6 +274,14 @@ func (a *App) reconcileServiceTask06(ctx context.Context, t serviceTaskRecord06,
 		return t.View, nil
 	}
 	m := a.Store.(*MySQL)
+	// A worker that vanished after claiming has no acknowledged controller
+	// receipt. Keep that distinction visible while trying read-only lookup.
+	if t.View.Status == "running" && !t.Payload.ReceiptKnown && time.Since(t.UpdatedAt) > 90*time.Second {
+		if _, err := m.finishServiceTask06(ctx, t.View.ID, "uncertain", "", ""); err != nil {
+			return t.View, err
+		}
+		t.View.Status = "uncertain"
+	}
 	if s.View.Kind != "cloud_server" {
 		if !manual {
 			return t.View, serviceapi.ErrUnavailable
@@ -313,6 +321,7 @@ func (a *App) reconcileServiceTask06(ctx context.Context, t serviceTaskRecord06,
 		return t.View, serviceapi.ErrUncertain
 	}
 	if result.OperationID != t.View.ID || result.Action != t.Action {
+		_, _ = m.finishServiceTask06(ctx, t.View.ID, "uncertain", "", "")
 		return t.View, serviceapi.ErrUncertain
 	}
 	status := result.Status
