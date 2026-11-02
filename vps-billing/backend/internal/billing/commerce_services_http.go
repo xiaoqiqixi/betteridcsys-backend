@@ -93,7 +93,7 @@ func (a *App) commerceServicesHTTP(w http.ResponseWriter, r *http.Request, u Use
 			if err == nil && a.Config.Services != nil {
 				remote, inspectErr := a.Config.Services.InspectService(r.Context(), out)
 				if inspectErr == nil {
-					out.Capabilities = remote.Capabilities
+					mergeServiceProjection06(&out, remote)
 				}
 			}
 		case "PATCH":

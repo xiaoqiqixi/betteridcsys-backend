@@ -360,6 +360,9 @@ func (a *App) serveAuthorized(w http.ResponseWriter, r *http.Request, u User, p 
 	if a.commerceServicesHTTP(w, r, u, p) {
 		return
 	}
+	if a.serviceReads06HTTP(w, r, u, p) {
+		return
+	}
 	if a.upgrade06HTTP(w, r, u, p) {
 		return
 	}
