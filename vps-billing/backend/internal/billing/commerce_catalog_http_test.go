@@ -101,12 +101,15 @@ func TestMySQLCommerceCatalogHandlerContractAndPermissions(t *testing.T) {
 	if duplicate.ID == p.ID || duplicate.Visibility != "hidden" || duplicate.Revision != 1 {
 		t.Fatal(duplicate)
 	}
-	migrationExec(t, t.Context(), m.DB, "INSERT INTO os_images(id,family,name,version,min_disk_gb,enabled,controller_id,remote_image_id,sha256) VALUES('image1','ubuntu','Ubuntu','24.04',10,FALSE,'controller','remote',REPEAT('a',64))")
+	migrationExec(t, t.Context(), m.DB, "INSERT INTO os_images(id,family,name,version,min_disk_gb,enabled,controller_id,connection_id,remote_image_id,sha256) VALUES('image1','ubuntu','Ubuntu','24.04',10,FALSE,'controller','controller','remote',REPEAT('a',64))")
 	status, body = admin.request("PATCH", "/api/v1/admin/os-images/image1", map[string]any{"enabled": true, "name": "Ubuntu LTS"}, "")
 	if status != 200 {
 		t.Fatal(status, body)
 	}
 	contracttest.Response(t, "PATCH", "/admin/os-images/{id}", body)
+	if image, ok := body["data"].(map[string]any); !ok || image["connection_id"] != "controller" {
+		t.Fatal("image update changed its server connection binding", body)
+	}
 	for _, tc := range []struct {
 		method, path string
 		input        any
