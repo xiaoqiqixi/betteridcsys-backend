@@ -82,6 +82,13 @@ func RunServer(d ServerDefinition, factory func(ServerOptions) (serverv1.Process
 	}
 	ctx, cancel := signal.NotifyContext(context.Background(), syscall.SIGTERM, syscall.SIGINT)
 	defer cancel()
+	if worker, ok := processor.(interface{ Run(context.Context) error }); ok {
+		go func() {
+			if worker.Run(ctx) != nil {
+				cancel()
+			}
+		}()
+	}
 	return (ServerServer{Manifest: manifest, ConnectionID: *connection, ClientUID: uint32(*client), Processor: processor}).Serve(ctx, listener)
 }
 

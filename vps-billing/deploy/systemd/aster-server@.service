@@ -27,8 +27,10 @@ UMask=0077
 RuntimeDirectory=aster-server/%i
 RuntimeDirectoryMode=0750
 RuntimeDirectoryPreserve=no
+StateDirectory=aster-server/%i
+StateDirectoryMode=0700
 
-ReadWritePaths=/run/aster-server/%i
+ReadWritePaths=/run/aster-server/%i /var/lib/aster-server/%i
 InaccessiblePaths=-/etc/aster/api.env -/etc/aster/secrets -/run/mysqld -/var/lib/mysql -/run/aster-smtp -/etc/aster/server -/etc/aster/payment -/run/aster-payment
 NoNewPrivileges=true
 PrivateTmp=true
