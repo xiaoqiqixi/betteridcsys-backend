@@ -30,6 +30,7 @@ func (m *MySQL) CancelInvoice06(ctx context.Context, actor User, id, reason stri
 		return m.Invoice06(ctx, "", id)
 	}
 	return retryPayment(ctx, func() (api.AdminInvoice, error) {
+		actor := actor // Reset authorization input for every transaction attempt.
 		var out api.AdminInvoice
 		tx, err := m.DB.BeginTx(ctx, &sql.TxOptions{Isolation: sql.LevelReadCommitted})
 		if err != nil {
@@ -158,6 +159,7 @@ func (m *MySQL) RefundCredit06(ctx context.Context, actor User, id string, input
 	}
 	fp := digest(id + ":" + string(raw))
 	return retryPayment(ctx, func() (api.AdminInvoice, error) {
+		actor := actor // Reset authorization input for every transaction attempt.
 		var out api.AdminInvoice
 		tx, err := m.DB.BeginTx(ctx, &sql.TxOptions{Isolation: sql.LevelReadCommitted})
 		if err != nil {

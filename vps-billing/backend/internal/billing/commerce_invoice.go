@@ -502,6 +502,7 @@ func (m *MySQL) CreateInvoice06(ctx context.Context, actor User, input api.Admin
 	fingerprint := digest(string(raw))
 	due, _ := time.Parse(time.RFC3339Nano, input.DueAt)
 	return retryPayment(ctx, func() (api.AdminInvoice, error) {
+		actor := actor // Reset authorization input for every transaction attempt.
 		var out api.AdminInvoice
 		tx, err := m.DB.BeginTx(ctx, &sql.TxOptions{Isolation: sql.LevelReadCommitted})
 		if err != nil {

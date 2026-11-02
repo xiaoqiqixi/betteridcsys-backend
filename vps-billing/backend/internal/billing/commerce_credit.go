@@ -94,6 +94,7 @@ func (m *MySQL) AdjustCredit06(ctx context.Context, actor User, uid string, delt
 	raw, _ := json.Marshal([]any{uid, delta, reason})
 	fingerprint := digest(string(raw))
 	return retryPayment(ctx, func() (api.CreditEntry, error) {
+		actor := actor // Reset authorization input for every transaction attempt.
 		var out api.CreditEntry
 		tx, err := m.DB.BeginTx(ctx, &sql.TxOptions{Isolation: sql.LevelReadCommitted})
 		if err != nil {

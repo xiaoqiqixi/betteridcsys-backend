@@ -100,6 +100,7 @@ func (m *MySQL) voidInvoiceAttempt06(ctx context.Context, actor User, id, reason
 		return PaymentAttempt{}, err
 	}
 	return retryPayment(ctx, func() (PaymentAttempt, error) {
+		actor := actor // Reset authorization input for every transaction attempt.
 		var out PaymentAttempt
 		tx, err := m.DB.BeginTx(ctx, &sql.TxOptions{Isolation: sql.LevelReadCommitted})
 		if err != nil {
@@ -273,6 +274,7 @@ func (m *MySQL) AddInvoicePayment06(ctx context.Context, actor User, id string, 
 		return api.AdminInvoice{}, ErrCommerceInput
 	}
 	return retryPayment(ctx, func() (api.AdminInvoice, error) {
+		actor := actor // Reset authorization input for every transaction attempt.
 		var out api.AdminInvoice
 		tx, err := m.DB.BeginTx(ctx, &sql.TxOptions{Isolation: sql.LevelReadCommitted})
 		if err != nil {

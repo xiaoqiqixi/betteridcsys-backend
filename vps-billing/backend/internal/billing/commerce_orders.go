@@ -237,6 +237,7 @@ func (m *MySQL) CreateOrder06(ctx context.Context, actor User, input api.CreateO
 	}
 	fp := digest(string(raw))
 	return retryPayment(ctx, func() (api.CreateOrderResponse, error) {
+		actor := actor // Reset authorization input for every transaction attempt.
 		var out api.CreateOrderResponse
 		tx, err := m.DB.BeginTx(ctx, &sql.TxOptions{Isolation: sql.LevelReadCommitted})
 		if err != nil {
@@ -534,6 +535,7 @@ func (m *MySQL) CancelOrder06(ctx context.Context, actor User, id, reason string
 		return api.Order{}, ErrCommerceInput
 	}
 	return retryPayment(ctx, func() (api.Order, error) {
+		actor := actor // Reset authorization input for every transaction attempt.
 		var out api.Order
 		owner := actor.ID
 		if actor.Role == "admin" {
