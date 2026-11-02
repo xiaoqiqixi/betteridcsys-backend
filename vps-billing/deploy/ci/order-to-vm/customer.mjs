@@ -77,7 +77,7 @@ async function placeOrder(page, name, password) {
   await expect(page.getByRole('heading', { name: 'E2E Small', exact: true })).toBeVisible();
   await page.getByRole('combobox').click();
   await page.getByRole('option', { name: /24\.04/ }).click();
-  await page.getByLabel('Hostname', { exact: true }).fill(name);
+  await page.getByLabel(/^Hostname\b/).fill(name);
   await page.getByLabel('Root password', { exact: true }).fill(password);
   await page.getByRole('button', { name: 'Continue to checkout', exact: true }).click();
   const result = await mutation(page, '/orders', () => page.getByRole('button', { name: 'Place order', exact: true }).click());
