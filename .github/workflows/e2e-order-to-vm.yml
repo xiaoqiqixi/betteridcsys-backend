@@ -22,6 +22,7 @@ jobs:
           python3 -B vps-billing/deploy/ci/order-to-vm/stack.py pins >> "$GITHUB_OUTPUT"
           python3 -B vps-billing/deploy/ci/order-to-vm/test_mail_sink.py
           python3 -B vps-billing/deploy/ci/order-to-vm/test_guest_readiness.py
+          python3 -B vps-billing/deploy/ci/order-to-vm/test_guest_console.py
           node --check vps-billing/deploy/ci/order-to-vm/customer.mjs
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:

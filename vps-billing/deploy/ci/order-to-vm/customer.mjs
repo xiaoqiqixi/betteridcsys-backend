@@ -125,7 +125,7 @@ try {
   const manual = await placeOrder(customer, 'manual-e2e', setup.rootPassword);
   await payManual(staff, manual.invoice.id);
   assert.equal((await data(customerContext, '/invoices/' + manual.invoice.id)).status, 'paid');
-  const service = await fixture('provisioned', { order: manual.order.id, step: 'manual-payment-provisioning' });
+  const service = await fixture('provisioned', { order: manual.order.id, step: 'manual-payment-provisioning', password: setup.rootPassword });
   await servicePage(customer, service.id);
   await expect(customer.getByText(service.ip, { exact: true }).first()).toBeVisible();
 
@@ -138,7 +138,7 @@ try {
   assert.equal(checkout.status, 'redirect');
   assert.equal(new URL(checkout.checkout_url).hostname, 'checkout.example.test');
   await fixture('gateway', { invoice: gateway.invoice.id });
-  const second = await fixture('provisioned', { order: gateway.order.id, step: 'fixture-payment-provisioning' });
+  const second = await fixture('provisioned', { order: gateway.order.id, step: 'fixture-payment-provisioning', password: setup.secondPassword });
   assert.notEqual(service.ip, second.ip);
 
   await power(customer, service, 'Shut down', 'stopped');
@@ -148,7 +148,7 @@ try {
   await menu(customer, 'Reset root password');
   await customer.getByRole('dialog').getByLabel('Root password', { exact: true }).fill(setup.resetPassword);
   let task = await mutation(customer, `/services/${service.id}/reset-password`, () => customer.getByRole('dialog').getByRole('button', { name: 'Confirm', exact: true }).click());
-  await fixture('state', { id: service.id, state: 'active', power: 'running', task: task.id, step: 'reset-root-password' });
+  await fixture('state', { id: service.id, state: 'active', power: 'running', task: task.id, step: 'reset-root-password', password: setup.resetPassword });
 
   await servicePage(customer, service.id);
   await menu(customer, 'Reinstall OS');
@@ -158,7 +158,7 @@ try {
   await dialog.getByLabel('Root password', { exact: true }).fill(setup.reinstallPassword);
   await dialog.getByPlaceholder('manual-e2e', { exact: true }).fill('manual-e2e');
   task = await mutation(customer, `/services/${service.id}/reinstall`, () => dialog.getByRole('button', { name: 'Erase and reinstall', exact: true }).click());
-  await fixture('state', { id: service.id, state: 'active', power: 'running', task: task.id, step: 'reinstall-second-image', image: 'ubuntu-22' });
+  await fixture('state', { id: service.id, state: 'active', power: 'running', task: task.id, step: 'reinstall-second-image', image: 'ubuntu-22', password: setup.reinstallPassword });
 
   await power(customer, service, 'Shut down', 'stopped');
   await servicePage(customer, service.id);

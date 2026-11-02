@@ -25,6 +25,7 @@ import urllib.error
 import urllib.request
 import uuid
 import xml.etree.ElementTree as ET
+from guest_console import verify_boot
 
 ROOT = Path(__file__).resolve().parents[4]
 HERE = Path(__file__).resolve().parent
@@ -155,6 +156,8 @@ class Stack:
         self.phase = "initialize"
         self.counter = 0
         self.units = []
+        self.guest_credentials = {}
+        self.guest_boots = set()
         self.scheduler_at = datetime.now(timezone.utc).replace(second=0, microsecond=0) + timedelta(minutes=2)
         self.env = dict(os.environ, SSL_CERT_FILE=str(self.root / "ca.crt"), SSL_CERT_DIR=str(self.root / "empty-ca"))
         self.pin = pins()
@@ -555,6 +558,9 @@ http {{
     def service_state(self, args):
         sid = args["id"]
         require(re.fullmatch("[a-f0-9]{32}", sid), "invalid service assertion identity")
+        if args.get("password"):
+            require(args["password"] in self.secrets, "unknown guest credential assertion")
+            self.guest_credentials[sid] = args["password"]
         def observed():
             self.tick("dispatch_provisioning")
             view = self.admin.call("/admin/services/" + sid)
@@ -615,6 +621,18 @@ http {{
                     if not ssh_ready:
                         observation["waiting_for"] = "guest_ssh"
                         return False
+                    boot = (resource, self.command(["virsh", "-c", "qemu:///system", "domid", domain]).stdout.strip())
+                    if boot not in self.guest_boots:
+                        observation["waiting_for"] = "guest_initialization"
+                        terminal = self.command(["virsh", "-c", "qemu:///system", "ttyconsole", domain]).stdout.decode().strip()
+                        require(re.fullmatch(r"/dev/pts/[0-9]+", terminal), "unexpected guest serial path")
+                        fd = os.open(terminal, os.O_RDWR | os.O_NOCTTY | os.O_NONBLOCK)
+                        try:
+                            verify_boot(fd, self.guest_credentials[sid])
+                        finally:
+                            os.close(fd)
+                        self.guest_boots.add(boot)
+                    observation.update(cloud_init="done", guest_power_management="active", root_credential="verified")
             operations = []
             for task in tasks:
                 operation = task["operation"]
@@ -629,7 +647,10 @@ http {{
                     require(self.sql("controller", f"SELECT state FROM controller_operations WHERE id='{setup}'") == "succeeded", "initial image and credential setup did not succeed")
                     require(int(self.sql("controller", f"SELECT COUNT(*) FROM controller_audit WHERE target='{setup}'")) > 0, "initial guest setup has no audit")
                     operations.append({"id": setup, "action": "initial-guest-setup", "state": "succeeded"})
-            return {"id": sid, "resource": resource, "ip": instance["ipv4"], "finance": view["status"], "power": args.get("power"), "operations": operations}
+            result = {"id": sid, "resource": resource, "ip": instance["ipv4"], "finance": view["status"], "power": args.get("power"), "operations": operations}
+            if args.get("power") == "running":
+                result["guest"] = {"cloud_init": "done", "power_management": "active", "root_credential": "verified"}
+            return result
         result = self.wait(args["step"] + " finance/controller/libvirt agreement", observed, timeout=300)
         self.complete_step(args["step"], service=sid, **{key: value for key, value in result.items() if key != "id"})
         return result
@@ -684,7 +705,7 @@ http {{
             order = self.admin.call("/admin/orders/" + args["order"])
             ids = [sid for item in order["items"] for sid in item["service_ids"]]
             require(len(ids) == 1, "paid order did not create one service")
-            return self.service_state({"id": ids[0], "state": "active", "power": "running", "image": "ubuntu-24", "step": args["step"]})
+            return self.service_state({"id": ids[0], "state": "active", "power": "running", "image": "ubuntu-24", "step": args["step"], "password": args["password"]})
         if method == "overdue":
             service = self.admin.call("/admin/services/" + args["id"])
             due = datetime.fromisoformat(service["next_due_at"].replace("Z", "+00:00"))
@@ -773,8 +794,8 @@ http {{
             for instance in state["instances"].values():
                 if re.fullmatch("aster-[a-f0-9]{32}", instance["domain"]):
                     if not self.evidence["passed"]:
-                        # The guest has received no interactive passwords. Keep its
-                        # display and host-side network state to diagnose boot failures.
+                        # Keep display and host-side network state. Root credentials
+                        # are only entered through the private, echo-free serial login.
                         screenshot = self.report / (instance["domain"] + ".ppm")
                         self.command(["virsh", "-c", "qemu:///system", "screenshot", instance["domain"], screenshot], check=False, timeout=15)
                         if screenshot.is_file():
