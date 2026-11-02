@@ -307,6 +307,8 @@ class Stack:
         for command in ("migrate", "register-nodes"):
             self.command([BIN / "aster-controller", command, "--config", self.controller_config])
         self.wait("mTLS node heartbeat", lambda: self.command([BIN / "aster-controller", "heartbeat", "--config", self.controller_config, "--node", "e2e-node"], check=False).returncode == 0)
+        # Registration starts in maintenance; admit this fixture only after its verified heartbeat.
+        self.command([BIN / "aster-controller", "maintenance", "--config", self.controller_config, "--node", "e2e-node", "--on=false"])
         self.spawn("controller", [BIN / "aster-controller", "serve", "--config", self.controller_config, "--console-origin", "https://localhost:19443"])
         self.wait("controller HTTPS", lambda: self.get("https://localhost:19443/v1/health", self.admin_token))
 
