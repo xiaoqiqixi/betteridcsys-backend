@@ -276,4 +276,29 @@ func TestMySQLCommerceProvisionClaimConcurrencyAndOverdueRace(t *testing.T) {
 	if err != nil || s.Status != "suspended" {
 		t.Fatal("administrator suspension lifted", s, err)
 	}
+	// Free-form customer reasons must not turn a cancellation into an overdue job.
+	cancelled, err := m.CancelService06(t.Context(), f.customer, sid, &api.RequestCancellationInput{Type: "immediate", Reason: "overdue"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	contracttest.Data(t, "Service", map[string]any{"data": cancelled})
+	var terminate string
+	if err = m.DB.QueryRow("SELECT id FROM service_tasks WHERE service_id=? AND action='terminate' AND status='queued'", sid).Scan(&terminate); err != nil {
+		t.Fatal(err)
+	}
+	task, err = app.DispatchServiceTask06(t.Context(), terminate, false, false)
+	if err != nil || task.Status != "running" {
+		t.Fatal("customer cancellation was superseded by its reason", task, err)
+	}
+	contracttest.Data(t, "ServiceTask", map[string]any{"data": task})
+	task, err = app.DispatchServiceTask06(t.Context(), terminate, true, true)
+	if err != nil || task.Status != "succeeded" {
+		t.Fatal(task, err)
+	}
+	contracttest.Data(t, "ServiceTask", map[string]any{"data": task})
+	s, err = m.Service06(t.Context(), f.customer.ID, sid)
+	if err != nil || s.Status != "terminated" {
+		t.Fatal(s, err)
+	}
+	contracttest.Data(t, "AdminService", map[string]any{"data": s})
 }
