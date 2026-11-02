@@ -284,7 +284,7 @@ jobs:
           set -euo pipefail
           umask 077
           tools_root=$(mktemp -d "$ASTER_NATIVE_FIXTURE_ROOT/browser-tools.XXXXXXXX")
-          npm install --prefix "$tools_root" --ignore-scripts --no-audit --no-fund --save-exact playwright@1.64.0
+          npm install --prefix "$tools_root" --ignore-scripts --no-audit --no-fund --save-exact @playwright/test@1.64.0
           export PLAYWRIGHT_BROWSERS_PATH="$tools_root/browsers"
           node "$tools_root/node_modules/playwright/cli.js" install --with-deps firefox
           sudo apt-get install --no-install-recommends -y libnss3-tools

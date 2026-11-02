@@ -161,8 +161,8 @@ func browserPackagedAPI(t *testing.T, ctx context.Context, caseDir, origin, dsn 
 	return proxy, stop
 }
 
-// Every row except short-lived authentication sessions is compared after UI
-// acceptance. This includes exact money, issuer/currency/product snapshots,
+// Every business row is compared after UI acceptance. Authentication events
+// and staff login timestamps are checked separately against exactly four logins. This includes exact money, issuer/currency/product snapshots,
 // audit events, idempotency records, outbox, provisioning and settings.
 func browserMySQLHistory(t *testing.T, ctx context.Context, m *MySQL) map[string]string {
 	t.Helper()
@@ -179,7 +179,7 @@ func browserMySQLHistory(t *testing.T, ctx context.Context, m *MySQL) map[string
 		if !regexp.MustCompile(`^[a-z_]+$`).MatchString(name) {
 			t.Fatal("unexpected fixture table name")
 		}
-		if name != "sessions" {
+		if name != "sessions" && name != "login_events" {
 			names = append(names, name)
 		}
 	}
@@ -189,7 +189,11 @@ func browserMySQLHistory(t *testing.T, ctx context.Context, m *MySQL) map[string
 	tables.Close()
 	result := map[string]string{}
 	for _, name := range names {
-		rows, err := m.DB.QueryContext(ctx, "SELECT * FROM `"+name+"`")
+		query := "SELECT * FROM `" + name + "`"
+		if name == "staff_members" {
+			query = "SELECT user_id,role_id FROM staff_members"
+		}
+		rows, err := m.DB.QueryContext(ctx, query)
 		if err != nil {
 			t.Fatal("cannot read isolated historical rows")
 		}
@@ -293,6 +297,7 @@ func TestOwnedBrowserMySQLFixture(t *testing.T) {
 		t.Fatal("migrated CNY fixture quote is missing")
 	}
 	credentials := map[string]any{}
+	users := map[string]User{}
 	for _, role := range []string{"customer", "admin"} {
 		password := "AsterBrowser-" + ID()
 		hash, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
@@ -304,6 +309,7 @@ func TestOwnedBrowserMySQLFixture(t *testing.T) {
 			t.Fatal("cannot create isolated browser account")
 		}
 		credentials[role] = map[string]string{"email": user.Email, "password": password}
+		users[role] = user
 		if role == "customer" {
 			if _, err = m.DB.ExecContext(ctx, "UPDATE plans SET available=TRUE WHERE id='starter'"); err != nil {
 				t.Fatal("cannot enable isolated product")
@@ -311,9 +317,12 @@ func TestOwnedBrowserMySQLFixture(t *testing.T) {
 			if _, err = m.DB.ExecContext(ctx, "UPDATE plan_prices SET available=TRUE WHERE plan_id='starter' AND currency='CNY'"); err != nil {
 				t.Fatal("cannot enable isolated prices")
 			}
-			if _, _, err = m.CreateOrder(ctx, user, "starter", "browser-fixture", "browser-"+ID(), "CNY"); err != nil {
+			order, _, e := m.CreateOrder(ctx, user, "starter", "browser-fixture", "browser-"+ID(), "CNY")
+			if e != nil {
 				t.Fatal("cannot create isolated pending order and audit history")
 			}
+			credentials["order"] = map[string]any{"id": order.ID, "number": order.Number,
+				"total": map[string]any{"amount_minor": originalCNY, "currency": "CNY", "decimal_places": 2}}
 		} else {
 			// AddUser persists revision 1; do not use the stale in-memory revision
 			// zero identity for subsequent audited production Store operations.
@@ -355,6 +364,14 @@ func TestOwnedBrowserMySQLFixture(t *testing.T) {
 			t.Fatal("required isolated starter quote is missing")
 		}
 	}
+	var loginEvents int
+	if m.DB.QueryRowContext(ctx, "SELECT COUNT(*) FROM login_events").Scan(&loginEvents) != nil || loginEvents != 0 {
+		t.Fatal("browser fixture must begin without login events")
+	}
+	var browserStarted time.Time
+	if m.DB.QueryRowContext(ctx, "SELECT UTC_TIMESTAMP(6)").Scan(&browserStarted) != nil {
+		t.Fatal("cannot bind authentication evidence to browser lifetime")
+	}
 	before := browserMySQLHistory(t, ctx, m)
 	var pending, unpaid, jobs int
 	if m.DB.QueryRowContext(ctx, "SELECT COUNT(*) FROM orders WHERE status='pending_payment'").Scan(&pending) != nil || pending != 1 {
@@ -382,7 +399,7 @@ func TestOwnedBrowserMySQLFixture(t *testing.T) {
 			}
 		}()
 	} else {
-		app := NewApp(m, Config{Demo: false, Origin: origin, Secret: ID() + ID(), SecureCookie: true})
+		app := NewApp(m, Config{Demo: false, Origin: origin, Secret: ID() + ID(), SecureCookie: true, CommerceContractVersion: "0.6"})
 		api = app.Handler()
 	}
 	dist := os.Getenv("ASTER_BILLING_BROWSER_DIST")
@@ -418,6 +435,11 @@ func TestOwnedBrowserMySQLFixture(t *testing.T) {
 		}
 		w.Header().Set("X-Content-Type-Options", "nosniff")
 		w.Header().Set("Cache-Control", "no-store")
+		// The paired Vue frontend uses history routing, including direct reloads.
+		if filepath.Ext(r.URL.Path) == "" {
+			http.ServeFile(w, r, filepath.Join(dist, "index.html"))
+			return
+		}
 		static.ServeHTTP(w, r)
 	})
 	cert, err := tls.LoadX509KeyPair(filepath.Join(caseDir, "server.pem"), filepath.Join(caseDir, "server.key"))
@@ -463,6 +485,20 @@ waiting:
 	}
 	if blocked.Load() != 0 || logins.Load() != 4 || logouts.Load() != 4 || audits.Load() < 4 {
 		t.Fatal("required real API acceptance did not complete or attempted a business write")
+	}
+	if m.DB.QueryRowContext(ctx, "SELECT COUNT(*) FROM login_events").Scan(&loginEvents) != nil || loginEvents != 4 {
+		t.Fatal("browser must record exactly four successful logins")
+	}
+	for role, user := range users {
+		var count int
+		if err := m.DB.QueryRowContext(ctx, `SELECT COUNT(*) FROM login_events WHERE user_id=? AND email_hash=? AND result='success' AND ip IN ('127.0.0.1','::1') AND user_agent LIKE '%Firefox/%' AND created_at BETWEEN ? AND UTC_TIMESTAMP(6)`, user.ID, digest(user.Email), browserStarted).Scan(&count); err != nil || count != 2 {
+			t.Fatal("authentication history does not match both browser sizes")
+		}
+		if role == "admin" {
+			if err := m.DB.QueryRowContext(ctx, `SELECT COUNT(*) FROM staff_members s WHERE s.user_id=? AND s.last_login_at BETWEEN (SELECT MAX(created_at) FROM login_events WHERE user_id=s.user_id AND result='success') AND UTC_TIMESTAMP(6)`, user.ID).Scan(&count); err != nil || count != 1 {
+				t.Fatal("staff login timestamp does not match authenticated history")
+			}
+		}
 	}
 	if !reflect.DeepEqual(before, browserMySQLHistory(t, ctx, m)) {
 		t.Fatal("historical rows or business settings changed during UI acceptance")

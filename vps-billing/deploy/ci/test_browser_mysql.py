@@ -30,12 +30,12 @@ class BrowserMySQLGuards(unittest.TestCase):
         # Actual Unix-socket connectivity and @@datadir are checked by Linux Go.
         (self.fixture / "mysql.sock").touch()
         self.billing = self.root / "vps-billing"
-        for relative in ("frontend/dist/index.html", "frontend/tests/browser-mysql.mjs", "frontend/tests/ui-copy-boundaries.mjs", "deploy/ci/browser-mysql-fixture.gotxt"):
+        for relative in ("frontend/dist/index.html", "deploy/ci/browser-mysql.mjs", "deploy/ci/browser-mysql-fixture.gotxt"):
             file = self.billing / relative
             file.parent.mkdir(parents=True, exist_ok=True)
             file.write_text("source")
         self.modules = self.base / "tools/node_modules"
-        for package in (self.modules / "playwright/package.json", self.billing / "frontend/node_modules/@playwright/test/package.json"):
+        for package in (self.modules / "playwright/package.json", self.modules / "@playwright/test/package.json"):
             package.parent.mkdir(parents=True, exist_ok=True)
             package.write_text('{"version":"1.64.0"}')
         self.browsers = self.base / "browsers"
@@ -113,9 +113,9 @@ class BrowserMySQLGuards(unittest.TestCase):
         self.rejected()
 
     def test_symlink_source_rejected(self):
-        source = self.billing / "frontend/tests/browser-mysql.mjs"
+        source = self.billing / "deploy/ci/browser-mysql.mjs"
         source.unlink()
-        source.symlink_to(self.billing / "frontend/tests/ui-copy-boundaries.mjs")
+        source.symlink_to(self.billing / "deploy/ci/browser-mysql-fixture.gotxt")
         self.rejected()
 
     def test_unpinned_browser_rejected(self):
@@ -327,9 +327,8 @@ class BrowserMySQLProgress(unittest.TestCase):
 
     def test_every_source_phase_has_an_allowlisted_diagnostic(self):
         import re
-        script = SCRIPT.parents[2] / "frontend/tests/browser-mysql.mjs"
-        shared = script.with_name("ui-copy-boundaries.mjs")
-        phases = set(re.findall(r'(?:progress|checkpoint)\("([a-z-]+)"', script.read_text() + shared.read_text()))
+        script = SCRIPT.with_name("browser-mysql.mjs")
+        phases = set(re.findall(r'(?:progress|checkpoint)\("([a-z-]+)"', script.read_text()))
         self.assertEqual(phases, runner.BROWSER_PHASES)
 
     def test_unrecognized_field_rejected(self):

@@ -28,15 +28,33 @@ SHOTS = sorted([f"scope-{role}-{size}-{locale}.png"
                 for role in ("customer", "admin") for size in ("desktop", "mobile") for locale in ("zh-CN", "en")]
                + [f"audit-{size}-{locale}.png" for size in ("desktop", "mobile") for locale in ("zh-CN", "en")])
 BROWSER_PHASES = {
-    "browser-start", "tls-untrusted-navigation", "tls-trusted-navigation",
-    "reset-preferences", "reset-reload", "default-preferences",
-    "login-open", "login-fill", "login-submit", "login-session", "login-cookie",
-    "language-open", "language-select", "language-close", "language-assert",
-    "currency-open", "currency-select", "currency-assert", "screenshot",
-    "audit-navigation", "audit-assert", "read-fault-baseline", "read-fault-inject",
-    "read-fault-assert", "read-fault-delivery", "read-fault-locale", "read-fault-message",
-    "read-fault-no-write-warning", "read-fault-retry", "read-fault-no-empty", "read-fault-recover", "logout-open", "logout-submit",
-    "logout-session", "report-assert", "report-write",
+    "audit-assert",
+    "audit-navigation",
+    "browser-start",
+    "currency-assert",
+    "currency-select",
+    "language-assert",
+    "language-open",
+    "language-select",
+    "login-cookie",
+    "login-fill",
+    "login-open",
+    "login-session",
+    "login-submit",
+    "logout-open",
+    "logout-session",
+    "logout-submit",
+    "read-fault-assert",
+    "read-fault-inject",
+    "read-fault-no-write-warning",
+    "read-fault-recover",
+    "read-fault-retry",
+    "report-assert",
+    "report-write",
+    "reset-preferences",
+    "screenshot",
+    "tls-trusted-navigation",
+    "tls-untrusted-navigation",
 }
 
 
@@ -102,13 +120,13 @@ def validate(args):
     if parent.st_uid != os.geteuid() or parent.st_mode & 0o022:
         raise Failure("Output parent must be owned and not group/world writable")
     billing = root / "vps-billing"
-    for relative in ("frontend/dist/index.html", "frontend/tests/browser-mysql.mjs", "frontend/tests/ui-copy-boundaries.mjs", "deploy/ci/browser-mysql-fixture.gotxt"):
+    for relative in ("frontend/dist/index.html", "deploy/ci/browser-mysql.mjs", "deploy/ci/browser-mysql-fixture.gotxt"):
         regular(billing / relative, 5_000_000)
     modules = Path(os.environ.get("PLAYWRIGHT_MODULE_DIR", ""))
     browsers = Path(os.environ.get("PLAYWRIGHT_BROWSERS_PATH", ""))
     if not modules.is_absolute() or not browsers.is_absolute() or not browsers.is_dir():
         raise Failure("A pinned private Playwright Firefox installation is required")
-    for package in (modules / "playwright/package.json", billing / "frontend/node_modules/@playwright/test/package.json"):
+    for package in (modules / "playwright/package.json", modules / "@playwright/test/package.json"):
         if json.loads(regular(package).read_text()).get("version") != "1.64.0":
             raise Failure("Both private Firefox driver and test assertions must be Playwright 1.64.0")
     for command in ("go", "node", "openssl", "certutil"):
@@ -297,7 +315,7 @@ def main():
             if fixture.poll() is not None or time.monotonic() >= deadline:
                 raise Failure("Owned real MySQL fixture did not become ready")
             time.sleep(0.1)
-        script = str(billing / "frontend/tests/browser-mysql.mjs")
+        script = str(billing / "deploy/ci/browser-mysql.mjs")
         stage = "firefox-must-reject-untrusted-ca"
         run(["node", script, "untrusted"], timeout=90, required=(fixture,))
         stage = "trust-ca-in-private-profile-only"
