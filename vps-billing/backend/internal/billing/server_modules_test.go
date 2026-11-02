@@ -151,3 +151,56 @@ func TestCommerceModuleProcessorRejectsReplacedConnectionIdentity(t *testing.T) 
 		t.Fatal("switched module accepted for existing connection")
 	}
 }
+
+func TestMySQLCommerceManualDeliveryInformation(t *testing.T) {
+	f := mysqlCatalogFixture(t)
+	m := f.store.(*MySQL)
+	sid, _ := paidService06(t, f)
+	app := NewApp(m, Config{Demo: true, Origin: "http://localhost", Secret: ID() + ID(), CommerceContractVersion: "0.6"})
+	server := httptest.NewServer(app.Handler())
+	defer server.Close()
+	admin := client(t, server.URL, f.admin.Email, "CatalogFixture!2026")
+	customer := client(t, server.URL, f.customer.Email, "CatalogFixture!2026")
+	v, err := m.Service06(t.Context(), f.customer.ID, sid)
+	if err != nil {
+		t.Fatal(err)
+	}
+	info := api.ManualServiceInfo{Hostname: "manual.example", IPv4: []string{"192.0.2.25"}, IPv6: []string{"2001:db8::25"}}
+	in := map[string]any{"revision": v.Revision, "manual_info": info}
+	status, body := customer.request("PATCH", "/api/v1/admin/services/"+sid, in, "")
+	if status != 403 {
+		t.Fatal(status, body)
+	}
+	status, body = admin.request("PATCH", "/api/v1/admin/services/"+sid, in, "")
+	if status != 200 {
+		t.Fatal(status, body)
+	}
+	contracttest.Response(t, "PATCH", "/admin/services/{id}", body)
+	status, body = admin.request("PATCH", "/api/v1/admin/services/"+sid, in, "")
+	if status != 409 {
+		t.Fatal("stale manual edit", status, body)
+	}
+	status, body = admin.request("POST", "/api/v1/admin/services/"+sid+"/actions", api.AdminServiceActionInput{Action: "provision", Reason: "Manual delivery checked"}, ID())
+	if status != 200 {
+		t.Fatal(status, body)
+	}
+	status, body = customer.request("GET", "/api/v1/services/"+sid, nil, "")
+	if status != 200 {
+		t.Fatal(status, body)
+	}
+	contracttest.Response(t, "GET", "/services/{id}", body)
+	data := body["data"].(map[string]any)
+	if data["hostname"] != info.Hostname || data["primary_ipv4"] != info.IPv4[0] || data["status"] != "active" {
+		t.Fatal(data)
+	}
+	serviceControllerFixture06(t, m, f.customer.ID, sid)
+	v, err = m.Service06(t.Context(), f.customer.ID, sid)
+	if err != nil {
+		t.Fatal(err)
+	}
+	in["revision"] = v.Revision
+	status, body = admin.request("PATCH", "/api/v1/admin/services/"+sid, in, "")
+	if status != 409 {
+		t.Fatal("manual edit of module service", status, body)
+	}
+}

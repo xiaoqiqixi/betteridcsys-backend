@@ -763,6 +763,12 @@ type LoginEvent = struct {
 	Result    string    `json:"result"`
 }
 
+type ManualServiceInfo = struct {
+	Hostname string   `json:"hostname"`
+	IPv4     []string `json:"ipv4"`
+	IPv6     []string `json:"ipv6"`
+}
+
 type ModuleSchema = struct {
 	Type                 string                 `json:"type"`
 	Properties           map[string]SchemaField `json:"properties"`
@@ -1842,11 +1848,12 @@ type AdminListServicesResponse = struct {
 type AdminGetServiceResponse = AdminService
 
 type AdminUpdateServiceInput = struct {
-	Revision           Revision  `json:"revision"`
-	Label              string    `json:"label,omitempty"`
-	NextDueAt          Timestamp `json:"next_due_at,omitempty"`
-	AutoRenew          bool      `json:"auto_renew,omitempty"`
-	PriceOverrideMinor *int64    `json:"price_override_minor,omitempty"`
+	ManualInfo         ManualServiceInfo `json:"manual_info,omitempty"`
+	Revision           Revision          `json:"revision"`
+	Label              string            `json:"label,omitempty"`
+	NextDueAt          Timestamp         `json:"next_due_at,omitempty"`
+	AutoRenew          bool              `json:"auto_renew,omitempty"`
+	PriceOverrideMinor *int64            `json:"price_override_minor,omitempty"`
 }
 
 type AdminUpdateServiceResponse = AdminService

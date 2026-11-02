@@ -24,6 +24,7 @@ type orderItemSnapshot06 struct {
 	Legacy       bool                `json:"legacy,omitempty"`
 }
 type serviceConfiguration06 struct {
+	ManualInfo   *api.ManualServiceInfo `json:"manual_info,omitempty"`
 	PasswordHash string                 `json:"password_hash,omitempty"`
 	Kind         string                 `json:"kind"`
 	ProductID    string                 `json:"product_id"`

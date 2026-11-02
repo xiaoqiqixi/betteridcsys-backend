@@ -6,8 +6,11 @@ import (
 	"database/sql"
 	"encoding/json"
 	"errors"
+	"net/netip"
 	"strings"
 	"time"
+	"unicode"
+	"unicode/utf8"
 )
 
 type serviceRecord06 struct {
@@ -98,6 +101,13 @@ func scanService06(row interface{ Scan(...any) error }) (serviceRecord06, error)
 	}
 	v.IPv4 = []string{}
 	v.IPv6 = []string{}
+	if v.ModuleID == nil && out.Configuration.ManualInfo != nil {
+		info := out.Configuration.ManualInfo
+		v.IPv4, v.IPv6 = append(v.IPv4, info.IPv4...), append(v.IPv6, info.IPv6...)
+		if len(v.IPv4) > 0 {
+			v.PrimaryIPv4 = &v.IPv4[0]
+		}
+	}
 	v.Tasks = []api.ServiceTask{}
 	v.AvailableImages = []api.OsImage{}
 	v.RenewalOptions = make([]struct {
@@ -276,11 +286,12 @@ func (m *MySQL) ServicePage06(ctx context.Context, owner, cursor, status, search
 }
 
 type servicePatch06 struct {
-	Revision      int64           `json:"revision,omitempty"`
-	Label         *string         `json:"label,omitempty"`
-	AutoRenew     *bool           `json:"auto_renew,omitempty"`
-	NextDueAt     *string         `json:"next_due_at,omitempty"`
-	PriceOverride json.RawMessage `json:"price_override_minor,omitempty"`
+	ManualInfo    *api.ManualServiceInfo `json:"manual_info,omitempty"`
+	Revision      int64                  `json:"revision,omitempty"`
+	Label         *string                `json:"label,omitempty"`
+	AutoRenew     *bool                  `json:"auto_renew,omitempty"`
+	NextDueAt     *string                `json:"next_due_at,omitempty"`
+	PriceOverride json.RawMessage        `json:"price_override_minor,omitempty"`
 }
 
 func serviceConflict06() error {
@@ -322,6 +333,33 @@ func (m *MySQL) PatchService06(ctx context.Context, actor User, id string, admin
 		}
 		if s.View.Status == "terminated" || s.View.Status == "cancelled" {
 			return serviceConflict06()
+		}
+		if in.ManualInfo != nil {
+			if !admin || s.View.ModuleID != nil || s.Configuration.Module != nil {
+				return serviceConflict06()
+			}
+			info := *in.ManualInfo
+			if !utf8.ValidString(info.Hostname) || len([]rune(info.Hostname)) > 253 || strings.IndexFunc(info.Hostname, unicode.IsControl) >= 0 {
+				return ErrCommerceInput
+			}
+			for family, values := range [][]string{info.IPv4, info.IPv6} {
+				if values == nil || len(values) > 16 {
+					return ErrCommerceInput
+				}
+				seen := map[string]bool{}
+				for i, value := range values {
+					address, e := netip.ParseAddr(value)
+					if e != nil || address.Zone() != "" || address.Is4In6() || address.Is4() != (family == 0) || seen[address.String()] {
+						return ErrCommerceInput
+					}
+					values[i] = address.String()
+					seen[values[i]] = true
+				}
+			}
+			s.Configuration.ManualInfo = &info
+			if _, err = tx.ExecContext(ctx, "UPDATE services SET name=?,configuration_snapshot=? WHERE id=?", info.Hostname, jsonValue06(s.Configuration), id); err != nil {
+				return err
+			}
 		}
 		if in.Label != nil {
 			s.View.Label = *in.Label

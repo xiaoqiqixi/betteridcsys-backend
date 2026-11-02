@@ -5839,7 +5839,7 @@
                         "properties": {
                           "module_id": {
                             "type": "string",
-                            "pattern": "^server\\.[a-z0-9][a-z0-9._-]{0,55}$"
+                            "pattern": "^server\\.[a-z][a-z0-9-]{0,47}$"
                           },
                           "connection_id": {
                             "$ref": "#/components/schemas/Id"
@@ -6151,7 +6151,7 @@
                         "properties": {
                           "module_id": {
                             "type": "string",
-                            "pattern": "^server\\.[a-z0-9][a-z0-9._-]{0,55}$"
+                            "pattern": "^server\\.[a-z][a-z0-9-]{0,47}$"
                           },
                           "connection_id": {
                             "$ref": "#/components/schemas/Id"
@@ -6820,6 +6820,9 @@
               "schema": {
                 "type": "object",
                 "properties": {
+                  "manual_info": {
+                    "$ref": "#/components/schemas/ManualServiceInfo"
+                  },
                   "revision": {
                     "$ref": "#/components/schemas/Revision"
                   },
@@ -13589,7 +13592,7 @@
                 "properties": {
                   "module_id": {
                     "type": "string",
-                    "pattern": "^server\\.[a-z0-9][a-z0-9._-]{0,55}$"
+                    "pattern": "^server\\.[a-z][a-z0-9-]{0,47}$"
                   },
                   "connection_id": {
                     "$ref": "#/components/schemas/Id"
@@ -13946,7 +13949,7 @@
             "anyOf": [
               {
                 "type": "string",
-                "pattern": "^server\\.[a-z0-9][a-z0-9._-]{0,55}$"
+                "pattern": "^server\\.[a-z][a-z0-9-]{0,47}$"
               },
               {
                 "type": "null"
@@ -16482,6 +16485,38 @@
         ],
         "additionalProperties": false
       },
+      "ManualServiceInfo": {
+        "type": "object",
+        "properties": {
+          "hostname": {
+            "type": "string",
+            "maxLength": 253
+          },
+          "ipv4": {
+            "maxItems": 16,
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "ipv4",
+              "pattern": "^(?:(?:25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9][0-9]|[0-9])\\.){3}(?:25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9][0-9]|[0-9])$"
+            }
+          },
+          "ipv6": {
+            "maxItems": 16,
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "ipv6",
+              "pattern": "^(([0-9a-fA-F]{1,4}:){7}[0-9a-fA-F]{1,4}|([0-9a-fA-F]{1,4}:){1,7}:|([0-9a-fA-F]{1,4}:){1,6}:[0-9a-fA-F]{1,4}|([0-9a-fA-F]{1,4}:){1,5}(:[0-9a-fA-F]{1,4}){1,2}|([0-9a-fA-F]{1,4}:){1,4}(:[0-9a-fA-F]{1,4}){1,3}|([0-9a-fA-F]{1,4}:){1,3}(:[0-9a-fA-F]{1,4}){1,4}|([0-9a-fA-F]{1,4}:){1,2}(:[0-9a-fA-F]{1,4}){1,5}|[0-9a-fA-F]{1,4}:((:[0-9a-fA-F]{1,4}){1,6})|:((:[0-9a-fA-F]{1,4}){1,7}|:))$"
+            }
+          }
+        },
+        "required": [
+          "hostname",
+          "ipv4",
+          "ipv6"
+        ]
+      },
       "ModuleSchema": {
         "type": "object",
         "properties": {
@@ -18215,7 +18250,7 @@
           },
           "module_id": {
             "type": "string",
-            "pattern": "^server\\.[a-z0-9][a-z0-9._-]{0,55}$"
+            "pattern": "^server\\.[a-z][a-z0-9-]{0,47}$"
           },
           "name": {
             "type": "string",
@@ -18305,7 +18340,7 @@
         "properties": {
           "id": {
             "type": "string",
-            "pattern": "^server\\.[a-z0-9][a-z0-9._-]{0,55}$"
+            "pattern": "^server\\.[a-z][a-z0-9-]{0,47}$"
           },
           "name": {
             "$ref": "#/components/schemas/LocalizedText"
