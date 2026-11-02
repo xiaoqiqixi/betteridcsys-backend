@@ -648,6 +648,10 @@ http {{
                     require(int(self.sql("controller", f"SELECT COUNT(*) FROM controller_audit WHERE target='{setup}'")) > 0, "initial guest setup has no audit")
                     operations.append({"id": setup, "action": "initial-guest-setup", "state": "succeeded"})
             result = {"id": sid, "resource": resource, "ip": instance["ipv4"], "finance": view["status"], "power": args.get("power"), "operations": operations}
+            if args["step"] == "console-vnc-handshake":
+                grants = int(self.sql("controller", f"SELECT COUNT(*) FROM controller_audit WHERE actor='billing' AND action='console.issued' AND target='{resource}'"))
+                require(grants == 1, "console handshake lacks its controller grant audit")
+                result["console_grant_audits"] = grants
             if args.get("power") == "running":
                 result["guest"] = {"cloud_init": "done", "power_management": "active", "root_credential": "verified"}
             return result

@@ -38,7 +38,7 @@ commands.
 | Payment fixture on another order | Real plugin checkout and signed callback; separate active VM and IP |
 | Power, password, reinstall | Successful controller operations; matching finance and libvirt state; second approved image |
 | Stopped snapshot and restore | Snapshot lifecycle succeeds; domain remains stopped |
-| Console | TLS websocket receives the real node VNC `RFB` banner |
+| Console | TLS websocket receives the real node VNC `RFB` banner; controller records the grant audit |
 | Plan change | Paid upgrade; controller and finance resource values match domain CPU, memory, and disk size |
 | Overdue and settlement | Renewal invoice; suspended and stopped domain; start rejected; paid invoice automatically resumes VM |
 | Immediate cancellation | Terminated service; undefined domain; removed disks; released IP |
