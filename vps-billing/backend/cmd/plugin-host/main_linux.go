@@ -18,15 +18,17 @@ import (
 func main() {
 	root := flag.String("root", "", "Protected installed plugin directory")
 	policy := flag.String("policy", "", "Root-owned explicit plugin policy")
-	kind := flag.String("kind", "smtp", "Approved plugin slot: smtp, payment or resource")
-	slot := flag.String("slot", "", "Payment gateway id")
+	kind := flag.String("kind", "smtp", "Approved plugin slot: smtp, payment, server or resource")
+	slot := flag.String("slot", "", "Connection or payment gateway id")
 	flag.Parse()
-	if (*slot != "" && (*kind != "payment" || !pluginapi.ValidGatewayID(*slot))) || flag.NArg() != 0 || os.Geteuid() == 0 || *kind != "smtp" && *kind != "payment" && *kind != "resource" {
+	if (*slot != "" && ((*kind != "payment" && *kind != "server") || !pluginapi.ValidGatewayID(*slot))) || flag.NArg() != 0 || os.Geteuid() == 0 || *kind != "smtp" && *kind != "payment" && *kind != "resource" && *kind != "server" {
 		stop()
 	}
 	var approved *runtimeplugins.Approval
 	var err error
-	if *kind == "payment" {
+	if *kind == "server" {
+		approved, err = runtimeplugins.OpenApprovedServer(*root, *policy, *slot)
+	} else if *kind == "payment" {
 		approved, err = runtimeplugins.OpenApprovedPayment(*root, *policy, *slot)
 	} else if *kind == "resource" {
 		approved, err = runtimeplugins.OpenApprovedResource(*root, *policy)
@@ -82,7 +84,10 @@ func main() {
 			stop()
 		}
 	}
-	if *kind == "payment" || *kind == "resource" {
+	if *kind == "server" {
+		args = append(args, "--connection-id", *slot)
+	}
+	if *kind == "payment" || *kind == "resource" || *kind == "server" {
 		// systemd supplies a read-only credential directory to this service only.
 		// No core configuration, database credentials or arbitrary environment leaks.
 		if directory := os.Getenv("CREDENTIALS_DIRECTORY"); directory != "" {

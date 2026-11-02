@@ -113,6 +113,15 @@ func (a *Approval) Close() {
 }
 
 func selectionFor(policy pluginapi.Policy, kind string) *pluginapi.Selection {
+	if strings.HasPrefix(kind, "server:") {
+		for i := range policy.Servers {
+			if policy.Servers[i].Slot == strings.TrimPrefix(kind, "server:") {
+				return &policy.Servers[i]
+			}
+		}
+		return nil
+	}
+
 	if strings.HasPrefix(kind, "payment:") {
 		for i := range policy.Payments {
 			if policy.Payments[i].Slot == strings.TrimPrefix(kind, "payment:") {
@@ -137,10 +146,13 @@ func validateSelection(s *pluginapi.Selection, kind string, rules trust) error {
 	if kind == "payment" {
 		prefix = "payment."
 	}
+	if kind == "server" {
+		prefix = "server."
+	}
 	if kind == "resource" {
 		prefix = "resource."
 	}
-	if !pluginapi.ValidID(s.ID) || !strings.HasPrefix(s.ID, prefix) || !pluginapi.ValidVersion(s.Version) || !pluginapi.ValidDigest(s.ManifestSHA256) || !cleanAbsolute(s.Socket) || len(s.Socket) > 100 || s.WorkerUID == 0 || kind != "resource" && s.ClientUID == 0 || (!rules.allowSameUID && s.WorkerUID == s.ClientUID) || len(s.AllowedTargets) > 8 || kind != "payment" && s.Enabled && len(s.AllowedTargets) == 0 {
+	if !pluginapi.ValidID(s.ID) || !strings.HasPrefix(s.ID, prefix) || !pluginapi.ValidVersion(s.Version) || !pluginapi.ValidDigest(s.ManifestSHA256) || !cleanAbsolute(s.Socket) || len(s.Socket) > 100 || s.WorkerUID == 0 || kind != "resource" && s.ClientUID == 0 || (!rules.allowSameUID && s.WorkerUID == s.ClientUID) || len(s.AllowedTargets) > 8 || kind != "payment" && kind != "server" && s.Enabled && len(s.AllowedTargets) == 0 {
 		return ErrUnavailable
 	}
 	if kind == "resource" {
@@ -163,7 +175,7 @@ func validateSelection(s *pluginapi.Selection, kind string, rules trust) error {
 	return nil
 }
 func validatePolicyKind(policy pluginapi.Policy, kind string, rules trust) error {
-	if policy.Schema != 1 || policy.Revision == 0 || kind != "smtp" && kind != "payment" && kind != "resource" && !(strings.HasPrefix(kind, "payment:") && pluginapi.ValidGatewayID(strings.TrimPrefix(kind, "payment:"))) {
+	if policy.Schema != 1 || policy.Revision == 0 || kind != "smtp" && kind != "payment" && kind != "resource" && !(strings.HasPrefix(kind, "payment:") && pluginapi.ValidGatewayID(strings.TrimPrefix(kind, "payment:"))) && !(strings.HasPrefix(kind, "server:") && pluginapi.ValidConnectionID(strings.TrimPrefix(kind, "server:"))) {
 		return ErrUnavailable
 	}
 	if validateSelection(policy.SMTP, "smtp", rules) != nil || validateSelection(policy.Payment, "payment", rules) != nil || validateSelection(policy.Resource, "resource", rules) != nil {
@@ -185,6 +197,18 @@ func validatePolicyKind(policy pluginapi.Policy, kind string, rules trust) error
 			return ErrUnavailable
 		}
 		seen[p.Slot] = true
+		all = append(all, p)
+	}
+	if len(policy.Servers) > 64 {
+		return ErrUnavailable
+	}
+	serverSlots := map[string]bool{}
+	for i := range policy.Servers {
+		p := &policy.Servers[i]
+		if !pluginapi.ValidConnectionID(p.Slot) || serverSlots[p.Slot] || p.Socket != "/run/aster-server/"+p.Slot+"/plugin.sock" || p.MerchantID != "" || validateSelection(p, "server", rules) != nil {
+			return ErrUnavailable
+		}
+		serverSlots[p.Slot] = true
 		all = append(all, p)
 	}
 	for i, left := range all {
@@ -238,6 +262,9 @@ func loadApprovalKind(root, policyPath, kind string, rules trust, inspectDisable
 	if strings.HasPrefix(kind, "payment:") {
 		kind = "payment"
 	}
+	if strings.HasPrefix(kind, "server:") {
+		kind = "server"
+	}
 	base := filepath.Join(root, s.ID, s.Version)
 	raw, err = readProtected(filepath.Join(base, "manifest.json"), pluginapi.MaxManifestBytes, rules)
 	if err != nil {
@@ -248,7 +275,7 @@ func loadApprovalKind(root, policyPath, kind string, rules trust, inspectDisable
 		return nil, ErrUnavailable
 	}
 	var manifest pluginapi.Manifest
-	if pluginapi.DecodeStrict(raw, pluginapi.MaxManifestBytes, &manifest) != nil || manifest.ID != s.ID || manifest.Version != s.Version || kind == "payment" && manifest.Protocol != pluginapi.PaymentProtocol || kind == "smtp" && manifest.Protocol != pluginapi.SMTPProtocol || kind == "resource" && manifest.Protocol != pluginapi.ResourceProtocol {
+	if pluginapi.DecodeStrict(raw, pluginapi.MaxManifestBytes, &manifest) != nil || manifest.ID != s.ID || manifest.Version != s.Version || kind == "payment" && manifest.Protocol != pluginapi.PaymentProtocol || kind == "smtp" && manifest.Protocol != pluginapi.SMTPProtocol || kind == "resource" && manifest.Protocol != pluginapi.ResourceProtocol || kind == "server" && manifest.Protocol != pluginapi.ServerProtocol {
 		return nil, ErrUnavailable
 	}
 	if manifest.Validate(pluginapi.CoreVersion) != nil {
@@ -306,4 +333,8 @@ func OpenApprovedPayment(root, policyPath string, slot ...string) (*Approval, er
 // OpenApprovedResource is the independent host-only resource worker slot.
 func OpenApprovedResource(root, policyPath string) (*Approval, error) {
 	return loadApprovalKind(root, policyPath, "resource", trust{})
+}
+
+func OpenApprovedServer(root, policyPath, slot string) (*Approval, error) {
+	return loadApprovalKind(root, policyPath, "server:"+slot, trust{})
 }

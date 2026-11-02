@@ -21,6 +21,7 @@ const (
 	SMTPCapability            = "smtp.send"
 	PaymentProtocol           = "aster.payment/1"
 	PaymentMinCoreVersion     = "0.5.3"
+	ServerProtocol            = "aster.server/1"
 	ResourceProtocol          = "aster.resource/1"
 	ResourceMinCoreVersion    = "0.5.10"
 	PaymentCheckoutCapability = "payment.checkout"
@@ -36,7 +37,7 @@ const (
 )
 
 var ErrInvalid = errors.New("invalid plugin data")
-var identifier = regexp.MustCompile(`^(email|payment|resource)\.[a-z][a-z0-9-]{0,47}$`)
+var identifier = regexp.MustCompile(`^(email|payment|resource|server)\.[a-z][a-z0-9-]{0,47}$`)
 var digest = regexp.MustCompile(`^[a-f0-9]{64}$`)
 var release = regexp.MustCompile(`^(0|[1-9][0-9]{0,5})\.(0|[1-9][0-9]{0,5})\.(0|[1-9][0-9]{0,5})$`)
 
@@ -66,6 +67,7 @@ type Policy struct {
 	Payment  *Selection  `json:"payment,omitempty"`
 	Payments []Selection `json:"payments,omitempty"`
 	Resource *Selection  `json:"resource,omitempty"`
+	Servers  []Selection `json:"servers,omitempty"`
 }
 
 type Selection struct {
@@ -160,6 +162,15 @@ func (m Manifest) Validate(core string) error {
 		if actualErr != nil || declaredErr != nil || actual < 0 || declared < 0 {
 			return ErrInvalid
 		}
+	case ServerProtocol:
+		if !strings.HasPrefix(m.ID, "server.") || m.Payment != nil || !EqualCapabilities(m.Capabilities, ServerCapabilities()) {
+			return ErrInvalid
+		}
+		actual, e := CompareVersion(core, "0.6.0")
+		declared, d := CompareVersion(m.CoreMin, "0.6.0")
+		if e != nil || d != nil || actual < 0 || declared < 0 {
+			return ErrInvalid
+		}
 	case ResourceProtocol:
 		if !strings.HasPrefix(m.ID, "resource.") || m.Payment != nil || !EqualCapabilities(m.Capabilities, ResourceCapabilities()) {
 			return ErrInvalid
@@ -245,6 +256,8 @@ func DecodeStrict(raw []byte, limit int, destination any) error {
 	var nested string
 	var nestedRequired []string
 	switch destination.(type) {
+	case *ServerResponse:
+		required = []string{"protocol", "request_id", "status", "code", "payload"}
 	case *ResourceResponse:
 		required = []string{"protocol", "request_id", "status", "code", "payload"}
 	case *SendResponse:

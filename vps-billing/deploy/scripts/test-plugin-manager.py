@@ -128,6 +128,22 @@ class ManagerTest(unittest.TestCase):
                       merchant_id="synthetic-merchant", allowed_targets=[{"host": "api.example.test", "port": 443}])
         return result
 
+    def test_server_slots_preserve_other_plugins_and_reject_shared_identity(self):
+        selected = {"slot": "east", "id": "server.aster-cloud", "version": "1.0.0", "enabled": True,
+                    "manifest_sha256": "a" * 64, "worker_uid": 2002, "client_uid": 2001,
+                    "socket": "/run/aster-server/east/plugin.sock", "allowed_targets": []}
+        policy = {"schema": 1, "revision": 1, "servers": [selected]}
+        self.assertEqual(manager.validate_policy(policy), policy)
+        other = dict(selected, slot="west", socket="/run/aster-server/west/plugin.sock")
+        policy["servers"].append(other)
+        with self.assertRaises(manager.Rejected):
+            manager.validate_policy(policy)
+        other["worker_uid"] = 2003
+        self.assertEqual(manager.validate_policy(policy), policy)
+        other["socket"] = selected["socket"]
+        with self.assertRaises(manager.Rejected):
+            manager.validate_policy(policy)
+
     def test_payment_install_approval_enable_disable_and_rollback_preserve_smtp(self):
         self.install()
         self.mutate("select", 0, selection=self.selection())
