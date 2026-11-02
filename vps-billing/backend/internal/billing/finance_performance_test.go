@@ -123,11 +123,13 @@ func TestMySQLCommerceFinanceRuntimePerformance(t *testing.T) {
 	results := []measurement{}
 	// Resolve every read route before timing; legacy migrated products can be
 	// hidden and are not a valid public product-detail fixture.
+	stopCapture := captureFinanceQueries(t, m)
 	for _, e := range endpoints {
 		if e.method == http.MethodGet {
 			request(e)
 		}
 	}
+	explainFinanceRequests(t, ctx, m, stopCapture())
 	// Profiles are a separate phase, so they do not perturb these percentiles.
 	for _, e := range endpoints {
 		for range 5 {
