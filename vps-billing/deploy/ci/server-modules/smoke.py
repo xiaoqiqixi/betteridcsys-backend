@@ -23,8 +23,19 @@ OWNED_PATHS = []
 OWNED_USERS = []
 UNIT_STARTED = False
 
+def safe_log(raw):
+    text = raw.decode('utf-8', errors='replace')[-16000:]
+    # Fixture-owned credentials are never published, including in failure output.
+    for value in ['module_test_only', 'CatalogFixture!2026'] + [p.read_text().strip() for p in PRIVATE.glob('*.token')]:
+        if value: text = text.replace(value, '[redacted]')
+    return text
+
 def run(args, **kw):
-    return subprocess.run([str(a) for a in args], check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, **kw)
+    result = subprocess.run([str(a) for a in args], stdout=subprocess.PIPE, stderr=subprocess.PIPE, **kw)
+    if result.returncode:
+        print(safe_log(result.stdout + result.stderr), file=sys.stderr, flush=True)
+        raise RuntimeError(f'{Path(str(args[0])).name} failed with exit code {result.returncode}')
+    return result
 
 def write(path, value, mode=0o600):
     path.write_bytes((json.dumps(value) if isinstance(value, (dict, list)) else value).encode() if not isinstance(value, bytes) else value)
@@ -63,8 +74,8 @@ def main():
     wait(lambda:(ROOT/'node-ready.json').exists())
     meta=json.loads((ROOT/'node-ready.json').read_text())
     mysql_socket='/var/run/aster-module-mysql/mysqld.sock'
-    run(['mysql','--socket='+mysql_socket,'-uroot','-e','CREATE DATABASE aster_mod_cloud_test; CREATE DATABASE aster_mod_finance_test;'],env=env|{'MYSQL_PWD':'module_test_only'})
-    write(PRIVATE/'cloud.dsn',f'root:module_test_only@unix({mysql_socket})/aster_mod_cloud_test?parseTime=true')
+    run(['mysql','--socket='+mysql_socket,'-uroot','-e','CREATE DATABASE aster_controller_module_test; CREATE DATABASE aster_mod_finance_test;'],env=env|{'MYSQL_PWD':'module_test_only'})
+    write(PRIVATE/'cloud.dsn',f'root:module_test_only@unix({mysql_socket})/aster_controller_module_test?parseTime=true')
     for name in ['billing','admin-read','admin-write']: write(PRIVATE/(name+'.token'),secrets.token_hex(32))
     profile={'id':meta['node_id'],'datacenter_id':meta['datacenter_id'],'group_id':meta['group_id'],'endpoint':'https://127.0.0.1:20444','allowed_cidrs':['127.0.0.0/8'],'ca_file':str(ROOT/'ca.crt'),'client_cert_file':str(ROOT/'node-client.crt'),'client_key_file':str(PRIVATE/'node-client.key'),'server_certificate_sha256':cert_sha(ROOT/'node.crt')}
     config={'schema':1,'controller_id':'smoke-cloud','listen':'127.0.0.1:20443','tls_cert_file':str(ROOT/'controller.crt'),'tls_key_file':str(PRIVATE/'controller.key'),'dsn_file':str(PRIVATE/'cloud.dsn'),'billing_token_file':str(PRIVATE/'billing.token'),'admin_read_token_file':str(PRIVATE/'admin-read.token'),'admin_write_token_file':str(PRIVATE/'admin-write.token'),'heartbeat_ttl_seconds':300,'nodes':[profile],'presets':[{'id':'smoke','node_id':meta['node_id'],'resources':meta['resources']}],'dispatcher':{'enabled':True},'service':{'snapshot_limit':0,'images':[]}}
@@ -112,6 +123,10 @@ def main():
 
 try:
     main()
+except Exception:
+    for path in PRIVATE.glob('*.log'):
+        print(path.name + ':\n' + safe_log(path.read_bytes()), file=sys.stderr, flush=True)
+    raise
 finally:
     # Private logs are not uploaded: keep only bounded nonsecret outcome evidence.
     if UNIT_STARTED:subprocess.run(['systemctl','stop',UNIT],stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL)
