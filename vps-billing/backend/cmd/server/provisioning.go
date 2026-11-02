@@ -3,8 +3,11 @@ package main
 import (
 	"aster/billing/internal/billing"
 	"aster/billing/internal/controllers"
+	api "aster/billing/internal/financeapi"
 	"aster/billing/internal/runtimeplugins"
+	"aster/billing/serviceapi"
 	"context"
+	"database/sql"
 	"encoding/json"
 	"errors"
 	"flag"
@@ -35,9 +38,9 @@ func provisioningFlagsSelected(flags *flag.FlagSet) (dispatch, reconcile bool) {
 	return
 }
 
-// A root-owned one-shot command is the only network dispatch path. Web handlers
-// may prepare a paid order's immutable job, but never read host credentials,
-// invoke this command, or directly send provisioning requests.
+// This root-only path retains the legacy explicit host dispatch contract.
+// Commerce tasks also have an independently configured in-process dispatcher;
+// it never invokes this command or borrows these private host credentials.
 func performProvisioning(ctx context.Context, store billing.ProvisioningJobStore, jobID string, reconcile bool, prepare func(context.Context, string) (controllerTransport, error)) (billing.ProvisioningJob, error) {
 	request, err := store.ProvisioningRequest(ctx, jobID)
 	if err != nil {
@@ -90,6 +93,7 @@ func runHostProvisioning(out io.Writer, jobID string, reconcile bool) int {
 		Status string                   `json:"status"`
 		Code   string                   `json:"code"`
 		Job    *billing.ProvisioningJob `json:"job,omitempty"`
+		Task   *api.ServiceTask         `json:"task,omitempty"`
 	}{Status: "unavailable", Code: "PROVISIONING_UNAVAILABLE"}
 	emit := func(code int) int { _ = json.NewEncoder(out).Encode(response); return code }
 	if !regexp.MustCompile(`^[0-9a-f]{32}$`).MatchString(jobID) {
@@ -121,6 +125,38 @@ func runHostProvisioning(out io.Writer, jobID string, reconcile bool) int {
 	if store.Ping(ctx) != nil {
 		response.Code = "SCHEMA_NOT_READY"
 		return emit(2)
+	}
+	var serviceID string
+	serviceErr := store.DB.QueryRowContext(ctx, "SELECT service_id FROM service_tasks WHERE id=?", jobID).Scan(&serviceID)
+	if serviceErr == nil {
+		runtime := &billing.ServiceControllers06{
+			Provisioning: func(ctx context.Context, id string) (billing.ProvisioningController06, error) {
+				return prepare(ctx, id)
+			},
+			Services: func(ctx context.Context, id string) (billing.ServiceController06, error) {
+				if os.Getenv("PROVISIONING_TRANSPORT") == "resource" {
+					return nil, serviceapi.ErrUnavailable
+				}
+				return serviceapi.New(ctx, os.Getenv("PROVISIONING_POLICY_FILE"), id)
+			},
+		}
+		app := billing.NewApp(store, billing.Config{Services: runtime})
+		task, taskErr := app.DispatchServiceTask06(ctx, jobID, reconcile, true)
+		if task.ID != "" {
+			response.Task = &task
+		}
+		if taskErr != nil {
+			response.Code = "SERVICE_TASK_UNAVAILABLE"
+			return emit(1)
+		}
+		response.Status, response.Code = task.Status, "none"
+		if task.Status == "failed" || task.Status == "uncertain" {
+			return emit(1)
+		}
+		return emit(0)
+	}
+	if !errors.Is(serviceErr, sql.ErrNoRows) {
+		return emit(1)
 	}
 	job, err := performProvisioning(ctx, store, jobID, reconcile, prepare)
 	if job.ID != "" {

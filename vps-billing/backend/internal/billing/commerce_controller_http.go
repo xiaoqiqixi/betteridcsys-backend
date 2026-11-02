@@ -58,7 +58,7 @@ func (a *App) serviceReads06HTTP(w http.ResponseWriter, r *http.Request, u User,
 		return true
 	}
 	runtime, ok := a.Config.Services.(*ServiceControllers06)
-	if !ok {
+	if !ok || runtime == nil {
 		a.serviceControllerError06(w, r, serviceapi.ErrUnavailable)
 		return true
 	}

@@ -30,9 +30,11 @@ jobs:
         with:
           go-version: '1.27.3'
           cache: false
-      - name: Exact money and contract validation
+      - name: Vet and verify money, contracts, controller transport and CLI
         working-directory: vps-billing/backend
-        run: go test -race -count=1 ./internal/commerce ./internal/contracttest ./internal/financeapi
+        run: |
+          go vet ./...
+          go test -race -count=1 ./internal/commerce ./internal/contracttest ./internal/financeapi ./internal/controllers ./controllerapi ./serviceapi ./cmd/server
       - name: Real MySQL commerce and payment acceptance
         working-directory: vps-billing/backend
         env:

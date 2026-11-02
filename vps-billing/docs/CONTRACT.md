@@ -8,10 +8,12 @@ Handler tests use `internal/contracttest.Data` for named response schemas and `i
 
 The [Core 0.5 compatibility reference](LEGACY_CONTRACT_0.5.md) documents deprecated endpoints retained for one release, including `/plans` and `/admin/catalog`. It is historical documentation, not the Core 0.6 schema. New capabilities are implemented against the vendored contract.
 
-During the commerce rollout, send `X-Aster-API-Version: 0.6` on overlapping invoice reads (`/invoices` and `/admin/invoices`, including detail). Without this selector, those reads retain the 0.5 response. New paths such as `/credit/top-up` and `/invoices/{id}/pay` always use the 0.6 contract. Responses vary on the version header.
+Production defaults to Core 0.6. For one release, `X-Aster-API-Version: 0.5` selects deprecated overlapping order, invoice, service, taxonomy and overview projections. `COMMERCE_API_VERSION=0.5` can select that compatibility default for an existing deployment; a `0.6` request header overrides it. The in-memory demo retains its legacy default. New paths such as `/credit/top-up` and `/invoices/{id}/pay` always use the 0.6 contract. Responses vary on the version header.
 
-The same selector enables 0.6 order reads and cancellation. `POST /orders` recognizes the 0.6 cart body by `items`; the deprecated `plan_id` body remains available. Checkout reserves inventory and coupon uses until payment or cancellation. Paid orders create one service per unit, with queued provisioning tasks. Historical paid orders are not backfilled.
+`POST /orders` recognizes the 0.6 cart body by `items`; the deprecated `plan_id` body remains available. Checkout reserves inventory and coupon uses until payment or cancellation. Paid orders create one service per unit, with queued provisioning tasks. Historical paid orders are not backfilled.
 
 Checkout accepts owned SSH key references. It rejects `root_password` with `PASSWORD_REQUIRES_DIRECT_ACTION`: a password cannot be retained across an asynchronous payment wait. Password changes belong to the direct controller action after provisioning.
 
 Original-channel refunds require the gateway's `payment.refund` capability. Core reserves each refund before dispatch. A pending or ambiguous provider result stays reserved for operator reconciliation and is never automatically dispatched again. Credit refunds and manual payments commit their ledger, invoice, audit and idempotency response together.
+
+The controller SDK is pinned in [CLOUD_SOURCE.json](../contract/CLOUD_SOURCE.json), with the complete upstream source and an integrity test. See [COMMERCE_OPERATIONS.md](COMMERCE_OPERATIONS.md) for host credentials, automatic dispatch, manual reconciliation and current controller protocol limits.

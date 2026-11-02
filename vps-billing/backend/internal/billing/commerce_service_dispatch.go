@@ -171,7 +171,7 @@ func (a *App) DispatchServiceTask06(ctx context.Context, id string, reconcileOnl
 		return m.finishServiceTask06(ctx, id, "succeeded", "MANUAL", "")
 	}
 	runtime, ok := a.Config.Services.(*ServiceControllers06)
-	if !ok {
+	if !ok || runtime == nil {
 		return task.View, serviceapi.ErrUnavailable
 	}
 	payload := task.Payload
@@ -281,7 +281,7 @@ func (a *App) reconcileServiceTask06(ctx context.Context, t serviceTaskRecord06,
 		return m.finishServiceTask06(ctx, t.View.ID, "succeeded", "MANUAL", "")
 	}
 	runtime, ok := a.Config.Services.(*ServiceControllers06)
-	if !ok {
+	if !ok || runtime == nil {
 		return t.View, serviceapi.ErrUnavailable
 	}
 	if !t.OperationID.Valid || t.OperationID.String != t.View.ID {

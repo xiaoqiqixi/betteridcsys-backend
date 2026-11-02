@@ -84,7 +84,7 @@ func (a *App) upgrade06HTTP(w http.ResponseWriter, r *http.Request, u User, p st
 	}
 	remote, err := a.Config.Services.InspectService(r.Context(), service)
 	if err != nil {
-		a.commerceError(w, r, err)
+		a.serviceControllerError06(w, r, err)
 		return true
 	}
 	if !remote.Capabilities.Upgrade {

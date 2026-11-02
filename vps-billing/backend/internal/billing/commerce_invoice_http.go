@@ -8,8 +8,8 @@ import (
 	"strings"
 )
 
-// The explicit selector keeps the overlapping 0.5 handlers available while the
-// frontend pairing decides the default. Non-overlapping 0.6 routes need no header.
+// Production defaults to 0.6. The explicit selector preserves overlapping 0.5
+// projections for one release; non-overlapping 0.6 routes need no header.
 func (a *App) commerceContract06(r *http.Request) bool {
 	return r.Header.Get("X-Aster-API-Version") == "0.6" || r.Header.Get("X-Aster-API-Version") == "" && a.Config.CommerceContractVersion == "0.6"
 }

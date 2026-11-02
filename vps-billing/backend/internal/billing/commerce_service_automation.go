@@ -46,7 +46,7 @@ func (a *App) registerServiceDispatch06() {
 		}
 		// Rotate one approved catalog per tick so many unavailable controllers cannot
 		// starve lifecycle work. Newly discovered images require administrator enablement.
-		if runtime, ok := a.Config.Services.(*ServiceControllers06); ok && runtime.Services != nil && len(runtime.IDs) > 0 && ctx.Err() == nil {
+		if runtime, ok := a.Config.Services.(*ServiceControllers06); ok && runtime != nil && runtime.Services != nil && len(runtime.IDs) > 0 && ctx.Err() == nil {
 			controller := runtime.IDs[int(at.Unix()/60)%len(runtime.IDs)]
 			client, err := runtime.Services(ctx, controller)
 			if err == nil {

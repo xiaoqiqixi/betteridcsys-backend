@@ -219,7 +219,19 @@ func main() {
 		state := plugins.State()
 		return updates.Current{CoreVersion: pluginapi.CoreVersion, SMTPVersion: state.Version, SMTPStatus: state.Status, PluginPolicyRevision: state.PolicyRevision, SMTPProtocol: state.SMTPProtocol, SMTPCoreMin: state.SMTPCoreMin, SMTPCoreMaxExclusive: state.SMTPCoreMaxExclusive}
 	})
-	app := billing.NewAppWithIntegrations(store, billing.Config{Updates: updateService, HostOperations: local.hostOperations, Plugins: plugins, SMTPKey: local.smtpKey, Demo: demo, Origin: origin, Secret: key, SecureCookie: !demo, TrustedProxyCIDRs: local.proxyCIDRs}, registry)
+	serviceControllers, serviceErr := billing.LoadServiceControllers06(os.Getenv("SERVICE_CONTROLLER_POLICY_FILE"))
+	if serviceErr != nil {
+		fatal("invalid service controller host policy or private runtime credentials")
+	}
+	var serviceInspector billing.ServiceInspector06
+	if serviceControllers != nil {
+		serviceInspector = serviceControllers
+	}
+	contractVersion, versionErr := commerceContractVersion(demo, os.Getenv("COMMERCE_API_VERSION"))
+	if versionErr != nil {
+		fatal("COMMERCE_API_VERSION must be 0.5 or 0.6")
+	}
+	app := billing.NewAppWithIntegrations(store, billing.Config{CommerceContractVersion: contractVersion, Services: serviceInspector, Updates: updateService, HostOperations: local.hostOperations, Plugins: plugins, SMTPKey: local.smtpKey, Demo: demo, Origin: origin, Secret: key, SecureCookie: !demo, TrustedProxyCIDRs: local.proxyCIDRs}, registry)
 	server := &http.Server{Addr: listen, Handler: app.Handler(), ReadHeaderTimeout: 5 * time.Second, ReadTimeout: 15 * time.Second, WriteTimeout: 20 * time.Second, IdleTimeout: 60 * time.Second, MaxHeaderBytes: 16 << 10, ErrorLog: log.New(transportLogWriter{slog.Default()}, "", 0)}
 	listener, err := net.Listen("tcp", listen)
 	if err != nil {
@@ -391,4 +403,19 @@ func runPreflight(output io.Writer) int {
 	}
 	result.Checked = append(result.Checked, "selected_database_vendor_version_transport", "direct_database_select_and_table_inventory_visibility", "applied_migration_prefix_checksums_and_required_schema_shape", "administrator_count_if_schema_initialized")
 	return finish("")
+}
+
+// Production pairs with the pinned 0.6 frontend. Demo memory fixtures retain
+// their 0.5 projection; callers may explicitly select 0.5 for one release.
+func commerceContractVersion(demo bool, override string) (string, error) {
+	if override == "0.5" || override == "0.6" {
+		return override, nil
+	}
+	if override != "" {
+		return "", errors.New("unsupported commerce contract")
+	}
+	if demo {
+		return "0.5", nil
+	}
+	return "0.6", nil
 }

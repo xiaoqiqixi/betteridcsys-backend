@@ -205,7 +205,7 @@ func (a *App) serviceActions06HTTP(w http.ResponseWriter, r *http.Request, u Use
 		}
 	}
 	runtime, ok := a.Config.Services.(*ServiceControllers06)
-	if !ok {
+	if !ok || runtime == nil {
 		a.serviceControllerError06(w, r, serviceapi.ErrUnavailable)
 		return true
 	}
