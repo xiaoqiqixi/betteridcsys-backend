@@ -17,11 +17,13 @@ type orderRecord06 struct {
 	ClientID, ClientEmail string
 }
 type orderItemSnapshot06 struct {
-	Item    commerce.QuotedItem `json:"item"`
-	SSHKeys []string            `json:"ssh_keys"`
-	Legacy  bool                `json:"legacy,omitempty"`
+	PasswordHash string              `json:"password_hash,omitempty"`
+	Item         commerce.QuotedItem `json:"item"`
+	SSHKeys      []string            `json:"ssh_keys"`
+	Legacy       bool                `json:"legacy,omitempty"`
 }
 type serviceConfiguration06 struct {
+	PasswordHash    string            `json:"password_hash,omitempty"`
 	Kind            string            `json:"kind"`
 	ProductID       string            `json:"product_id"`
 	NodeID          string            `json:"node_id"`
@@ -226,16 +228,15 @@ func (m *MySQL) OrderPage06(ctx context.Context, owner, cursor, status, search s
 }
 
 func (m *MySQL) CreateOrder06(ctx context.Context, actor User, input api.CreateOrderInput, key string) (api.CreateOrderResponse, error) {
-	for _, item := range input.Items {
-		if item.RootPassword != "" {
-			return api.CreateOrderResponse{}, problem(400, "PASSWORD_REQUIRES_DIRECT_ACTION", "Use an SSH key for checkout; set a password through a direct service action after provisioning")
-		}
-	}
 	raw, _ := json.Marshal(input)
 	if !keyPattern.MatchString(key) || api.ValidateInput("createOrder", raw) != nil {
 		return api.CreateOrderResponse{}, ErrCommerceInput
 	}
 	fp := digest(string(raw))
+	passwordHashes, err := checkoutPasswordHashes06(input.Items)
+	if err != nil {
+		return api.CreateOrderResponse{}, err
+	}
 	return retryPayment(ctx, func() (api.CreateOrderResponse, error) {
 		actor := actor // Reset authorization input for every transaction attempt.
 		var out api.CreateOrderResponse
@@ -312,6 +313,9 @@ func (m *MySQL) CreateOrder06(ctx context.Context, actor User, input api.CreateO
 			return out, err
 		}
 		for position, item := range quote.Items {
+			if passwordHashes[position] != "" && (item.Product.Kind != "cloud_server" || item.OSImage == nil) {
+				return out, problem(400, "GUEST_IMAGE_REQUIRED", "Select an operating system before setting its root password")
+			}
 			sshKeys := []string{}
 			seen := map[string]bool{}
 			for _, id := range item.Input.SSHKeyIDs {
@@ -343,7 +347,7 @@ func (m *MySQL) CreateOrder06(ctx context.Context, actor User, input api.CreateO
 				}
 				reserved = item.Input.Quantity
 			}
-			snapshot, _ := json.Marshal(orderItemSnapshot06{Item: item, SSHKeys: sshKeys})
+			snapshot, _ := json.Marshal(orderItemSnapshot06{Item: item, SSHKeys: sshKeys, PasswordHash: passwordHashes[position]})
 			options, _ := json.Marshal(item.OptionsSummary)
 			var hostname *string
 			if item.Input.Hostname != "" {
@@ -505,7 +509,7 @@ func fulfillPaidOrder06(ctx context.Context, tx *sql.Tx, invoice api.AdminInvoic
 			if len([]rune(label)) > 80 {
 				label = string([]rune(label)[:80])
 			}
-			config := serviceConfiguration06{Kind: item.Product.Kind, ProductID: item.Product.ID, NodeID: item.Product.NodeID, RegionID: item.Product.RegionID, RemoteProductID: item.Product.RemoteProductID, Input: item.Input, SSHKeys: row.snapshot.SSHKeys, UnitIndex: unit, UnitCount: item.Input.Quantity}
+			config := serviceConfiguration06{Kind: item.Product.Kind, ProductID: item.Product.ID, NodeID: item.Product.NodeID, RegionID: item.Product.RegionID, RemoteProductID: item.Product.RemoteProductID, Input: item.Input, SSHKeys: row.snapshot.SSHKeys, PasswordHash: row.snapshot.PasswordHash, UnitIndex: unit, UnitCount: item.Input.Quantity}
 			config.Input.Quantity = 1
 			config.Input.Hostname = hostname
 			configRaw, _ := json.Marshal(config)

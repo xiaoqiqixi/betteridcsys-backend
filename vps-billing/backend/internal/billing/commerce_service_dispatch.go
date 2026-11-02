@@ -41,10 +41,16 @@ func (m *MySQL) prepareProvision06(ctx context.Context, s serviceRecord06, id st
 		}
 		p.Bootstrap = true
 		p.Image = s.View.OSImage
+		if s.Configuration.PasswordHash != "" {
+			if !serviceapi.ValidPasswordHash(s.Configuration.PasswordHash) || len(s.Configuration.SSHKeys) != 0 {
+				return p, serviceapi.ErrUnavailable
+			}
+			p.Params.PasswordHash = s.Configuration.PasswordHash
+		}
 		if len(s.Configuration.SSHKeys) == 1 {
 			p.Params.SSHPublicKey = s.Configuration.SSHKeys[0]
 		}
-	} else if len(s.Configuration.SSHKeys) > 0 {
+	} else if len(s.Configuration.SSHKeys) > 0 || s.Configuration.PasswordHash != "" {
 		return p, serviceapi.ErrUnavailable
 	}
 	return p, nil
@@ -231,7 +237,7 @@ func (a *App) DispatchServiceTask06(ctx context.Context, id string, reconcileOnl
 	case "reinstall":
 		// First setup may generate an ephemeral credential. The customer can set a
 		// password later; neither this random value nor a retry copy is persisted.
-		if payload.Source == "bootstrap" && params.SSHPublicKey == "" {
+		if payload.Source == "bootstrap" && params.SSHPublicKey == "" && params.PasswordHash == "" {
 			params.Password = ID() + ID()
 		}
 	}

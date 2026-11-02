@@ -1,6 +1,6 @@
 {
   "repository": "xiaoqiqixi/betteridcsys-cloud",
-  "commit": "61e63894058f084b557703bfe6742ad52428d98b",
+  "commit": "ba52445794c44105fdb61c7b6d2bf6dde7277d26",
   "path": "contracts/billing",
   "files": {
     "LICENSE": "c71d239df91726fc519c6eb72d318ec65820627232b2f796219e87dcf35d0ab4",
@@ -18,7 +18,8 @@
     "serviceapi/README.md": "a334a9e696e1295865fcda13dceab362bc5a991323db1577f386e185d995ac43",
     "serviceapi/client.go": "114e543f604cdf0c3b95cb5ea4775bd75a30cff4d42d5a71e33d02997f547ad7",
     "serviceapi/client_test.go": "4b8d8a4db521f7027010c648828f09a60f9c2f83b162546b7cfe8be69cfaac47",
-    "serviceapi/contract.go": "b2cdb996a8ac88a77c6e6c3b3b235d789803b15bb510542ef8c93b3813bb4109",
-    "serviceapi/contract_test.go": "e730ab07ad874ce9d996712204993139085db1c893e2581b197e4a6463060236"
+    "serviceapi/contract.go": "ce349146197ef6059e4aeb43a5116236c425f287e2f4dda982a651a61932c168",
+    "serviceapi/contract_test.go": "e730ab07ad874ce9d996712204993139085db1c893e2581b197e4a6463060236",
+    "serviceapi/password_hash_test.go": "b2f5df2660f27c39b18a9bdfede5202aa2e2788084ee083af2dc69c6d1495f79"
   }
 }

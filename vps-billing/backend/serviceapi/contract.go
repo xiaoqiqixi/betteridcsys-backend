@@ -32,20 +32,27 @@ type Params struct {
 	InboundBandwidthMbps int    `json:"inbound_bandwidth_mbps,omitempty"`
 	ImageID              string `json:"image_id,omitempty"`
 	Password             string `json:"password,omitempty"`
-	SSHPublicKey         string `json:"ssh_public_key,omitempty"`
-	StartAfter           bool   `json:"start_after,omitempty"`
-	Confirmation         string `json:"confirmation,omitempty"`
-	SnapshotID           string `json:"snapshot_id,omitempty"`
-	Name                 string `json:"name,omitempty"`
-	CPUCores             int    `json:"cpu_cores,omitempty"`
-	MemoryMB             int    `json:"memory_mb,omitempty"`
-	DiskGB               int    `json:"disk_gb,omitempty"`
+	// PasswordHash is a one-way Linux crypt hash for delayed initial setup.
+	// It may be persisted; the original password must never be retained.
+	PasswordHash string `json:"password_hash,omitempty"`
+	SSHPublicKey string `json:"ssh_public_key,omitempty"`
+	StartAfter   bool   `json:"start_after,omitempty"`
+	Confirmation string `json:"confirmation,omitempty"`
+	SnapshotID   string `json:"snapshot_id,omitempty"`
+	Name         string `json:"name,omitempty"`
+	CPUCores     int    `json:"cpu_cores,omitempty"`
+	MemoryMB     int    `json:"memory_mb,omitempty"`
+	DiskGB       int    `json:"disk_gb,omitempty"`
 }
 
 func (p Params) Redacted() Params { p.Password = ""; return p }
 func validPassword(p string) bool {
 	return len(p) >= 1 && len(p) <= 1024 && utf8.ValidString(p) && !strings.ContainsAny(p, "\x00\r\n")
 }
+
+var passwordHashPattern = regexp.MustCompile(`^\$2[ab]\$1[2-6]\$[./A-Za-z0-9]{53}$`)
+
+func ValidPasswordHash(hash string) bool { return passwordHashPattern.MatchString(hash) }
 func validKey(k string) bool {
 	return len(k) <= 8192 && !strings.ContainsAny(k, "\x00\r\n") && (strings.HasPrefix(k, "ssh-ed25519 ") || strings.HasPrefix(k, "ssh-rsa ") || strings.HasPrefix(k, "ecdsa-sha2-nistp256 "))
 }
@@ -61,10 +68,16 @@ func (p Params) Valid(action string) bool {
 		}
 		rest.Confirmation = ""
 	case "reinstall":
-		if !imagePattern.MatchString(p.ImageID) || (p.Password == "") == (p.SSHPublicKey == "") || p.Password != "" && !validPassword(p.Password) || p.SSHPublicKey != "" && !validKey(p.SSHPublicKey) {
+		credentials := 0
+		for _, value := range []string{p.Password, p.PasswordHash, p.SSHPublicKey} {
+			if value != "" {
+				credentials++
+			}
+		}
+		if !imagePattern.MatchString(p.ImageID) || credentials != 1 || p.Password != "" && !validPassword(p.Password) || p.PasswordHash != "" && !ValidPasswordHash(p.PasswordHash) || p.SSHPublicKey != "" && !validKey(p.SSHPublicKey) {
 			return false
 		}
-		rest.ImageID, rest.Password, rest.SSHPublicKey = "", "", ""
+		rest.ImageID, rest.Password, rest.PasswordHash, rest.SSHPublicKey = "", "", "", ""
 	case "reset_password":
 		if !validPassword(p.Password) {
 			return false
