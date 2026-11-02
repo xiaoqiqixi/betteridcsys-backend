@@ -10,7 +10,16 @@ const ID = "payment.bank-transfer"
 const Version = "1.0.0"
 
 func Declarations() paymentv1.Declarations {
-	return paymentv1.Declarations{Name: map[string]string{"en": "Bank transfer", "zh-CN": "银行转账"}, Description: map[string]string{"en": "Send a transfer using the reference shown. Staff confirm receipt."}, Flow: "instructions", Currencies: []paymentv1.Currency{{"USD", 2}, {"EUR", 2}, {"GBP", 2}, {"CNY", 2}, {"JPY", 0}}, CheckoutHosts: []string{}}
+	return paymentv1.Declarations{
+		Name:        map[string]string{"en": "Bank transfer", "zh-CN": "银行转账"},
+		Description: map[string]string{"en": "Send a transfer using the reference shown. Staff confirm receipt."},
+		Flow:        "instructions",
+		Currencies: []paymentv1.Currency{
+			{Code: "USD", Precision: 2}, {Code: "EUR", Precision: 2},
+			{Code: "GBP", Precision: 2}, {Code: "CNY", Precision: 2}, {Code: "JPY", Precision: 0},
+		},
+		CheckoutHosts: []string{},
+	}
 }
 func Manifest(sha string) pluginapi.Manifest {
 	d := Declarations()

@@ -26,7 +26,18 @@ const Version = "1.0.0"
 const APIVersion = "2026-10-28.endive"
 
 func Declarations() paymentv1.Declarations {
-	return paymentv1.Declarations{Name: map[string]string{"en": "Card · Stripe", "zh-CN": "银行卡 · Stripe"}, Flow: "redirect", Currencies: []paymentv1.Currency{{"USD", 2}, {"EUR", 2}, {"GBP", 2}, {"CNY", 2}, {"JPY", 0}, {"AUD", 2}, {"CAD", 2}, {"HKD", 2}, {"SGD", 2}, {"CHF", 2}}, CheckoutHosts: []string{"checkout.stripe.com"}}
+	return paymentv1.Declarations{
+		Name: map[string]string{"en": "Card · Stripe", "zh-CN": "银行卡 · Stripe"},
+		Flow: "redirect",
+		Currencies: []paymentv1.Currency{
+			{Code: "USD", Precision: 2}, {Code: "EUR", Precision: 2},
+			{Code: "GBP", Precision: 2}, {Code: "CNY", Precision: 2},
+			{Code: "JPY", Precision: 0}, {Code: "AUD", Precision: 2},
+			{Code: "CAD", Precision: 2}, {Code: "HKD", Precision: 2},
+			{Code: "SGD", Precision: 2}, {Code: "CHF", Precision: 2},
+		},
+		CheckoutHosts: []string{"checkout.stripe.com"},
+	}
 }
 func Capabilities() []string {
 	return append(pluginapi.PaymentCapabilities(), pluginapi.PaymentQueryCapability, pluginapi.PaymentRefundCapability)
