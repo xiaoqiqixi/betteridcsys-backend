@@ -5,7 +5,10 @@ on:
   workflow_dispatch:
 permissions:
   contents: read
-# Every pushed revision receives its own result while maintainers share main.
+# Superseded pushes yield runner capacity to current main; manual runs are separate.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}-${{ github.event_name }}
+  cancel-in-progress: ${{ github.event_name == 'push' }}
 jobs:
   accounts-mysql:
     runs-on: ubuntu-24.04
