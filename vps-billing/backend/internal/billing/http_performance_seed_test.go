@@ -26,18 +26,18 @@ func TestMySQLHTTPPerformanceSeedUsesLiveStaffMembershipAndCurrentSchema(t *test
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(before.Counts) != 75 {
-		t.Fatalf("performance fixture has %d tables, want 75", len(before.Counts))
+	if len(before.Counts) != 76 {
+		t.Fatalf("performance fixture has %d tables, want 76", len(before.Counts))
 	}
 	for name, count := range map[string]int64{
-		"schema_migrations": 28, "staff_roles": 1, "staff_members": 1, "products": 3, "product_prices": 0,
+		"schema_migrations": 29, "staff_roles": 1, "staff_members": 1, "products": 3, "product_prices": 0,
 		"users": 3, "orders": 4, "invoices": 4, "sessions": 2, "account_sessions": 0, "account_settings": 2,
 		"email_outbox": 0, "automation_settings": 1, "automation_runs": 0, "support_departments": 2,
 		"tickets": 0, "ticket_messages": 0, "announcements": 0, "api_tokens": 0, "ssh_keys": 0,
 		"order_items": 0, "invoice_lines": 0, "invoice_payments": 0, "invoice_refunds": 0,
 		"affiliate_commissions": 0, "affiliate_settings": 1, "affiliate_profiles": 0,
 		"affiliate_commission_rules": 0, "affiliate_commission_lines": 0, "affiliate_adjustments": 0,
-		"affiliate_payouts": 0, "affiliate_registration_ips": 0, "affiliate_invoice_lines": 0,
+		"affiliate_payouts": 0, "affiliate_registration_ips": 0, "affiliate_invoice_lines": 0, "server_connections": 0,
 		"service_units": 0, "service_tasks": 0, "invoice_service_changes": 0, "invoice_notifications": 0,
 	} {
 		if before.Counts[name] != count {
