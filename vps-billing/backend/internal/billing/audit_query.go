@@ -1,6 +1,7 @@
 package billing
 
 import (
+	"aster/billing/internal/financeapi"
 	"bytes"
 	"context"
 	"crypto/hmac"
@@ -266,6 +267,10 @@ func (a *App) auditEventsHTTP(w http.ResponseWriter, r *http.Request, actor User
 		a.internal(w, r, err)
 		return
 	}
+	if admin && a.commerceContract06(r) {
+		a.adminAuditPage06(w, r, q, page)
+		return
+	}
 	if actor.Role != "admin" {
 		page.Items = customerAudits(page.Items, actor.Email)
 	}
@@ -298,6 +303,53 @@ func (a *App) auditEventsHTTP(w http.ResponseWriter, r *http.Request, actor User
 		NextCursor string  `json:"next_cursor,omitempty"`
 		Limit      int     `json:"limit"`
 	}{items, page.HasMore, next, q.Limit})
+}
+
+// The current staff console validates the nullable fields and pagination shape
+// before rendering. Keep the legacy projection available to explicit 0.5 clients.
+func (a *App) adminAuditPage06(w http.ResponseWriter, r *http.Request, q AuditQuery, page AuditPage) {
+	items := make([]financeapi.AuditEvent, 0, len(page.Items))
+	roles := map[string]string{}
+	for _, row := range page.Items {
+		actorType := "system"
+		var email *string
+		if row.ActorEmail != "" && row.ActorEmail != "system" && !strings.HasPrefix(row.ActorEmail, "payment:") {
+			email = &row.ActorEmail
+			actorType = roles[row.ActorEmail]
+			if actorType == "" {
+				// Historical rows have no stored actor role. Unknown former
+				// accounts retain the conservative staff classification.
+				actorType = "staff"
+				u, err := a.Store.UserByEmail(r.Context(), row.ActorEmail)
+				if err != nil && !errors.Is(err, ErrNotFound) {
+					a.internal(w, r, err)
+					return
+				}
+				if err == nil && u.Role == "customer" {
+					actorType = "client"
+				}
+				roles[row.ActorEmail] = actorType
+			}
+		}
+		v := financeapi.AuditEvent{ID: row.ID, At: stamp(row.CreatedAt), ActorType: actorType,
+			ActorEmail: email, Action: row.Action}
+		if row.Target != "" {
+			v.TargetID = &row.Target
+		}
+		if row.Detail != "" {
+			v.Reason = &row.Detail
+		}
+		items = append(items, v)
+	}
+	var next *string
+	if page.HasMore && len(page.Items) > 0 {
+		value := a.encodeAuditCursor("", q, page.Items[len(page.Items)-1])
+		next = &value
+	}
+	jsonOut(w, 200, struct {
+		Items      []financeapi.AuditEvent `json:"items"`
+		NextCursor *string                 `json:"next_cursor"`
+	}{items, next})
 }
 
 // Old records do not persist actor roles. Only customer-authored order actions
