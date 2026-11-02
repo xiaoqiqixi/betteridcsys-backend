@@ -310,6 +310,14 @@ func (a *App) auditEventsHTTP(w http.ResponseWriter, r *http.Request, actor User
 func (a *App) adminAuditPage06(w http.ResponseWriter, r *http.Request, q AuditQuery, page AuditPage) {
 	items := make([]financeapi.AuditEvent, 0, len(page.Items))
 	roles := map[string]string{}
+	if m, ok := a.Store.(*MySQL); ok {
+		var err error
+		roles, err = m.auditActorRoles(r.Context(), page.Items)
+		if err != nil {
+			a.internal(w, r, err)
+			return
+		}
+	}
 	for _, row := range page.Items {
 		actorType := "system"
 		var email *string
