@@ -359,6 +359,9 @@ func (a *App) serveAuthorized(w http.ResponseWriter, r *http.Request, u User, p 
 	if a.commerceServicesHTTP(w, r, u, p) {
 		return
 	}
+	if a.overview06HTTP(w, r, u, p) {
+		return
+	}
 	if !admin && a.affiliateHTTP(w, r, u, p) {
 		return
 	}
