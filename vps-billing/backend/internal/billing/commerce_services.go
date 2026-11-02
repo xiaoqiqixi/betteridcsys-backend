@@ -27,22 +27,19 @@ func customerService06(v api.AdminService) api.Service {
 	_ = json.Unmarshal(raw, &out)
 	return out
 }
-func readService06(ctx context.Context, q currencyQuerier, owner, id, lock string) (serviceRecord06, error) {
+
+const service06Columns = `s.id,s.user_id,u.email,s.name,s.plan_name,s.region,s.status,s.product_id,s.cycle,s.recurring_minor,s.price_override_minor,s.currency,s.currency_snapshot,s.next_due_at,s.auto_renew,s.label,s.module_id,s.connection_id,s.resource_id,s.suspension_reason,s.cancellation_type,s.cancellation_reason,s.cancellation_requested_at,s.terminates_at,s.specs_snapshot,s.os_snapshot,s.configuration_snapshot,s.created_at,s.revision,s.anchor_day,s.last_change_at,s.cpu,s.memory_gb,s.disk_gb`
+
+func scanService06(row interface{ Scan(...any) error }) (serviceRecord06, error) {
 	var out serviceRecord06
 	v := &out.View
-	query := `SELECT s.id,s.user_id,u.email,s.name,s.plan_name,s.region,s.status,s.product_id,s.cycle,s.recurring_minor,s.price_override_minor,s.currency,s.currency_snapshot,s.next_due_at,s.auto_renew,s.label,s.module_id,s.connection_id,s.resource_id,s.suspension_reason,s.cancellation_type,s.cancellation_reason,s.cancellation_requested_at,s.terminates_at,s.specs_snapshot,s.os_snapshot,s.configuration_snapshot,s.created_at,s.revision,s.anchor_day,s.last_change_at,s.cpu,s.memory_gb,s.disk_gb FROM services s JOIN users u ON u.id=s.user_id WHERE s.id=?`
-	args := []any{id}
-	if owner != "" {
-		query += " AND s.user_id=?"
-		args = append(args, owner)
-	}
 	var formatRaw, specsRaw, osRaw, configRaw []byte
 	var hostname string
 	var override *int64
 	var cancelType, cancelReason *string
 	var created, cancelled, terminates sql.NullTime
 	var memoryGB int64
-	err := q.QueryRowContext(ctx, query+lock, args...).Scan(&v.ID, &v.ClientID, &v.ClientEmail, &hostname, &v.ProductName, &v.Region, &v.Status, &out.ProductID, &v.Cycle, &v.Recurring.AmountMinor, &override, &v.Recurring.Currency, &formatRaw, &out.Due, &v.AutoRenew, &v.Label, &v.ModuleID, &v.ConnectionID, &v.ResourceID, &v.SuspensionReason, &cancelType, &cancelReason, &cancelled, &terminates, &specsRaw, &osRaw, &configRaw, &created, &v.Revision, &out.Anchor, &out.LastChange, &v.Specs.CPUCores, &memoryGB, &v.Specs.DiskGB)
+	err := row.Scan(&v.ID, &v.ClientID, &v.ClientEmail, &hostname, &v.ProductName, &v.Region, &v.Status, &out.ProductID, &v.Cycle, &v.Recurring.AmountMinor, &override, &v.Recurring.Currency, &formatRaw, &out.Due, &v.AutoRenew, &v.Label, &v.ModuleID, &v.ConnectionID, &v.ResourceID, &v.SuspensionReason, &cancelType, &cancelReason, &cancelled, &terminates, &specsRaw, &osRaw, &configRaw, &created, &v.Revision, &out.Anchor, &out.LastChange, &v.Specs.CPUCores, &memoryGB, &v.Specs.DiskGB)
 	if errors.Is(err, sql.ErrNoRows) {
 		return out, ErrNotFound
 	}
@@ -113,6 +110,21 @@ func readService06(ctx context.Context, q currencyQuerier, owner, id, lock strin
 			Amount api.Money `json:"amount"`
 		}{v.Cycle, v.Recurring})
 	}
+	return out, nil
+}
+
+func readService06(ctx context.Context, q currencyQuerier, owner, id, lock string) (serviceRecord06, error) {
+	query := "SELECT " + service06Columns + " FROM services s JOIN users u ON u.id=s.user_id WHERE s.id=?"
+	args := []any{id}
+	if owner != "" {
+		query += " AND s.user_id=?"
+		args = append(args, owner)
+	}
+	out, err := scanService06(q.QueryRowContext(ctx, query+lock, args...))
+	if err != nil {
+		return out, err
+	}
+	v := &out.View
 	if out.Configuration.NodeID != "" {
 		// Taxonomy is presentation only; historical services survive retirement.
 		err = q.QueryRowContext(ctx, "SELECT name FROM catalog_nodes WHERE id=?", out.Configuration.NodeID).Scan(&v.NodeLabel)
@@ -195,8 +207,8 @@ func (m *MySQL) Service06(ctx context.Context, owner, id string) (api.AdminServi
 	}
 	return v.View, tx.Commit()
 }
-func (m *MySQL) ServicePage06(ctx context.Context, owner, cursor, status, search string, limit int) ([]api.AdminService, *string, error) {
-	out := []api.AdminService{}
+func (m *MySQL) ServicePage06(ctx context.Context, owner, cursor, status, search string, limit int) ([]api.AdminServiceSummary, *string, error) {
+	out := []api.AdminServiceSummary{}
 	if limit < 1 || limit > 100 || len(search) > 120 {
 		return out, nil, ErrCommerceInput
 	}
@@ -256,12 +268,9 @@ func (m *MySQL) ServicePage06(ctx context.Context, owner, cursor, status, search
 		next = &last
 		ids = ids[:limit]
 	}
-	for _, id := range ids {
-		v, err := readService06(ctx, tx, owner, id, "")
-		if err != nil {
-			return out, nil, err
-		}
-		out = append(out, v.View)
+	out, err = readServiceSummaries06(ctx, tx, ids, owner)
+	if err != nil {
+		return out, nil, err
 	}
 	return out, next, tx.Commit()
 }

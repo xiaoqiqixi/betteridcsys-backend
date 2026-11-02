@@ -5,7 +5,6 @@ import (
 	api "aster/billing/internal/financeapi"
 	"context"
 	"database/sql"
-	"encoding/json"
 	"net/http"
 	"time"
 )
@@ -53,15 +52,12 @@ func (m *MySQL) ClientOverview06(ctx context.Context, uid string, at time.Time) 
 	if err != nil {
 		return out, err
 	}
-	for _, id := range ids {
-		record, err := readService06(ctx, tx, uid, id, "")
-		if err != nil {
-			return out, err
-		}
-		raw, _ := json.Marshal(record.View)
-		var v api.ServiceSummary
-		_ = json.Unmarshal(raw, &v)
-		out.Services = append(out.Services, v)
+	services, err := readServiceSummaries06(ctx, tx, ids, uid)
+	if err != nil {
+		return out, err
+	}
+	for _, service := range services {
+		out.Services = append(out.Services, customerServiceSummary06(service))
 	}
 	ids, err = overviewIDs06(ctx, tx, "SELECT id FROM invoices WHERE user_id=? ORDER BY (status='unpaid') DESC,due_at DESC,id DESC LIMIT 5", uid)
 	if err != nil {
