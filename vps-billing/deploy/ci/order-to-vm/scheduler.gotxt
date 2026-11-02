@@ -1,0 +1,39 @@
+// CI-only overlay: call the real registered jobs with an explicit scheduler clock.
+// This file is not compiled into aster-api and exposes no HTTP clock endpoint.
+package billing
+
+import (
+	"context"
+	"os"
+	"runtime"
+	"testing"
+	"time"
+	"aster/billing/internal/runtimeplugins"
+)
+
+func TestOrderToVMScheduler(t *testing.T) {
+	if runtime.GOOS != "linux" || os.Getenv("GITHUB_ACTIONS") != "true" || os.Getenv("ASTER_E2E_SCHEDULER") != "1" {
+		t.Fatal("scheduler fixture requires the disposable Actions stack")
+	}
+	read := func(name string) string { b, e := os.ReadFile(os.Getenv(name)); if e != nil { t.Fatal("private runtime configuration unavailable") }; return string(b) }
+	ctx, cancel := context.WithTimeout(t.Context(), 90*time.Second)
+	defer cancel()
+	m, err := OpenMySQL(ctx, read("MYSQL_DSN_FILE"), false)
+	if err != nil { t.Fatal("real MySQL unavailable", err) }
+	defer m.DB.Close()
+	plugins := runtimeplugins.New(os.Getenv("PLUGIN_DIRECTORY"), os.Getenv("PLUGIN_POLICY_FILE"))
+	key, err := LoadSMTPKey(os.Getenv("SMTP_ENCRYPTION_KEY_FILE"))
+	if err != nil { t.Fatal(err) }
+	a := NewApp(m, Config{CommerceContractVersion: "0.6", Services: NewServerModules06(plugins), Plugins: plugins, SMTPKey: key, Origin: os.Getenv("APP_ORIGIN"), Secret: read("SESSION_SECRET_FILE"), SecureCookie: true})
+	at, err := time.Parse(time.RFC3339, os.Getenv("ASTER_E2E_AT"))
+	if err != nil { t.Fatal("explicit scheduler clock required") }
+	name := os.Getenv("ASTER_E2E_JOB")
+	job := a.Automation.jobs[name]
+	if job == nil { t.Fatal("unknown registered scheduler job") }
+	if _, err := m.RunAutomationJob(ctx, name, at, job); err != nil { t.Fatal("scheduler job failed", name, err) }
+	var status string
+	var failed int
+	if err := m.DB.QueryRowContext(ctx, "SELECT status,failed FROM automation_runs WHERE job=? AND scheduled_at=?", name, at.UTC().Truncate(time.Minute)).Scan(&status, &failed); err != nil || status != "succeeded" || failed != 0 {
+		t.Fatal("scheduler receipt did not succeed", name, status, failed, err)
+	}
+}

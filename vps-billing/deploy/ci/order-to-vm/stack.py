@@ -5,6 +5,9 @@ All persistent input is pinned in E2E_STACK.json. Runtime credentials and raw
 diagnostics stay in a private owned directory and are removed on every exit.
 """
 import hashlib
+import hmac
+import http.cookiejar
+from datetime import datetime, timedelta, timezone
 import json
 import os
 from pathlib import Path
@@ -18,12 +21,44 @@ import sys
 import time
 import urllib.error
 import urllib.request
+import uuid
 
 ROOT = Path(__file__).resolve().parents[4]
 HERE = Path(__file__).resolve().parent
 ARTIFACTS = ROOT / "artifacts"
 DOWNLOADS = ARTIFACTS / "e2e-downloads"
 BIN = ARTIFACTS / "e2e-bin"
+
+
+class API:
+    def __init__(self, stack):
+        self.origin = "https://localhost:19445"
+        self.opener = urllib.request.build_opener(urllib.request.ProxyHandler({}),
+            urllib.request.HTTPSHandler(context=stack.context), urllib.request.HTTPCookieProcessor(http.cookiejar.CookieJar()))
+        self.csrf = ""
+
+    def call(self, path, method="GET", body=None):
+        headers = {"Accept": "application/json", "Origin": self.origin}
+        if method != "GET":
+            headers.update({"Content-Type": "application/json", "X-CSRF-Token": self.csrf, "Idempotency-Key": uuid.uuid4().hex})
+        request = urllib.request.Request(self.origin + "/api/v1" + path, method=method,
+            data=json.dumps(body).encode() if body is not None else None, headers=headers)
+        try:
+            with self.opener.open(request, timeout=30) as response:
+                result = json.load(response)
+        except urllib.error.HTTPError as error:
+            # Never expose request credentials or email verification material.
+            result = json.loads(error.read(65536))
+            raise RuntimeError(f"finance {method} {path}: HTTP {error.code}: {result.get('error', {}).get('code', 'unknown')}") from None
+        value = result["data"]
+        if path == "/session":
+            self.csrf = value["csrf_token"]
+        return value
+
+    def login(self, email, password):
+        self.call("/session")
+        self.call("/auth/login", "POST", {"email": email, "password": password})
+        self.call("/session")
 
 
 def require(condition, message):
@@ -102,6 +137,8 @@ class Stack:
         self.secrets = []
         self.phase = "initialize"
         self.counter = 0
+        self.units = []
+        self.scheduler_at = datetime.now(timezone.utc).replace(second=0, microsecond=0) + timedelta(minutes=2)
         self.env = dict(os.environ, SSL_CERT_FILE=str(self.root / "ca.crt"), SSL_CERT_DIR=str(self.root / "empty-ca"))
         self.pin = pins()
         self.evidence = {"schema": 1, "finance": os.environ["GITHUB_SHA"], "cloud": self.pin["cloud"]["source_sha"], "frontend": self.pin["frontend"]["source_sha"], "integration": self.pin["integration"], "steps": [], "passed": False}
@@ -275,7 +312,8 @@ class Stack:
         self.write(self.api_dir / "smtp.key", secrets.token_bytes(32), uid=self.api_uid, gid=self.api_gid)
         policy = {"schema": 1, "controllers": [{"id": "e2e-cloud", "enabled": True, "endpoint": "https://127.0.0.1:19443/v1/provisioning", "allowed_cidrs": ["127.0.0.0/8"], "token_file": str(self.api_dir / "billing.token"), "ca_file": str(self.root / "ca.crt")}]}
         self.write(self.root / "controllers.json", policy, 0o644)
-        self.api_env = dict(self.env, APP_MODE="production", APP_ORIGIN="https://localhost:19445", LISTEN_ADDR="127.0.0.1:18080", MYSQL_DSN_FILE=str(self.api_dir / "mysql.dsn"), SESSION_SECRET_FILE=str(self.api_dir / "session"), SERVICE_CONTROLLER_POLICY_FILE=str(self.root / "controllers.json"), SMTP_ENCRYPTION_KEY_FILE=str(self.api_dir / "smtp.key"), COMMERCE_API_VERSION="0.6", TRUSTED_PROXY_CIDRS="127.0.0.0/8")
+        self.plugins()
+        self.api_env = dict(self.env, APP_MODE="production", APP_ORIGIN="https://localhost:19445", LISTEN_ADDR="127.0.0.1:18080", MYSQL_DSN_FILE=str(self.api_dir / "mysql.dsn"), SESSION_SECRET_FILE=str(self.api_dir / "session"), SERVICE_CONTROLLER_POLICY_FILE=str(self.root / "controllers.json"), SMTP_ENCRYPTION_KEY_FILE=str(self.api_dir / "smtp.key"), COMMERCE_API_VERSION="0.6", TRUSTED_PROXY_CIDRS="127.0.0.0/8", PLUGIN_DIRECTORY=str(self.root / "plugins"), PLUGIN_POLICY_FILE=str(self.root / "plugins.json"))
         prefix = ["setpriv", "--reuid=" + str(self.api_uid), "--regid=" + str(self.api_gid), "--init-groups"]
         self.command(prefix + [BIN / "aster-api", "-migrate"], env=self.api_env)
         self.admin_password = self.password()
@@ -312,7 +350,103 @@ http {{
         require(b"<html" in self.get("https://localhost:19445/"), "frontend unavailable")
         self.evidence["steps"].append({"id": "stack-readiness", "passed": True})
 
+    def plugins(self):
+        self.log("isolated SMTP and paymentfixture workers")
+        (self.private / "mail").mkdir(mode=0o700)
+        self.smtp_password = self.password()
+        self.write(self.private / "smtp-password", self.smtp_password)
+        self.spawn("mail-sink", [sys.executable, "-B", HERE / "mail_sink.py", self.root])
+        self.payment_key = secrets.token_bytes(32)
+        self.write(self.private / "payment-fixture-key", self.payment_key)
+        policy = {"schema": 1, "revision": 1}
+        specifications = [
+            ("smtp", "email.smtp", "1.1.0", "aster.smtp/1", ["smtp.send"], 19446),
+            ("payment", "payment.fixture", "0.1.0", "aster.payment/1", ["payment.checkout", "payment.verify_callback"], 443),
+        ]
+        for kind, identifier, version, protocol, capabilities, port in specifications:
+            user = "aster-e2e-" + kind
+            self.command(["useradd", "--system", "--no-create-home", "--shell", "/usr/sbin/nologin", "--gid", str(self.api_gid), user])
+            uid = int(self.command(["id", "-u", user]).stdout)
+            directory = self.root / "plugins" / identifier / version
+            directory.mkdir(parents=True, mode=0o755)
+            binary = directory / "plugin"
+            shutil.copyfile(BIN / ("paymentfixture" if kind == "payment" else kind), binary)
+            binary.chmod(0o555)
+            manifest = {"schema": 1, "id": identifier, "version": version, "protocol": protocol,
+                "core_min": "0.5.3" if kind == "payment" else "0.4.0", "core_max_exclusive": "0.7.0",
+                "capabilities": capabilities, "executable": "plugin", "sha256": digest(binary)}
+            if kind == "payment":
+                manifest["payment"] = {"currencies": [{"code": "CNY", "precision": 2}, {"code": "USD", "precision": 2}, {"code": "JPY", "precision": 0}], "checkout_hosts": ["checkout.example.test"]}
+            path = self.write(directory / "manifest.json", manifest, 0o644)
+            sockets = self.root / (kind + "-socket")
+            sockets.mkdir(mode=0o750)
+            os.chown(sockets, uid, self.api_gid)
+            selection = {"enabled": True, "id": identifier, "version": version, "manifest_sha256": digest(path), "worker_uid": uid,
+                "client_uid": self.api_uid, "socket": str(sockets / "plugin.sock"), "allowed_targets": [{"host": "localhost", "port": port}]}
+            if kind == "payment":
+                selection["merchant_id"] = "e2e-merchant"
+            policy[kind] = selection
+        self.write(self.root / "plugins.json", policy, 0o644)
+        for kind, *_ in specifications:
+            unit = "aster-e2e-" + kind + "-" + os.environ["GITHUB_RUN_ID"]
+            args = ["systemd-run", "--unit=" + unit, "--collect", "--property=User=aster-e2e-" + kind, "--property=Group=" + str(self.api_gid),
+                "--property=NoNewPrivileges=yes", "--property=ProtectSystem=strict", "--property=ReadWritePaths=" + str(self.root / (kind + "-socket")),
+                "--property=BindReadOnlyPaths=" + str(self.root / "ca.crt") + ":/etc/ssl/certs/ca-certificates.crt"]
+            if kind == "payment":
+                args += ["--property=LoadCredential=payment-fixture-key:" + str(self.private / "payment-fixture-key")]
+            args += [str(BIN / "aster-plugin-host"), "--root", str(self.root / "plugins"), "--policy", str(self.root / "plugins.json"), "--kind", kind]
+            self.command(args)
+            self.units.append(unit)
+            self.wait(kind + " worker socket", lambda k=kind: (self.root / (k + "-socket/plugin.sock")).is_socket())
+
+    def tick(self, job, at=None):
+        if at is not None:
+            self.scheduler_at = max(self.scheduler_at, at)
+        else:
+            self.scheduler_at += timedelta(minutes=1)
+        self.command([BIN / "aster-controller", "heartbeat", "--config", self.controller_config, "--node", "e2e-node"])
+        prefix = ["setpriv", "--reuid=" + str(self.api_uid), "--regid=" + str(self.api_gid), "--init-groups"]
+        result = self.command(prefix + [BIN / "scheduler.test", "-test.run=^TestOrderToVMScheduler$", "-test.timeout=95s"], timeout=100, check=False,
+            env=dict(self.api_env, ASTER_E2E_SCHEDULER="1", ASTER_E2E_JOB=job, ASTER_E2E_AT=self.scheduler_at.isoformat(timespec="seconds").replace("+00:00", "Z")))
+        self.write(self.private / "scheduler-last.log", result.stdout + result.stderr)
+        require(result.returncode == 0, "real scheduler receipt failed: " + job)
+
+    def configure(self):
+        self.log("staff configuration through finance API")
+        self.admin = API(self)
+        self.admin.login("staff@e2e.invalid", self.admin_password)
+        settings = self.admin.call("/admin/site-settings")
+        settings.update(default_locale="en", enabled_locales=["en"], registration_open=True, email_verification_required=True,
+            site_name="Order to VM", company_name="Acceptance", company_address="CI", support_email="support@e2e.invalid")
+        self.admin.call("/admin/site-settings", "PATCH", settings)
+        smtp = self.admin.call("/admin/integrations/smtp")
+        self.admin.call("/admin/integrations/smtp", "PATCH", {"revision": smtp["revision"], "enabled": True, "host": "localhost", "port": 19446,
+            "security": "tls", "username": "acceptance", "password": self.smtp_password, "from_email": "support@e2e.invalid", "from_name": "Acceptance"})
+        self.admin.call("/admin/integrations/smtp/test", "POST", {"to": "probe@e2e.invalid"})
+        automation = self.admin.call("/admin/automation")
+        automation.update(auto_provision=True, auto_apply_credit=False, suspend_after_days=1, terminate_after_days=30)
+        self.admin.call("/admin/automation", "PATCH", automation)
+        for gateway in self.admin.call("/admin/integrations/gateways"):
+            self.admin.call("/admin/integrations/gateways/" + gateway["id"], "PATCH", {"revision": gateway["revision"], "enabled": True})
+        require(any(g["id"] == "payment.fixture" for g in self.admin.call("/payment-gateways?currency=CNY")), "payment worker unavailable")
+        self.evidence["steps"].append({"id": "isolated-payment-and-smtp-workers", "passed": True})
+
+    def verification_link(self, address):
+        self.tick("email_outbox")
+        def delivered():
+            for path in (self.private / "mail").glob("*.json"):
+                mail = json.loads(path.read_text())
+                if mail["to"] == address:
+                    match = re.search(r"https://localhost:19445/verify-email\?token=[A-Za-z0-9_-]+", mail["text"])
+                    if match:
+                        return match.group(0)
+            return False
+        return self.wait("verification delivered over real SMTP TLS", delivered)
+
     def cleanup(self):
+        for unit in self.units:
+            self.write(self.private / (unit + ".log"), self.command(["journalctl", "--no-pager", "-u", unit, "-n", "60"], check=False).stdout)
+            self.command(["systemctl", "stop", unit], check=False)
         for name, process, log in reversed(self.processes):
             if process.poll() is None:
                 os.killpg(process.pid, signal.SIGTERM)
@@ -343,6 +477,7 @@ http {{
             self.network()
             self.cloud()
             self.finance()
+            self.configure()
             self.evidence["passed"] = True
         except Exception as error:
             self.evidence["failure"] = {"phase": self.phase, "error": str(error)}
