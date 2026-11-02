@@ -175,7 +175,7 @@ def manifest(source, bundle, modules_path, build_path, commit, version, epoch, k
     else:
         write_json(bundle / "THIRD_PARTY_NOTICES.json", {"schema": 1, "go_modules": sorted(modules, key=lambda v: v["Path"]), "go_runtime": tool("go", "version"), "notices": embedded_notices(bundle), "scope": "Original top-level linked-module and Go runtime license/notice texts; not a complete SPDX/CycloneDX SBOM or legal determination"})
         shutil.rmtree(bundle / "licenses")
-        write_json(bundle / "manifest.json", {"schema": 1, "id": "email.smtp", "version": version, "protocol": "aster.smtp/1", "core_min": "0.4.0", "core_max_exclusive": "0.6.0", "capabilities": ["smtp.send"], "executable": "plugin", "sha256": info["binary_sha256"]["plugin"]})
+        write_json(bundle / "manifest.json", {"schema": 1, "id": "email.smtp", "version": version, "protocol": "aster.smtp/1", "core_min": "0.4.0", "core_max_exclusive": "0.7.0", "capabilities": ["smtp.send"], "executable": "plugin", "sha256": info["binary_sha256"]["plugin"]})
         shutil.copyfile(project / "backend/plugins/smtp/README.md", bundle / "README.md")
         sums = "".join(hashlib.sha256(((binary_root if name == "plugin" else bundle) / name).read_bytes()).hexdigest() + "  " + name + "\n" for name in ("LICENSE", "README.md", "THIRD_PARTY_NOTICES.json", "manifest.json", "plugin"))
         (bundle / "SHA256SUMS").write_text(sums)

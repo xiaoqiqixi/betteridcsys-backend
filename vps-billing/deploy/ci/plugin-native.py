@@ -224,7 +224,7 @@ def fixture_package(source, scratch, version):
     require(command([str(executable), "--version"]).strip() == ("Aster SMTP plugin " + version).encode(),
             "Independent SMTP fixture version differs")
     manifest = {"schema": 1, "id": "email.smtp", "version": version,
-                "protocol": "aster.smtp/1", "core_min": "0.4.0", "core_max_exclusive": "0.6.0",
+                "protocol": "aster.smtp/1", "core_min": "0.4.0", "core_max_exclusive": "0.7.0",
                 "capabilities": ["smtp.send"], "executable": "plugin",
                 "sha256": hashlib.sha256(binary).hexdigest()}
     files = {"plugin": binary, "manifest.json": json.dumps(manifest, sort_keys=True).encode() + b"\n",

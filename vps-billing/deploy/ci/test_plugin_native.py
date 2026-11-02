@@ -338,7 +338,7 @@ class NativeIndependentPackageTests(unittest.TestCase):
             self.assertEqual(set(verified.files), INSTALLER.FILES)
             self.assertEqual(manifest["version"], "1.1.1")
             self.assertIn(b"never publish", verified.files["README.md"])
-            self.assertEqual((manifest["core_min"], manifest["core_max_exclusive"]), ("0.4.0", "0.6.0"))
+            self.assertEqual((manifest["core_min"], manifest["core_max_exclusive"]), ("0.4.0", "0.7.0"))
             for raw_pin, metadata_pin in (("0" * 64, resources_pin), (binary_pin, "0" * 64)):
                 with self.subTest(raw_pin_matches=raw_pin == binary_pin), self.assertRaises(INSTALLER.Rejected):
                     INSTALLER.verify_package(str(package), metadata_pin, "0.5.0", trust=trust,
