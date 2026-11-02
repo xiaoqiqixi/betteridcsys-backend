@@ -195,6 +195,15 @@ class Stack:
             time.sleep(0.25)  # Poll an observed condition; never assume readiness.
         raise RuntimeError("deadline waiting for " + description)
 
+    def stage_binaries(self):
+        self.bin = self.root / "bin"
+        self.bin.mkdir(mode=0o755)
+        for source in BIN.iterdir():
+            require(source.is_file() and not source.is_symlink(), "unexpected cached binary")
+            target = self.bin / source.name
+            shutil.copyfile(source, target)
+            target.chmod(0o555)
+
     def tls(self):
         self.log("private TLS authority")
         self.command(["openssl", "req", "-x509", "-newkey", "rsa:2048", "-nodes", "-days", "2", "-subj", "/CN=Order to VM CI", "-keyout", self.private / "ca.key", "-out", self.root / "ca.crt"])
@@ -239,7 +248,7 @@ class Stack:
     def regressions(self):
         self.log("checkout credential and overdue billing regression tests on MySQL 8.4")
         self.sql("finance", "CREATE DATABASE aster_e2e_regression_test CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci")
-        result = self.command([BIN / "scheduler.test", "-test.v", "-test.timeout=4m",
+        result = self.command([self.bin / "scheduler.test", "-test.v", "-test.timeout=4m",
             "-test.run=^(TestMySQLCheckoutPasswordSurvivesPaymentAndBootstrap|TestOverdueDecisionSurvivesSchedulerClockAndRenewalRace|TestMySQLCommerceAutomationBillingJobsAndFailureIsolation)$"],
             env=dict(self.env, ASTER_MYSQL_TEST_DSN="root@unix(" + str(self.private / "mysql-finance/mysql.sock") + ")/aster_e2e_regression_test?parseTime=true"), check=False, timeout=250)
         self.write(self.private / "regressions.log", result.stdout + result.stderr)
@@ -287,14 +296,14 @@ class Stack:
                 "guest": {"enabled": True, "families": {i: "linux" for i in images}},
                 "storage": {"enabled": True, "directory": str(self.root / "snapshots"), "inbox_directory": str(self.root / "inbox"), "max_artifact_bytes": 12 << 30, "max_total_bytes": 24 << 30}}
         self.node_config = self.write(self.private / "node.json", node)
-        result = self.command([BIN / "aster-node", "--config", self.node_config, "--doctor"], check=False)
+        result = self.command([self.bin / "aster-node", "--config", self.node_config, "--doctor"], check=False)
         require(result.stdout.strip(), "node configuration rejected before readiness inspection")
         doctor = json.loads(result.stdout)
         self.evidence["node_doctor"] = doctor
         self.write(self.report / "summary.json", self.evidence, 0o644)
         failed = [check["name"] for check in doctor["checks"] if not check["passed"]]
         require(result.returncode == 0 and doctor["ready"], "node doctor failed: " + ", ".join(failed))
-        self.spawn("node", [BIN / "aster-node", "--config", self.node_config])
+        self.spawn("node", [self.bin / "aster-node", "--config", self.node_config])
         node_context = ssl.create_default_context(cafile=self.root / "ca.crt")
         node_context.load_cert_chain(self.root / "node-client.crt", self.private / "node-client.key")
         self.evidence["node_capabilities"] = self.wait("authenticated node capabilities", lambda: json.loads(self.get("https://127.0.0.1:19444/v1/capabilities", context=node_context)))
@@ -308,11 +317,11 @@ class Stack:
         controller = {"schema": 1, "controller_id": "e2e-cloud", "listen": "127.0.0.1:19443", "tls_cert_file": str(self.root / "controller.crt"), "tls_key_file": str(self.private / "controller.key"), "dsn_file": str(self.private / "controller.dsn"), "billing_token_file": str(self.private / "billing.token"), "admin_read_token_file": str(self.private / "admin-read.token"), "admin_write_token_file": str(self.private / "admin-write.token"), "heartbeat_ttl_seconds": 300, "nodes": [profile], "presets": [{"id": "e2e-small", "node_id": "e2e-node", "resources": resources}, {"id": "e2e-large", "node_id": "e2e-node", "resources": dict(resources, cpu_cores=2, memory_mib=768, system_disk_gib=6)}], "dispatcher": {"enabled": True}, "service": {"snapshot_limit": 3, "images": [{"id": im["id"], "family": "linux", "name": im["name"], "version": im["version"], "min_disk_gb": im["min_disk_gb"], "sha256": im["sha256"], "node_ids": ["e2e-node"]} for im in self.pin["images"]]}}
         self.controller_config = self.write(self.private / "controller.json", controller)
         for command in ("migrate", "register-nodes"):
-            self.command([BIN / "aster-controller", command, "--config", self.controller_config])
-        self.wait("mTLS node heartbeat", lambda: self.command([BIN / "aster-controller", "heartbeat", "--config", self.controller_config, "--node", "e2e-node"], check=False).returncode == 0)
+            self.command([self.bin / "aster-controller", command, "--config", self.controller_config])
+        self.wait("mTLS node heartbeat", lambda: self.command([self.bin / "aster-controller", "heartbeat", "--config", self.controller_config, "--node", "e2e-node"], check=False).returncode == 0)
         # Registration starts in maintenance; admit this fixture only after its verified heartbeat.
-        self.command([BIN / "aster-controller", "maintenance", "--config", self.controller_config, "--node", "e2e-node", "--on=false"])
-        self.spawn("controller", [BIN / "aster-controller", "serve", "--config", self.controller_config, "--console-origin", "https://localhost:19443"])
+        self.command([self.bin / "aster-controller", "maintenance", "--config", self.controller_config, "--node", "e2e-node", "--on=false"])
+        self.spawn("controller", [self.bin / "aster-controller", "serve", "--config", self.controller_config, "--console-origin", "https://localhost:19443"])
         self.wait("controller HTTPS", lambda: self.get("https://localhost:19443/v1/health", self.admin_token))
         self.complete_step("controller-node-mtls-and-admission", node="e2e-node")
 
@@ -337,11 +346,11 @@ class Stack:
         self.api_env = dict(self.env, APP_MODE="production", APP_ORIGIN="https://localhost:19445", LISTEN_ADDR="127.0.0.1:18080", MYSQL_DSN_FILE=str(self.api_dir / "mysql.dsn"), SESSION_SECRET_FILE=str(self.api_dir / "session"), SMTP_ENCRYPTION_KEY_FILE=str(self.api_dir / "smtp.key"), COMMERCE_API_VERSION="0.6", TRUSTED_PROXY_CIDRS="127.0.0.0/8", PLUGIN_DIRECTORY=str(self.root / "plugins"), PLUGIN_POLICY_FILE=str(self.root / "plugins.json"))
         self.api_env.update(API_TLS_CERT_FILE=str(self.root / "finance.crt"), API_TLS_KEY_FILE=str(self.api_dir / "finance.key"))
         prefix = ["setpriv", "--reuid=" + str(self.api_uid), "--regid=" + str(self.api_gid), "--init-groups"]
-        self.command(prefix + [BIN / "aster-api", "-migrate"], env=self.api_env)
+        self.command(prefix + [self.bin / "aster-api", "-migrate"], env=self.api_env)
         self.admin_password = self.password()
         self.write(self.api_dir / "bootstrap", self.admin_password, uid=self.api_uid, gid=self.api_gid)
-        self.command(prefix + [BIN / "aster-api", "-create-user"], env=dict(self.api_env, BOOTSTRAP_EMAIL="staff@e2e.invalid", BOOTSTRAP_PASSWORD_FILE=str(self.api_dir / "bootstrap"), BOOTSTRAP_ROLE="admin", BOOTSTRAP_NAME="E2E staff"))
-        self.spawn("finance", prefix + [BIN / "aster-api"], self.api_env)
+        self.command(prefix + [self.bin / "aster-api", "-create-user"], env=dict(self.api_env, BOOTSTRAP_EMAIL="staff@e2e.invalid", BOOTSTRAP_PASSWORD_FILE=str(self.api_dir / "bootstrap"), BOOTSTRAP_ROLE="admin", BOOTSTRAP_NAME="E2E staff"))
+        self.spawn("finance", prefix + [self.bin / "aster-api"], self.api_env)
         static = self.root / "frontend"
         shutil.copytree(ARTIFACTS / "e2e-frontend/dist", static)
         config = f"""daemon off;
@@ -398,7 +407,7 @@ http {{
             directory = self.root / "plugins" / identifier / version
             directory.mkdir(parents=True, mode=0o755)
             binary = directory / "plugin"
-            shutil.copyfile(BIN / {"payment": "paymentfixture", "server": "server.aster-cloud", "smtp": "smtp"}[kind], binary)
+            shutil.copyfile(self.bin / {"payment": "paymentfixture", "server": "server.aster-cloud", "smtp": "smtp"}[kind], binary)
             binary.chmod(0o555)
             manifest = {"schema": 1, "id": identifier, "version": version, "protocol": protocol,
                 "core_min": {"payment": "0.5.3", "smtp": "0.4.0", "server": "0.6.0"}[kind], "core_max_exclusive": "0.7.0",
@@ -435,22 +444,28 @@ http {{
                     "--property=LoadCredential=server_config.json:" + str(self.private / "server-config.json"),
                     "--property=LoadCredential=server_token:" + str(self.private / "billing.token"),
                     "--property=LoadCredential=server_ca.pem:" + str(self.root / "ca.crt")]
-            args += [str(BIN / "aster-plugin-host"), "--root", str(self.root / "plugins"), "--policy", str(self.root / "plugins.json"), "--kind", kind]
+            args += [str(self.bin / "aster-plugin-host"), "--root", str(self.root / "plugins"), "--policy", str(self.root / "plugins.json"), "--kind", kind]
             if kind == "server":
                 args += ["--slot", "e2e-cloud"]
             self.command(args)
             self.units.append(unit)
             socket = Path(policy["servers"][0]["socket"] if kind == "server" else policy[kind]["socket"])
-            self.wait(kind + " worker socket", socket.is_socket)
+            def ready():
+                if socket.is_socket():
+                    return True
+                active = self.command(["systemctl", "show", unit, "--property=ActiveState", "--value"], check=False).stdout.strip()
+                require(active in (b"active", b"activating"), kind + " worker exited before opening its socket")
+                return False
+            self.wait(kind + " worker socket", ready)
 
     def tick(self, job, at=None):
         if at is not None:
             self.scheduler_at = max(self.scheduler_at, at)
         else:
             self.scheduler_at += timedelta(minutes=1)
-        self.command([BIN / "aster-controller", "heartbeat", "--config", self.controller_config, "--node", "e2e-node"])
+        self.command([self.bin / "aster-controller", "heartbeat", "--config", self.controller_config, "--node", "e2e-node"])
         prefix = ["setpriv", "--reuid=" + str(self.api_uid), "--regid=" + str(self.api_gid), "--init-groups"]
-        result = self.command(prefix + [BIN / "scheduler.test", "-test.run=^TestOrderToVMScheduler$", "-test.timeout=95s"], timeout=100, check=False,
+        result = self.command(prefix + [self.bin / "scheduler.test", "-test.run=^TestOrderToVMScheduler$", "-test.timeout=95s"], timeout=100, check=False,
             env=dict(self.api_env, ASTER_E2E_SCHEDULER="1", ASTER_E2E_JOB=job, ASTER_E2E_AT=self.scheduler_at.isoformat(timespec="seconds").replace("+00:00", "Z")))
         self.write(self.private / "scheduler-last.log", result.stdout + result.stderr)
         require(result.returncode == 0, "real scheduler receipt failed: " + job)
@@ -742,6 +757,7 @@ http {{
 
     def run(self):
         try:
+            self.stage_binaries()
             self.tls()
             self.mysql()
             self.regressions()
