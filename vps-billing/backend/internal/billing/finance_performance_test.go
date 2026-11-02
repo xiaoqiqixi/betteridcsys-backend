@@ -114,11 +114,12 @@ func TestMySQLCommerceFinanceRuntimePerformance(t *testing.T) {
 		return elapsed
 	}
 	type measurement struct {
-		Method string  `json:"method"`
-		Path   string  `json:"path"`
-		P50    float64 `json:"p50_ms"`
-		P95    float64 `json:"p95_ms"`
-		N      int     `json:"samples"`
+		Method   string    `json:"method"`
+		Path     string    `json:"path"`
+		P50      float64   `json:"p50_ms"`
+		P95      float64   `json:"p95_ms"`
+		N        int       `json:"samples"`
+		SampleMS []float64 `json:"sample_ms"`
 	}
 	results := []measurement{}
 	// Resolve every read route before timing; legacy migrated products can be
@@ -144,7 +145,7 @@ func TestMySQLCommerceFinanceRuntimePerformance(t *testing.T) {
 		for _, kind := range []string{"invoice", "order", "service"} {
 			path = strings.ReplaceAll(path, httpPerfID(financePerfSeed, kind+"-0"), "{id}")
 		}
-		results = append(results, measurement{e.method, path, samples[49], samples[94], len(samples)})
+		results = append(results, measurement{e.method, path, samples[49], samples[94], len(samples), samples})
 	}
 	sort.Slice(results, func(i, j int) bool { return results[i].P95 > results[j].P95 })
 	var mysqlVersion string
@@ -153,6 +154,7 @@ func TestMySQLCommerceFinanceRuntimePerformance(t *testing.T) {
 	}
 	report, _ := json.Marshal(map[string]any{"seed": financePerfSeed, "go": runtime.Version(), "mysql": mysqlVersion, "gomaxprocs": runtime.GOMAXPROCS(0), "host_cpus": runtime.NumCPU(), "concurrency": 1, "warmup_requests": 5, "measurements": results})
 	t.Log("PERF1_RESULT " + string(report))
+	logFinanceStatementTimings(t, ctx, m)
 	var cpu bytes.Buffer
 	runtime.SetBlockProfileRate(1)
 	previous := runtime.SetMutexProfileFraction(1)

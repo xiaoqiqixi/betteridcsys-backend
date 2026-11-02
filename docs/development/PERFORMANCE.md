@@ -140,57 +140,75 @@ with CI-2.
 
 ## Measured changes
 
-The full-size probe on [2aeba26, run 41395844770](https://github.com/xiaoqiqixi/betteridcsys-backend/actions/runs/41395844770)
-passed with the same seed, Go/MySQL versions, concurrency, scheduler limit and
-sample count as the baseline. It includes product, request-authorization,
-invoice, service, order and audit batching. Main also contains concurrent
-non-PERF changes; hosted-runner timing varies. This is a comparison of complete
-application revisions, not isolated attribution of every millisecond.
+The final implementation probe on [b7e84ca, run 41397445773](https://github.com/xiaoqiqixi/betteridcsys-backend/actions/runs/41397445773)
+passed the complete Commerce core MySQL suite, including every new equivalence
+and boundary test. Server modules and Release tooling also passed. It uses the
+same seed, Go/MySQL versions, concurrency, scheduler limit and sample count as
+the baseline, and includes the overview aggregate change. Main also contains
+concurrent non-PERF changes. These are complete-revision comparisons on hosted
+runners, not isolated attribution of every millisecond.
 
 Times are milliseconds, in the original baseline ranking. The first twenty
-rows remain the baseline's twenty slowest routes.
+rows are the baseline's twenty slowest routes.
 
 | Method and endpoint | Before p50 | Before p95 | After p50 | After p95 |
 | --- | ---: | ---: | ---: | ---: |
-| GET /api/v1/admin/products | 209.591 | 224.958 | 13.287 | 14.350 |
-| GET /api/v1/products | 208.356 | 222.222 | 11.739 | 12.830 |
-| GET /api/v1/admin/overview?currency=CNY | 103.063 | 107.582 | 95.697 | 101.348 |
-| GET /api/v1/admin/invoices | 58.577 | 65.931 | 12.331 | 13.202 |
-| GET /api/v1/admin/currencies | 53.880 | 55.087 | 46.721 | 48.837 |
-| GET /api/v1/admin/orders | 47.368 | 52.369 | 14.963 | 16.247 |
-| GET /api/v1/invoices | 44.016 | 50.881 | 1.543 | 2.463 |
-| GET /api/v1/admin/services | 31.617 | 38.008 | 2.179 | 2.968 |
-| GET /api/v1/orders | 30.917 | 35.762 | 3.728 | 4.632 |
-| GET /api/v1/overview | 14.356 | 16.509 | 6.582 | 7.202 |
-| GET /api/v1/services | 13.022 | 15.815 | 1.647 | 2.518 |
-| GET /api/v1/admin/audit-events | 6.797 | 7.050 | 1.436 | 2.125 |
-| POST /api/v1/credit/top-up | 4.992 | 6.142 | 4.966 | 6.461 |
-| GET /api/v1/admin/products/perf-product-0 | 2.971 | 3.492 | 2.301 | 2.976 |
-| GET /api/v1/admin/customer-accounts | 1.814 | 2.375 | 1.171 | 1.725 |
-| GET /api/v1/admin/catalog-taxonomy | 2.226 | 2.349 | 1.267 | 1.422 |
-| GET /api/v1/invoices/{id} | 1.632 | 2.303 | 1.247 | 1.817 |
-| GET /api/v1/products/perf-product-0 | 2.068 | 2.198 | 1.699 | 2.025 |
-| GET /api/v1/services/{id} | 1.623 | 1.676 | 1.088 | 1.462 |
-| GET /api/v1/orders/{id} | 1.565 | 1.649 | 1.168 | 1.562 |
-| GET /api/v1/audit-events | 1.161 | 1.548 | 1.207 | 1.816 |
-| GET /api/v1/session | 0.981 | 1.020 | 0.614 | 0.811 |
-| GET /api/v1/catalog-taxonomy | 0.685 | 0.879 | 0.443 | 0.492 |
-| GET /api/v1/currencies | 0.364 | 0.407 | 0.238 | 0.281 |
+| GET /api/v1/admin/products | 209.591 | 224.958 | 7.781 | 8.516 |
+| GET /api/v1/products | 208.356 | 222.222 | 6.982 | 7.599 |
+| GET /api/v1/admin/overview?currency=CNY | 103.063 | 107.582 | 61.485 | 574.487 |
+| GET /api/v1/admin/invoices | 58.577 | 65.931 | 9.015 | 9.929 |
+| GET /api/v1/admin/currencies | 53.880 | 55.087 | 36.177 | 38.084 |
+| GET /api/v1/admin/orders | 47.368 | 52.369 | 10.525 | 13.638 |
+| GET /api/v1/invoices | 44.016 | 50.881 | 0.894 | 1.339 |
+| GET /api/v1/admin/services | 31.617 | 38.008 | 1.367 | 1.878 |
+| GET /api/v1/orders | 30.917 | 35.762 | 1.944 | 2.417 |
+| GET /api/v1/overview | 14.356 | 16.509 | 3.933 | 4.320 |
+| GET /api/v1/services | 13.022 | 15.815 | 0.807 | 1.264 |
+| GET /api/v1/admin/audit-events | 6.797 | 7.050 | 0.851 | 1.251 |
+| POST /api/v1/credit/top-up | 4.992 | 6.142 | 3.021 | 3.656 |
+| GET /api/v1/admin/products/perf-product-0 | 2.971 | 3.492 | 1.664 | 1.730 |
+| GET /api/v1/admin/customer-accounts | 1.814 | 2.375 | 0.845 | 1.195 |
+| GET /api/v1/admin/catalog-taxonomy | 2.226 | 2.349 | 0.603 | 0.861 |
+| GET /api/v1/invoices/{id} | 1.632 | 2.303 | 0.690 | 0.983 |
+| GET /api/v1/products/perf-product-0 | 2.068 | 2.198 | 0.970 | 1.232 |
+| GET /api/v1/services/{id} | 1.623 | 1.676 | 0.592 | 0.869 |
+| GET /api/v1/orders/{id} | 1.565 | 1.649 | 0.578 | 0.870 |
+| GET /api/v1/audit-events | 1.161 | 1.548 | 0.540 | 0.858 |
+| GET /api/v1/session | 0.981 | 1.020 | 0.362 | 0.546 |
+| GET /api/v1/catalog-taxonomy | 0.685 | 0.879 | 0.275 | 0.319 |
+| GET /api/v1/currencies | 0.364 | 0.407 | 0.137 | 0.161 |
 
-[After measurements](performance/2aeba26/result.json),
-[81 query plans](performance/2aeba26/explain.json),
-[CPU](performance/2aeba26/cpu.pprof),
-[block](performance/2aeba26/block.pprof) and
-[mutex](performance/2aeba26/mutex.pprof) profiles are retained. The plans contain
+**The latency target is not met.** Twenty-two of 23 measured reads are below
+100 ms, and the single measured write is below 200 ms. Admin overview p50 fell
+from 103.063 to 61.485 ms, but its p95 was 574.487 ms. A 605.382 ms overview p95
+also occurred on `30477fd`, before the aggregate rewrite. These observations do
+not isolate the cause of the tail; they must not be discarded as noise or used
+to claim the overview target passed. Login and other write operations were not
+benchmarked, and dedicated 1-vCPU acceptance remains outstanding.
+
+[Latest measurements](performance/b7e84ca/result.json),
+[81 query plans](performance/b7e84ca/explain.json),
+[CPU](performance/b7e84ca/cpu.pprof),
+[block](performance/b7e84ca/block.pprof) and
+[mutex](performance/b7e84ca/mutex.pprof) profiles are retained. The plans contain
 14 explicit list/filter cases and all 67 distinct SELECT forms observed during
 HTTP read preflights, including their child queries. They are not an exhaustive
 matrix of every filter and every endpoint in the repository.
 
-The after CPU profile sampled 330 ms over 3.03 s; Linux syscalls accounted for
-18.2% flat time, down from 48.2% in the baseline. This fixed-duration workload
+The latest CPU profile sampled 330 ms over 3.08 s; Linux syscalls accounted for
+24.2% flat time, down from 48.2% in the baseline. This fixed-duration workload
 completes more cycles after optimization, so these samples are not CPU/request
-measurements. Mutex delay remained tiny (228 microseconds), and block stacks
-still primarily show driver, SQL transaction and HTTP waits.
+measurements. Block stacks still primarily show driver, SQL transaction and
+HTTP waits. The earlier [2aeba26 measurements](performance/2aeba26/result.json)
+and profiles are retained as intermediate evidence; that run's overview p95
+was 101.348 ms before the aggregate rewrite.
+
+The probe now also retains every sorted latency sample and reads the slowest
+SELECT digest summaries from MySQL performance_schema after timing. The
+`PERF1_STATEMENTS` record includes server time, lock time, examined rows and Go
+pool wait counts. It is scoped to the disposable database and does not reset
+server instrumentation; migration/preflight SELECTs are included. This separates
+server-side delays from HTTP and pool waits without perturbing timed requests.
 
 ### Implementation and evidence by change
 
@@ -202,12 +220,12 @@ still primarily show driver, SQL transaction and HTTP waits.
 | `f2e240d` | Batch service summaries and reuse their base scanner | Staff services 38.008 → 2.968; client services 15.815 → 2.518 | Full summary equivalence, one-time cycles, cloud data, tasks and owner scoping passed |
 | `ca9657e` | Batch order headers, items and service links | Staff orders 52.369 → 16.247; client orders 35.762 → 4.632 | Full detail equivalence, legacy options, mixed-case child keys and cursor ownership passed |
 | `e555274` | Resolve audit actor roles in one query | Staff audit 7.050 → 2.125 | MySQL account collation, historical actors, Unicode and one-query assertion passed |
-| `f6ebdd7` | Combine duplicate overview aggregate scans | Before 107.582; after pending | Empty sets, month/current-time boundaries, currencies and balances covered by a new MySQL test |
+| `f6ebdd7` | Combine duplicate overview aggregate scans | p50 103.063 → 61.485; p95 107.582 → 574.487 (target unmet) | Empty sets, month/current-time boundaries, currencies and balances passed on real MySQL |
 
 The first two rows use their own retained probe runs:
 [product measurements](performance/1749131/result.json) and
-[authorization measurements](performance/30477fd/result.json). Later rows use the
-combined 2aeba26 probe. Request caching is supported by deterministic lookup-count
+[authorization measurements](performance/30477fd/result.json). The invoice/service/order/audit rows use the
+combined 2aeba26 probe; overview uses b7e84ca. Request caching is supported by deterministic lookup-count
 and revocation checks; noisy session latency does not establish a speedup for
 that endpoint. The authorization-only run also recorded a 605.382 ms overview
 p95, retained in the raw evidence rather than discarded.
@@ -226,7 +244,7 @@ order/audit equivalence tests passed. `0cba120` fixes the new product fixture's
 positional image insert by naming columns and supplying a connection identity.
 The existing image endpoint contract failure (`connection_id` empty) is separate
 from PERF-1 and its fixture was repaired by concurrent commit `0d770d2`; the
-complete suite must pass before claiming a green gate.
+complete Commerce core suite subsequently passed on b7e84ca.
 
 ## Index migration dependency
 
@@ -247,12 +265,30 @@ global and status-filtered selectors. This SQL experiment runs inside the ordina
 race-enabled MySQL suite; its timings are not HTTP acceptance measurements.
 No candidate index is installed in production by this test.
 
+The [successful experiment](performance/b7e84ca/index-candidates.json) measured:
+
+| Selector | Before p50 | Before p95 | Indexed p50 | Indexed p95 |
+| --- | ---: | ---: | ---: | ---: |
+| Orders, global | 8.005 | 8.892 | 0.196 | 0.231 |
+| Orders, pending payment | 9.516 | 11.155 | 0.207 | 0.277 |
+| Invoices, global | 7.816 | 8.359 | 0.176 | 0.203 |
+| Invoices, unpaid | 9.005 | 10.934 | 0.208 | 0.238 |
+
+All four plans select the proposed indexes and eliminate filesort. Global
+selectors estimate 51 entries instead of approximately 43,000/45,000. Filtered
+selectors use `ref` access; their row estimates remain approximately 19,600
+qualifying entries before LIMIT. The experiment checks unchanged ordered IDs;
+production write overhead and migration recovery still need validation.
+
 Registering a new migration also changes the exact migration count asserted by
 `internal/billing/http_performance_seed_test.go`. The task explicitly forbids
-editing that existing harness. Its inventory now expects 29 migrations after
-concurrent changes. The migration therefore awaits permission for that narrow
-inventory update, or an update by CI-2. Existing migrations and assertions have
-not been weakened. Additional observed scans include currency usage aggregation,
+editing that existing harness. The inventories now expect 29 migrations after
+concurrent changes. Besides the HTTP seed, fixed versions also appear in
+`performance-report.py`, `test_performance_report.py`, `accept-native.sh`,
+`core-native.py`, `test_accept_native.py` and `test_runtime_release.py` under
+`vps-billing/deploy/ci`. The migration therefore awaits permission for these
+matching inventory/version updates, or updates by CI-2. Existing migrations and
+assertions have not been weakened. Additional observed scans include currency usage aggregation,
 revenue-date filtering and service-count grouping; further indexes need their
 own measured tradeoffs, including write overhead.
 

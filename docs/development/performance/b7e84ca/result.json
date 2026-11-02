@@ -1,0 +1,181 @@
+{
+  "concurrency": 1,
+  "go": "go1.27.3",
+  "gomaxprocs": 1,
+  "host_cpus": 4,
+  "measurements": [
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/overview?currency=CNY",
+      "p50_ms": 61.485138,
+      "p95_ms": 574.486635,
+      "samples": 100
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/currencies",
+      "p50_ms": 36.176809,
+      "p95_ms": 38.083825,
+      "samples": 100
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/orders",
+      "p50_ms": 10.524551,
+      "p95_ms": 13.637701,
+      "samples": 100
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/invoices",
+      "p50_ms": 9.015146,
+      "p95_ms": 9.929024,
+      "samples": 100
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/products",
+      "p50_ms": 7.780806,
+      "p95_ms": 8.515853,
+      "samples": 100
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/products",
+      "p50_ms": 6.98215,
+      "p95_ms": 7.59937,
+      "samples": 100
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/overview",
+      "p50_ms": 3.933303,
+      "p95_ms": 4.319635,
+      "samples": 100
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/credit/top-up",
+      "p50_ms": 3.021026,
+      "p95_ms": 3.655563,
+      "samples": 100
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/orders",
+      "p50_ms": 1.944352,
+      "p95_ms": 2.417486,
+      "samples": 100
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/services",
+      "p50_ms": 1.366891,
+      "p95_ms": 1.877622,
+      "samples": 100
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/products/perf-product-0",
+      "p50_ms": 1.66406,
+      "p95_ms": 1.72999,
+      "samples": 100
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/invoices",
+      "p50_ms": 0.894259,
+      "p95_ms": 1.33917,
+      "samples": 100
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/services",
+      "p50_ms": 0.807087,
+      "p95_ms": 1.264086,
+      "samples": 100
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/audit-events",
+      "p50_ms": 0.851494,
+      "p95_ms": 1.251257,
+      "samples": 100
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/products/perf-product-0",
+      "p50_ms": 0.970453,
+      "p95_ms": 1.231868,
+      "samples": 100
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/customer-accounts",
+      "p50_ms": 0.845485,
+      "p95_ms": 1.194521,
+      "samples": 100
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/invoices/{id}",
+      "p50_ms": 0.690181,
+      "p95_ms": 0.983073,
+      "samples": 100
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/orders/{id}",
+      "p50_ms": 0.577852,
+      "p95_ms": 0.870493,
+      "samples": 100
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/services/{id}",
+      "p50_ms": 0.591813,
+      "p95_ms": 0.86874,
+      "samples": 100
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/catalog-taxonomy",
+      "p50_ms": 0.602879,
+      "p95_ms": 0.860688,
+      "samples": 100
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/audit-events",
+      "p50_ms": 0.539644,
+      "p95_ms": 0.858394,
+      "samples": 100
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/session",
+      "p50_ms": 0.362467,
+      "p95_ms": 0.545974,
+      "samples": 100
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/catalog-taxonomy",
+      "p50_ms": 0.274975,
+      "p95_ms": 0.318841,
+      "samples": 100
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/currencies",
+      "p50_ms": 0.137237,
+      "p95_ms": 0.161434,
+      "samples": 100
+    }
+  ],
+  "mysql": "8.4.13",
+  "seed": "finance-perf-v1",
+  "warmup_requests": 5,
+  "source_commit": "b7e84ca6b66e7d2f65b6613557197504cdb8b240",
+  "source_run": "https://github.com/xiaoqiqixi/betteridcsys-backend/actions/runs/41397445773"
+}
