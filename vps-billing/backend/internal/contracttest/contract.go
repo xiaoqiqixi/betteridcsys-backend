@@ -28,6 +28,10 @@ var mu sync.Mutex
 func load() {
 	_, file, _, _ := runtime.Caller(0)
 	dir := filepath.Join(filepath.Dir(file), "../../../contract")
+	// Relocated integration binaries still validate the exact hash-pinned files.
+	if relocated := os.Getenv("ASTER_TEST_CONTRACT_DIR"); relocated != "" {
+		dir = relocated
+	}
 	raw, err := os.ReadFile(filepath.Join(dir, "openapi.json"))
 	if err != nil {
 		loadError = err

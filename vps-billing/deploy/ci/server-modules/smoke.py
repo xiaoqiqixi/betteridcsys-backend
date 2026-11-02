@@ -68,6 +68,10 @@ def main():
         run(['openssl','req','-newkey','rsa:2048','-nodes','-subj','/CN=localhost','-keyout',PRIVATE/(name+'.key'),'-out',PRIVATE/(name+'.csr')])
         write(PRIVATE/'extensions',f'subjectAltName=DNS:localhost,IP:127.0.0.1\nextendedKeyUsage={usage}\n')
         run(['openssl','x509','-req','-days','1','-in',PRIVATE/(name+'.csr'),'-CA',ROOT/'ca.crt','-CAkey',PRIVATE/'ca.key','-CAcreateserial','-extfile',PRIVATE/'extensions','-out',ROOT/(name+'.crt')])
+    contract = ROOT/'contract'; contract.mkdir(mode=0o755)
+    for name in ['openapi.json','SOURCE.json']:
+        shutil.copyfile(REPO/'vps-billing/contract'/name,contract/name); (contract/name).chmod(0o644)
+    env['ASTER_TEST_CONTRACT_DIR'] = str(contract)
     binary = ROOT/'bin'; binary.mkdir(mode=0o755)
     for source in (REPO/'artifacts/mod-bin').iterdir(): shutil.copyfile(source,binary/source.name); (binary/source.name).chmod(0o555)
     node = spawn('node',[binary/'node.test','-test.run=^TestServerModuleFakeNode$','-test.v','-test.timeout=5m'],env)
@@ -82,6 +86,7 @@ def main():
     write(PRIVATE/'controller.json',config)
     for command in ['migrate','register-nodes']:run([binary/'controller',command,'--config',PRIVATE/'controller.json'])
     run([binary/'controller','heartbeat','--config',PRIVATE/'controller.json','--node',meta['node_id']])
+    run([binary/'controller','maintenance','--config',PRIVATE/'controller.json','--node',meta['node_id'],'--on=false'])
     spawn('controller',[binary/'controller','serve','--config',PRIVATE/'controller.json'],env)
     # Wait for the verified HTTPS controller before launching its consumer.
     import ssl, urllib.request
