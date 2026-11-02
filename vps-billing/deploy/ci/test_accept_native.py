@@ -505,7 +505,7 @@ class CorePaymentSchemaMigrationTests(unittest.TestCase):
 
         def sql(query, *, database=None):
             if query.startswith("SELECT COUNT(*) FROM information_schema.TABLES"):
-                return str({6: 13, 7: 14, CORE.CANDIDATE_SCHEMA: 67}[state["schema"]])
+                return str({6: 13, 7: 14, CORE.CANDIDATE_SCHEMA: 76}[state["schema"]])
             if query.startswith("SELECT SUM(amount_minor)"):
                 return "1500"
             if query.startswith("SELECT TABLE_NAME"):
@@ -577,7 +577,7 @@ class CorePaymentSchemaMigrationTests(unittest.TestCase):
         self.assertEqual([call for call in calls if call[1] == "-migrate"],
             [(published, "-migrate"), (candidate, "-migrate"), (candidate, "-migrate")])
         self.assertEqual((report["schema_before"], report["published_schema"], report["schema_after"]), (6, 7, CORE.CANDIDATE_SCHEMA))
-        self.assertEqual((report["tables_before"], report["tables_published"], report["tables_after"]), (13, 14, 67))
+        self.assertEqual((report["tables_before"], report["tables_published"], report["tables_after"]), (13, 14, 76))
         self.assertEqual(report["published_baseline_preflight_after_payment_migration"], "incompatible")
         self.assertTrue(report["additive_payment_migration_preserved_existing_data"])
         self.assertTrue(report["new_payment_tables_empty"])
@@ -606,11 +606,11 @@ class CorePaymentSchemaMigrationTests(unittest.TestCase):
     def test_native_expectations_match_the_reviewed_source_migration_inventory(self):
         migrations = sorted((SCRIPT.parents[2] / 'backend/migrations').glob('*.sql'))
         self.assertEqual(len(migrations), CORE.CANDIDATE_SCHEMA)
-        self.assertEqual(migrations[-1].name, '027_service_contract_bounds.sql')
+        self.assertEqual(migrations[-1].name, '029_server_modules.sql')
         tables = set(re.findall(r'CREATE TABLE IF NOT EXISTS ([a-z_]+)', '\n'.join(path.read_text() for path in migrations)))
-        self.assertEqual(len(tables) + 1, 67)  # schema_migrations is maintained by Go.
-        self.assertIn('[[ $migration_count == 27 ]]', SCRIPT.read_text())
-        self.assertIn('[[ $source_tables == 67 ]]', SCRIPT.read_text())
+        self.assertEqual(len(tables) + 1, 76)  # schema_migrations is maintained by Go.
+        self.assertIn('[[ $migration_count == 29 ]]', SCRIPT.read_text())
+        self.assertIn('[[ $source_tables == 76 ]]', SCRIPT.read_text())
 
 
 class CoreExecutorEvidenceSafetyTests(unittest.TestCase):
