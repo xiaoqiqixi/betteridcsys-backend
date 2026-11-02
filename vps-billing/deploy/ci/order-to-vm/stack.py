@@ -575,6 +575,7 @@ http {{
                 require(not any(i["state"] != "deleted" and i["ipv4"] == instance["ipv4"] for i in ledger["instances"].values()), "IP is still allocated")
             else:
                 actual = live.stdout.decode().strip()
+                self.evidence["last_service_observation"].update(resource=resource, libvirt=actual, ip=instance["ipv4"], image=instance["resources"]["image_id"])
                 if actual != ("shut off" if args["power"] == "stopped" else "running") or view.get("power") != args["power"]:
                     observation["waiting_for"] = "libvirt_and_finance_power"
                     observation["domain_state"] = actual if actual in ("running", "shut off", "paused") else "unconfirmed"
@@ -591,6 +592,7 @@ http {{
                     require(view["specs"]["cpu_cores"] == args["cpu"] and view["specs"]["memory_mb"] == args["memory"] and view["specs"]["disk_gb"] == args["disk"], "controller resize projection differs")
                 if args["power"] == "running":
                     reachable = self.command(["ping", "-n", "-c", "1", "-W", "1", instance["ipv4"]], check=False)
+                    self.evidence["last_service_observation"]["guest_reachable"] = reachable.returncode == 0
                     if reachable.returncode:
                         observation["waiting_for"] = "guest_network"
                         return False
@@ -749,12 +751,26 @@ http {{
                 for kind in ("operations", "storage_operations") for identifier, operation in state.get(kind, {}).items()]
             for instance in state["instances"].values():
                 if re.fullmatch("aster-[a-f0-9]{32}", instance["domain"]):
+                    if not self.evidence["passed"]:
+                        # The guest has received no interactive passwords. Keep its
+                        # display and host-side network state to diagnose boot failures.
+                        screenshot = self.report / (instance["domain"] + ".ppm")
+                        self.command(["virsh", "-c", "qemu:///system", "screenshot", instance["domain"], screenshot], check=False, timeout=15)
+                        if screenshot.is_file():
+                            if screenshot.stat().st_size <= 16 << 20:
+                                screenshot.chmod(0o644)
+                            else:
+                                screenshot.unlink()
+                        xml = self.command(["virsh", "-c", "qemu:///system", "dumpxml", instance["domain"]], check=False).stdout
+                        self.write(self.report / (instance["domain"] + ".xml"), xml, 0o644)
                     log = Path("/var/log/libvirt/qemu") / (instance["domain"] + ".log")
                     if log.is_file():
                         self.write(self.private / (instance["domain"] + ".log"), log.read_bytes()[-16384:])
                     self.command(["virsh", "-c", "qemu:///system", "destroy", instance["domain"]], check=False)
                     self.command(["virsh", "-c", "qemu:///system", "undefine", instance["domain"]], check=False)
         self.command(["virsh", "-c", "qemu:///system", "nwfilter-undefine", "aster-e2e-filter"], check=False)
+        neighbors = self.command(["ip", "neigh", "show", "dev", "e2evm0"], check=False).stdout
+        self.write(self.private / "guest-network.log", neighbors)
         self.command(["ip", "link", "del", "e2evm0"], check=False)
         # Only bounded redacted diagnostic tails are exported; never DBs/keys/mail.
         lines = []
