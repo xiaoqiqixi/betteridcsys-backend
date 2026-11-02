@@ -75,26 +75,39 @@ func assertLogDoesNotContain(t *testing.T, log *observationLog, secrets ...strin
 	}
 }
 func TestHTTPObservabilityCompletionRedaction(t *testing.T) {
-	app, log := observedApp(NewMemory())
-	r := httptest.NewRequest("GET", "http://localhost/api/v1/plans?token=QUERY_SECRET", strings.NewReader("BODY_SECRET"))
-	r.Header.Set("Authorization", "Bearer AUTH_SECRET")
-	r.Header.Set("Cookie", "SESSION_SECRET")
-	r.Header.Set("X-CSRF-Token", "CSRF_SECRET")
-	r.Header.Set("Idempotency-Key", "IDEMPOTENCY_SECRET")
-	r.Header.Set("X-Request-ID", "CLIENT_REQUEST_ID")
-	r.Header.Set("User-Agent", "AGENT_SECRET")
-	r.RemoteAddr = "192.0.2.111:54321"
-	w := httptest.NewRecorder()
-	app.Handler().ServeHTTP(w, r)
-	event := onlyObservation(t, log)
-	if w.Code != 200 || event["level"] != "INFO" || event["route"] != "/api/v1/plans" || event["method"] != "GET" || event["status"] != float64(200) || event["bytes"] != float64(w.Body.Len()) || event["duration_ms"].(float64) < 0 {
-		t.Fatal("wrong completion", event)
+	for _, tc := range []struct {
+		name, authorization, level, code string
+		status                           int
+	}{
+		{"public_read", "", "INFO", "", http.StatusOK},
+		{"rejected_bearer", "Bearer AUTH_SECRET", "WARN", "FORBIDDEN", http.StatusForbidden},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			app, log := observedApp(NewMemory())
+			r := httptest.NewRequest("GET", "http://localhost/api/v1/plans?token=QUERY_SECRET", strings.NewReader("BODY_SECRET"))
+			r.Header.Set("Authorization", tc.authorization)
+			r.Header.Set("Cookie", "SESSION_SECRET")
+			r.Header.Set("X-CSRF-Token", "CSRF_SECRET")
+			r.Header.Set("Idempotency-Key", "IDEMPOTENCY_SECRET")
+			r.Header.Set("X-Request-ID", "CLIENT_REQUEST_ID")
+			r.Header.Set("User-Agent", "AGENT_SECRET")
+			r.RemoteAddr = "192.0.2.111:54321"
+			w := httptest.NewRecorder()
+			app.Handler().ServeHTTP(w, r)
+			event := onlyObservation(t, log)
+			if w.Code != tc.status || event["level"] != tc.level || event["route"] != "/api/v1/plans" || event["method"] != "GET" || event["status"] != float64(tc.status) || event["bytes"] != float64(w.Body.Len()) || event["duration_ms"].(float64) < 0 {
+				t.Fatal("wrong completion", event)
+			}
+			if tc.code != "" && (event["error_code"] != tc.code || event["error_class"] != "http_error") {
+				t.Fatal("credential rejection lost its diagnostic", event)
+			}
+			requestID := w.Header().Get("X-Request-ID")
+			if len(requestID) != 32 || event["request_id"] != requestID {
+				t.Fatal("request ID not server-owned/correlated", event)
+			}
+			assertLogDoesNotContain(t, log, "QUERY_SECRET", "BODY_SECRET", "AUTH_SECRET", "SESSION_SECRET", "CSRF_SECRET", "IDEMPOTENCY_SECRET", "CLIENT_REQUEST_ID", "AGENT_SECRET", "192.0.2.111")
+		})
 	}
-	requestID := w.Header().Get("X-Request-ID")
-	if len(requestID) != 32 || event["request_id"] != requestID {
-		t.Fatal("request ID not server-owned/correlated", event)
-	}
-	assertLogDoesNotContain(t, log, "QUERY_SECRET", "BODY_SECRET", "AUTH_SECRET", "SESSION_SECRET", "CSRF_SECRET", "IDEMPOTENCY_SECRET", "CLIENT_REQUEST_ID", "AGENT_SECRET", "192.0.2.111")
 }
 
 type observationFailureStore struct {

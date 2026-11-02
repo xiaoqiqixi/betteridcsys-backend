@@ -41,7 +41,7 @@ jobs:
         run: |
           test -S /var/run/aster-accounts-mysql/mysqld.sock
           set -o pipefail
-          go test -race -count=1 -timeout=18m -json ./internal/billing -run 'Test(MySQL)?(Staff|Account|Registration|Recovery|Profile|SSH|API|Support|Ticket|EmailTemplate|Outbox|ConcurrentVerification|ConcurrentLastOwner|EveryContract|LoginLimiter|RejectedIP|Automation|Announcement|Affiliate|SecuritySettings|SiteSettings|ClientAdmin|SMTPContract)' | tee account-tests.jsonl
+          go test -race -count=1 -timeout=18m -json ./internal/billing -run 'Test(MySQL)?(Staff|Account|Registration|Recovery|Profile|SSH|API|Support|Ticket|EmailTemplate|Outbox|ConcurrentVerification|ConcurrentLastOwner|EveryContract|LoginLimiter|RejectedIP|Automation|Announcement|Affiliate|SecuritySettings|SiteSettings|ClientAdmin|SMTPContract|AuditEventsHTTPAuthorization|HTTPObservabilityCompletion)' | tee account-tests.jsonl
           python3 - <<'PY'
           import json
           from pathlib import Path

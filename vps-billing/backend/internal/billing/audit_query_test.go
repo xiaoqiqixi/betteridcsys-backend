@@ -58,9 +58,12 @@ func newAuditQueryFixture(t *testing.T, sql bool) auditQueryFixture {
 	fixture := auditQueryFixture{users: users}
 	fixture.events = auditQueryEvents(users)
 	if !sql {
-		m := &Memory{users: map[string]User{}, sessions: map[string]Session{}, audits: append([]Audit{}, fixture.events...)}
+		m := &Memory{users: map[string]User{}, sessions: map[string]Session{}, staffPolicies: map[string]staffPolicy{}, audits: append([]Audit{}, fixture.events...)}
 		for _, user := range users {
 			m.users[user.ID] = user
+			if user.Role == "admin" {
+				m.staffPolicies[user.ID] = ownerPolicy()
+			}
 		}
 		fixture.store = m
 		fixture.raw = func() []Audit { m.mu.Lock(); defer m.mu.Unlock(); return append([]Audit{}, m.audits...) }
