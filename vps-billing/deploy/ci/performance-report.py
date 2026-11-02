@@ -42,7 +42,7 @@ COUNTS = {
     "catalog_types": 1, "currency_settings": 1, "email_settings": 1,
     "invoices": 10000, "order_requests": 10000, "orders": 10000,
     "outbox_events": 10000, "payment_attempts": 0, "payment_settlements": 0,
-    "plan_prices": 3, "plans": 3, "schema_migrations": 26,
+    "plan_prices": 3, "plans": 3, "schema_migrations": 27,
     "product_configurations": 0, "order_product_configurations": 0, "provisioning_jobs": 0,
     "services": 1000, "sessions": 2, "site_settings": 1, "users": 101,
     "staff_roles": 1, "staff_members": 1, "products": 3, "product_prices": 0,

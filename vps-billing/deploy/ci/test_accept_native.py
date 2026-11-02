@@ -606,10 +606,10 @@ class CorePaymentSchemaMigrationTests(unittest.TestCase):
     def test_native_expectations_match_the_reviewed_source_migration_inventory(self):
         migrations = sorted((SCRIPT.parents[2] / 'backend/migrations').glob('*.sql'))
         self.assertEqual(len(migrations), CORE.CANDIDATE_SCHEMA)
-        self.assertEqual(migrations[-1].name, '026_commerce_services.sql')
+        self.assertEqual(migrations[-1].name, '027_service_contract_bounds.sql')
         tables = set(re.findall(r'CREATE TABLE IF NOT EXISTS ([a-z_]+)', '\n'.join(path.read_text() for path in migrations)))
         self.assertEqual(len(tables) + 1, 67)  # schema_migrations is maintained by Go.
-        self.assertIn('[[ $migration_count == 26 ]]', SCRIPT.read_text())
+        self.assertIn('[[ $migration_count == 27 ]]', SCRIPT.read_text())
         self.assertIn('[[ $source_tables == 67 ]]', SCRIPT.read_text())
 
 

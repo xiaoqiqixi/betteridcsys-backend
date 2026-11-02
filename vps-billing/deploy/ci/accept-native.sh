@@ -352,7 +352,7 @@ emit_json_fact PREFLIGHT_EMPTY_JSON preflight-empty.json
 "${cli_env[@]}" "MYSQL_DSN_FILE=$scratch/migrator.dsn" "$opt/releases/a/bin/aster-api" -migrate > "$scratch/migrate.log" 2>&1
 "${cli_env[@]}" "MYSQL_DSN_FILE=$scratch/migrator.dsn" "$opt/releases/a/bin/aster-api" -migrate >> "$scratch/migrate.log" 2>&1
 migration_count=$("${mysql_cmd[@]}" "$db" --execute='SELECT COUNT(*) FROM schema_migrations')
-[[ $migration_count == 26 ]] || fail 'The current source did not apply exactly twenty-six reviewed migrations.'
+[[ $migration_count == 27 ]] || fail 'The current source did not apply exactly twenty-seven reviewed migrations.'
 [[ $("${mysql_cmd[@]}" "$db" --execute="SELECT COUNT(*) FROM plan_prices WHERE currency='USD'") == 0 ]] || fail 'Fresh migration installed unapproved USD prices.'
 for role in admin customer second; do
   account_role=customer; [[ $role != admin ]] || account_role=admin
