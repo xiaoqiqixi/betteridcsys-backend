@@ -632,7 +632,7 @@ http {{
             order = self.admin.call("/admin/orders/" + args["order"])
             ids = [sid for item in order["items"] for sid in item["service_ids"]]
             require(len(ids) == 1, "paid order did not create one service")
-            return self.service_state({"id": ids[0], "state": "active", "power": "running", "step": args["step"]})
+            return self.service_state({"id": ids[0], "state": "active", "power": "running", "image": "ubuntu-24", "step": args["step"]})
         if method == "overdue":
             service = self.admin.call("/admin/services/" + args["id"])
             due = datetime.fromisoformat(service["next_due_at"].replace("Z", "+00:00"))
