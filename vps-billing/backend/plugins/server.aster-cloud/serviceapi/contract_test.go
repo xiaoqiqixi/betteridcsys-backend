@@ -31,7 +31,7 @@ func TestEveryActionCanonicalContract(t *testing.T) {
 				t.Fatal("digest mismatch")
 			}
 			var round ActionRequest
-			if Decode(raw, &round) != nil || round != r {
+			if Decode(raw, &round) != nil || !round.Params.Equal(r.Params) || round.Protocol != r.Protocol || round.OperationID != r.OperationID || round.OwnerRef != r.OwnerRef || round.Action != r.Action {
 				t.Fatal("roundtrip")
 			}
 			again, h2, e := round.BytesAndDigest()
@@ -50,10 +50,34 @@ func TestEveryActionCanonicalContract(t *testing.T) {
 	if string(raw) != want {
 		t.Fatalf("wire changed: %s", raw)
 	}
-	for _, p := range []Params{{ImageID: "ubuntu"}, {ImageID: "ubuntu", Password: "p", SSHPublicKey: "ssh-ed25519 AAAA"}, {Password: "p\ncommand"}, {CPUCores: 1, MemoryMB: 129, DiskGB: 4}} {
+	// {ImageID only}: no credential. {Password+PasswordHash}: two forms of the
+	// same secret. {newline password}: malformed. {bad resize}. None is valid.
+	for _, p := range []Params{{ImageID: "ubuntu"}, {ImageID: "ubuntu", Password: "p", PasswordHash: "x"}, {Password: "p\ncommand"}, {CPUCores: 1, MemoryMB: 129, DiskGB: 4}} {
 		if p.Valid("reinstall") || p.Valid("reset_password") || p.Valid("resize") {
 			t.Fatal("invalid union accepted")
 		}
+	}
+	// Mixing the single-key and multi-key forms is rejected.
+	if (Params{ImageID: "ubuntu", SSHPublicKey: "ssh-ed25519 AAAA", SSHPublicKeys: []string{"ssh-rsa BBBB"}}).Valid("reinstall") {
+		t.Fatal("mixed key forms accepted")
+	}
+	// Eleven keys and duplicate keys are both rejected.
+	var many []string
+	for i := 0; i < 11; i++ {
+		many = append(many, "ssh-ed25519 KEY"+string(rune('A'+i)))
+	}
+	if (Params{ImageID: "ubuntu", SSHPublicKeys: many}).Valid("reinstall") {
+		t.Fatal("eleven keys accepted")
+	}
+	if (Params{ImageID: "ubuntu", SSHPublicKeys: []string{"ssh-ed25519 DUP", "ssh-ed25519 DUP"}}).Valid("reinstall") {
+		t.Fatal("duplicate keys accepted")
+	}
+	// Valid unions: password + multiple keys for reinstall; keys-only for reset.
+	if !(Params{ImageID: "ubuntu", Password: "secret-123456", SSHPublicKeys: []string{"ssh-ed25519 AAAA", "ssh-rsa BBBB"}}).Valid("reinstall") {
+		t.Fatal("password plus keys rejected")
+	}
+	if !(Params{SSHPublicKeys: []string{"ssh-ed25519 AAAA"}}).Valid("reset_password") {
+		t.Fatal("keys-only reset rejected")
 	}
 	if (Params{Password: "secret"}).Redacted().Password != "" {
 		t.Fatal("redaction")

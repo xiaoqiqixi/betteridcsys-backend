@@ -35,14 +35,17 @@ type Params struct {
 	// PasswordHash is a one-way Linux crypt hash for delayed initial setup.
 	// It may be persisted; the original password must never be retained.
 	PasswordHash string `json:"password_hash,omitempty"`
-	SSHPublicKey string `json:"ssh_public_key,omitempty"`
-	StartAfter   bool   `json:"start_after,omitempty"`
-	Confirmation string `json:"confirmation,omitempty"`
-	SnapshotID   string `json:"snapshot_id,omitempty"`
-	Name         string `json:"name,omitempty"`
-	CPUCores     int    `json:"cpu_cores,omitempty"`
-	MemoryMB     int    `json:"memory_mb,omitempty"`
-	DiskGB       int    `json:"disk_gb,omitempty"`
+	// SSHPublicKey is retained for single-key callers; SSHPublicKeys carries the
+	// full set. A request sets at most one of the two forms.
+	SSHPublicKey  string   `json:"ssh_public_key,omitempty"`
+	SSHPublicKeys []string `json:"ssh_public_keys,omitempty"`
+	StartAfter    bool     `json:"start_after,omitempty"`
+	Confirmation  string   `json:"confirmation,omitempty"`
+	SnapshotID    string   `json:"snapshot_id,omitempty"`
+	Name          string   `json:"name,omitempty"`
+	CPUCores      int      `json:"cpu_cores,omitempty"`
+	MemoryMB      int      `json:"memory_mb,omitempty"`
+	DiskGB        int      `json:"disk_gb,omitempty"`
 }
 
 func (p Params) Redacted() Params { p.Password = ""; return p }
@@ -56,6 +59,39 @@ func ValidPasswordHash(hash string) bool { return passwordHashPattern.MatchStrin
 func validKey(k string) bool {
 	return len(k) <= 8192 && !strings.ContainsAny(k, "\x00\r\n") && (strings.HasPrefix(k, "ssh-ed25519 ") || strings.HasPrefix(k, "ssh-rsa ") || strings.HasPrefix(k, "ecdsa-sha2-nistp256 "))
 }
+
+// Keys returns the unified SSH key set, whether the caller used the single
+// SSHPublicKey field or the SSHPublicKeys slice. A valid request uses at most
+// one form (enforced by validKeySet), so at most one source is non-empty.
+func (p Params) Keys() []string {
+	if p.SSHPublicKey != "" {
+		return []string{p.SSHPublicKey}
+	}
+	return p.SSHPublicKeys
+}
+
+// validKeySet rejects mixing the two key forms, caps the set at ten, requires
+// each key well-formed, and rejects duplicates.
+func (p Params) validKeySet() bool {
+	if p.SSHPublicKey != "" && len(p.SSHPublicKeys) > 0 {
+		return false
+	}
+	keys := p.Keys()
+	if len(keys) > 10 {
+		return false
+	}
+	seen := make(map[string]struct{}, len(keys))
+	for _, k := range keys {
+		if !validKey(k) {
+			return false
+		}
+		if _, dup := seen[k]; dup {
+			return false
+		}
+		seen[k] = struct{}{}
+	}
+	return true
+}
 func (p Params) Valid(action string) bool {
 	rest := p
 	switch action {
@@ -68,21 +104,24 @@ func (p Params) Valid(action string) bool {
 		}
 		rest.Confirmation = ""
 	case "reinstall":
-		credentials := 0
-		for _, value := range []string{p.Password, p.PasswordHash, p.SSHPublicKey} {
-			if value != "" {
-				credentials++
-			}
-		}
-		if !imagePattern.MatchString(p.ImageID) || credentials != 1 || p.Password != "" && !validPassword(p.Password) || p.PasswordHash != "" && !ValidPasswordHash(p.PasswordHash) || p.SSHPublicKey != "" && !validKey(p.SSHPublicKey) {
+		// At least one credential: a password, a password hash, or SSH keys.
+		// Password and hash are mutually exclusive (never carry both forms of
+		// the same secret); either may combine with one or more SSH keys.
+		hasKeys := len(p.Keys()) > 0
+		if p.Password != "" && p.PasswordHash != "" {
 			return false
 		}
-		rest.ImageID, rest.Password, rest.PasswordHash, rest.SSHPublicKey = "", "", "", ""
+		if !imagePattern.MatchString(p.ImageID) || p.Password == "" && p.PasswordHash == "" && !hasKeys ||
+			p.Password != "" && !validPassword(p.Password) || p.PasswordHash != "" && !ValidPasswordHash(p.PasswordHash) || !p.validKeySet() {
+			return false
+		}
+		rest.ImageID, rest.Password, rest.PasswordHash, rest.SSHPublicKey, rest.SSHPublicKeys = "", "", "", "", nil
 	case "reset_password":
-		if !validPassword(p.Password) {
+		// A password, SSH keys, or both — at least one credential to set.
+		if p.PasswordHash != "" || p.Password == "" && len(p.Keys()) == 0 || p.Password != "" && !validPassword(p.Password) || !p.validKeySet() {
 			return false
 		}
-		rest.Password = ""
+		rest.Password, rest.SSHPublicKey, rest.SSHPublicKeys = "", "", nil
 	case "rescue_enter":
 		if !imagePattern.MatchString(p.ImageID) {
 			return false
@@ -114,7 +153,43 @@ func (p Params) Valid(action string) bool {
 	default:
 		return false
 	}
-	return rest == (Params{})
+	// Params holds a slice (SSHPublicKeys) and is not == comparable. Each action
+	// above clears its own keys into rest; any leftover key or scalar field is a
+	// forbidden cross-action parameter.
+	return len(rest.SSHPublicKeys) == 0 && rest.scalarZero()
+}
+
+// scalarZero reports whether every non-slice field is the zero value, preserving
+// the closed-union guarantee the old `rest == (Params{})` comparison provided.
+func (p Params) scalarZero() bool {
+	p.SSHPublicKeys = nil
+	z := Params{}
+	return p.SetBandwidth == z.SetBandwidth && p.BandwidthMbps == z.BandwidthMbps && p.InboundBandwidthMbps == z.InboundBandwidthMbps &&
+		p.ImageID == z.ImageID && p.Password == z.Password && p.PasswordHash == z.PasswordHash && p.SSHPublicKey == z.SSHPublicKey &&
+		p.StartAfter == z.StartAfter && p.Confirmation == z.Confirmation && p.SnapshotID == z.SnapshotID && p.Name == z.Name &&
+		p.CPUCores == z.CPUCores && p.MemoryMB == z.MemoryMB && p.DiskGB == z.DiskGB
+}
+
+// Equal compares two Params including the SSHPublicKeys slice (order-sensitive).
+func (p Params) Equal(o Params) bool {
+	if len(p.SSHPublicKeys) != len(o.SSHPublicKeys) {
+		return false
+	}
+	for i := range p.SSHPublicKeys {
+		if p.SSHPublicKeys[i] != o.SSHPublicKeys[i] {
+			return false
+		}
+	}
+	a, b := p, o
+	a.SSHPublicKeys, b.SSHPublicKeys = nil, nil
+	return a.scalarZeroEqual(b)
+}
+
+func (p Params) scalarZeroEqual(o Params) bool {
+	return p.SetBandwidth == o.SetBandwidth && p.BandwidthMbps == o.BandwidthMbps && p.InboundBandwidthMbps == o.InboundBandwidthMbps &&
+		p.ImageID == o.ImageID && p.Password == o.Password && p.PasswordHash == o.PasswordHash && p.SSHPublicKey == o.SSHPublicKey &&
+		p.StartAfter == o.StartAfter && p.Confirmation == o.Confirmation && p.SnapshotID == o.SnapshotID && p.Name == o.Name &&
+		p.CPUCores == o.CPUCores && p.MemoryMB == o.MemoryMB && p.DiskGB == o.DiskGB
 }
 
 type ActionRequest struct {

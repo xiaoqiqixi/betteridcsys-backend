@@ -13,12 +13,13 @@
     "contracts/billing/internal/controllers/service.go": "604aad48f809a0d0d24c18bfe6e3659af7048b2b305043e3ef94f43a8a10d81c",
     "contracts/billing/serviceapi/client.go": "114e543f604cdf0c3b95cb5ea4775bd75a30cff4d42d5a71e33d02997f547ad7",
     "contracts/billing/serviceapi/client_test.go": "4b8d8a4db521f7027010c648828f09a60f9c2f83b162546b7cfe8be69cfaac47",
-    "contracts/billing/serviceapi/contract.go": "b2cdb996a8ac88a77c6e6c3b3b235d789803b15bb510542ef8c93b3813bb4109",
-    "contracts/billing/serviceapi/contract_test.go": "e730ab07ad874ce9d996712204993139085db1c893e2581b197e4a6463060236"
+    "contracts/billing/serviceapi/contract.go": "b11dac2ee3f1227210d28d88f844291ce741cc84b149b0a82845e96451be6040",
+    "contracts/billing/serviceapi/contract_test.go": "858d85e408170b95377c3897c09fd14cf7bfcf84f408b2a9639ab5663109553a",
+    "contracts/billing/serviceapi/password_hash_test.go": "326c9b48a00af85c2290e43e2c975fcacad0a9e928a1321668dfe6162e13877e"
   },
   "protocols": [
     "aster.controller/1",
     "aster.service/1"
   ],
-  "compatibility_note": "Add serviceapi and shared pinned transport; optional explicit set_bandwidth resize parameters preserve prior rates when omitted and require bounded directional Mbps. Existing requests retain their canonical bytes."
+  "compatibility_note": "Add serviceapi and shared pinned transport; optional explicit set_bandwidth resize parameters preserve prior rates when omitted and require bounded directional Mbps. Existing requests retain their canonical bytes. Commit ba52445794c44105fdb61c7b6d2bf6dde7277d26 adds an optional bcrypt password_hash credential for delayed reinstall setup. A later change adds an optional ssh_public_keys array (up to ten unique keys) alongside the existing single ssh_public_key, and relaxes reinstall/reset_password to accept at least one credential — a password or password_hash (still mutually exclusive with each other) combined with one or more SSH keys — instead of exactly one. The single-key and array forms are mutually exclusive in one request. Omitting ssh_public_keys preserves existing canonical request bytes."
 }

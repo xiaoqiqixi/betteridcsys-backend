@@ -1,10 +1,10 @@
 {
   "repository": "xiaoqiqixi/betteridcsys-cloud",
-  "commit": "ba52445794c44105fdb61c7b6d2bf6dde7277d26",
+  "commit": "9afb0e7e0a42d6af4fbbf0f0bf56f26222ddbf39",
   "path": "contracts/billing",
   "files": {
     "LICENSE": "c71d239df91726fc519c6eb72d318ec65820627232b2f796219e87dcf35d0ab4",
-    "UPSTREAM.json": "aad39b18e4e9c30e36d7377499951de0b343f18bf506fae2a1005f202ee0e60b",
+    "UPSTREAM.json": "8437bd2b15ac92591c1e8ef0fafcbd42ae241b5bd3fe97f7eeb1409ff2e0195b",
     "controllerapi/contract.go": "082fc40c2963971d621d93c1a9dbaf1b0b649441757cd5c0af10656385bd1b0c",
     "controllerapi/contract_test.go": "cc167d111fb5adae6d545f39377bec05fd1fb6bfdb13fe69927f41b6c9fff62a",
     "controllerapi/transport.go": "0a6c6761e361cb181276bfefce6c6e6b7b535f3c25a73d28c68a7e98060ffcae",
@@ -18,8 +18,8 @@
     "serviceapi/README.md": "a334a9e696e1295865fcda13dceab362bc5a991323db1577f386e185d995ac43",
     "serviceapi/client.go": "114e543f604cdf0c3b95cb5ea4775bd75a30cff4d42d5a71e33d02997f547ad7",
     "serviceapi/client_test.go": "4b8d8a4db521f7027010c648828f09a60f9c2f83b162546b7cfe8be69cfaac47",
-    "serviceapi/contract.go": "ce349146197ef6059e4aeb43a5116236c425f287e2f4dda982a651a61932c168",
-    "serviceapi/contract_test.go": "e730ab07ad874ce9d996712204993139085db1c893e2581b197e4a6463060236",
-    "serviceapi/password_hash_test.go": "b2f5df2660f27c39b18a9bdfede5202aa2e2788084ee083af2dc69c6d1495f79"
+    "serviceapi/contract.go": "b11dac2ee3f1227210d28d88f844291ce741cc84b149b0a82845e96451be6040",
+    "serviceapi/contract_test.go": "858d85e408170b95377c3897c09fd14cf7bfcf84f408b2a9639ab5663109553a",
+    "serviceapi/password_hash_test.go": "326c9b48a00af85c2290e43e2c975fcacad0a9e928a1321668dfe6162e13877e"
   }
 }

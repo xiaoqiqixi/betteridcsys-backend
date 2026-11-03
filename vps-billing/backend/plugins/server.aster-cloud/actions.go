@@ -51,7 +51,8 @@ func validateInput(in serverv1.Request) error {
 	if in.Method == "create" {
 		var keys []string
 		convert(in.Input["ssh_keys"], &keys)
-		if len(keys) > 1 || len(keys) > 0 && (stringField(in.Input, "password_hash") != "" || stringField(in.Secrets, "password") != "") {
+		// Up to ten SSH keys, optionally alongside a password or password hash.
+		if len(keys) > 10 {
 			return serverv1.ErrConfiguration
 		}
 	}
@@ -76,11 +77,14 @@ func (m *Module) actionRequest(in serverv1.Request) (serviceapi.ActionRequest, e
 		p.PasswordHash = stringField(in.Input, "password_hash")
 		var keys []string
 		convert(in.Input["ssh_keys"], &keys)
-		if len(keys) > 1 {
-			return serviceapi.ActionRequest{}, serverv1.ErrConfiguration
-		}
-		if len(keys) == 1 {
+		// One key uses the single field; several use the array. serviceapi.Valid
+		// enforces the count, uniqueness and that the two forms are not mixed.
+		switch len(keys) {
+		case 0:
+		case 1:
 			p.SSHPublicKey = keys[0]
+		default:
+			p.SSHPublicKeys = keys
 		}
 	case "terminate":
 		p.Confirmation = in.ResourceID
