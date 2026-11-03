@@ -16,8 +16,9 @@ func checkoutPasswordHashes06(items []api.CartItemInput) ([]string, error) {
 		if item.RootPassword == "" {
 			continue
 		}
-		if len(item.SSHKeyIDs) != 0 || len(item.RootPassword) < 8 || len(item.RootPassword) > 72 || strings.ContainsAny(item.RootPassword, "\x00\r\n") {
-			return nil, problem(400, "INVALID_GUEST_CREDENTIAL", "Use either an SSH key or a root password of 8–72 bytes")
+		// A password and SSH keys may both be set; keep the byte-length bounds.
+		if len(item.RootPassword) < 8 || len(item.RootPassword) > 72 || strings.ContainsAny(item.RootPassword, "\x00\r\n") {
+			return nil, problem(400, "INVALID_GUEST_CREDENTIAL", "Use a root password of 8–72 bytes, SSH keys, or both")
 		}
 		hash, err := bcrypt.GenerateFromPassword([]byte(item.RootPassword), 12)
 		if err != nil || !validGuestPasswordHash06(string(hash)) {

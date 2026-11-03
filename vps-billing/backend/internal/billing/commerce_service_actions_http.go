@@ -254,7 +254,8 @@ func (a *App) serviceActions06HTTP(w http.ResponseWriter, r *http.Request, u Use
 		params.Input, params.Secrets = definition.InputSchema.Split(normalized)
 	case "reinstall":
 		in := input.(api.ReinstallServiceInput)
-		if !serviceConfirmation06(s, in.Confirm) || (in.RootPassword == "") == (len(in.SSHKeyIDs) == 0) {
+		// Reinstall needs at least one credential: a password, SSH keys, or both.
+		if !serviceConfirmation06(s, in.Confirm) || in.RootPassword == "" && len(in.SSHKeyIDs) == 0 {
 			a.commerceError(w, r, ErrCommerceInput)
 			return true
 		}

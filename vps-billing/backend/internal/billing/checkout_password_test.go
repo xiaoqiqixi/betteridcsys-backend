@@ -18,9 +18,13 @@ func TestCheckoutPasswordHashesPreserveCredentialsWithoutPlaintext(t *testing.T)
 	if strings.Contains(hashes[0], password) || bcrypt.CompareHashAndPassword([]byte(hashes[0]), []byte(password)) != nil {
 		t.Fatal("stored value does not authenticate the selected password")
 	}
-	for _, item := range []api.CartItemInput{{RootPassword: password, SSHKeyIDs: []string{"key"}}, {RootPassword: "short"}, {RootPassword: strings.Repeat("a", 73)}, {RootPassword: password + "\n"}} {
+	// A password combined with SSH keys is now valid; the hash is still derived.
+	if both, err := checkoutPasswordHashes06([]api.CartItemInput{{RootPassword: password, SSHKeyIDs: []string{"key"}}}); err != nil || !validGuestPasswordHash06(both[0]) {
+		t.Fatal("password combined with SSH keys rejected", err)
+	}
+	for _, item := range []api.CartItemInput{{RootPassword: "short"}, {RootPassword: strings.Repeat("a", 73)}, {RootPassword: password + "\n"}} {
 		if _, err := checkoutPasswordHashes06([]api.CartItemInput{item}); err == nil {
-			t.Fatal("ambiguous or unsafe guest credential accepted")
+			t.Fatal("unsafe guest credential accepted")
 		}
 	}
 }
